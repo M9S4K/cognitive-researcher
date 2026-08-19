@@ -346,8 +346,9 @@ place beside the document instead of drifting to the window edge.
   an insight moves the highlight through it rather than swapping its contents.
 - The row is a `<button>` (`.insight-hit`); the actions below it are separate buttons, so the
   markup stays valid and both are reachable by keyboard.
-- **Copy quote** writes the cited line to the clipboard; **Add to theme** is a pure simulation.
-  Both confirm by swapping their own label for 1400ms.
+- Actions are **Edit · Copy quote · Add to theme**. Copy quote writes the cited line to the
+  clipboard; Add to theme is a pure simulation. Both confirm by swapping their own label for
+  1400ms. Edit is real — see §13, batch 7.
 
 ### Content — one analysis per question set
 The doc analyses **the script that was actually run**, so its four sections are the four questions
@@ -544,9 +545,7 @@ window uses (`520ms cubic-bezier(.22, 1, .36, 1)`, `transform-origin` on the ico
 - `insight-doc.html` loads its script as `insight-doc.js?v=5.1`. The leave behaviour changed, and
   a copy cached from the standalone page would still try to navigate.
 
-**Still out of scope:** the document's own content. It analyses the four Section 1 questions as
-though they were the whole interview, which is visibly out of step with the five-section script
-from batch 3.
+The document's own content was brought back into step in batch 7.
 
 ### Batch 4 — Notes: Rae's, and yours
 *P21, P22, P24, P25 · HMW07*
@@ -640,3 +639,44 @@ section and question totals, so the modal, the footer, the preflight and the ass
 section head cannot drift apart.
 
 **Layout note:** the modal is still 685×500 — header 96, body 336, footer 68.
+
+### Batch 7 — The insight document
+*P21, P22, P24, P25 · HMW08, HMW09, HMW10 · the only 5/5 signal in the study*
+
+**It says what it covers.** `#doc-scope` under the title reads `Section 1 of 5 · 4 questions
+covered · 30:49`. Batch 3 gave the script five sections and eighteen questions; without this line
+the document read as an analysis of all of them.
+
+**Insights look clickable.** P22's finding, answered twice over: a `.doc-hint` under the summary
+says it once for the page, and every row then shows its own affordance — `.insight-open`
+("Open the moment ›") fades in on hover, and the stamp picks up a dotted underline. Both are
+suppressed on the selected row, which already shows what it is.
+
+**Insights are editable.** P24 wants to work in the document, not read it — editing is the first
+step of her affinity mapping. The text normally sits inside `.insight-hit`, a `<button>`, so the
+whole row is one hit target; **contenteditable cannot live inside a button**, so `makeEditAction()`
+swaps the button for a sibling `.insight-editor` rather than trying to make the button editable.
+`Enter` and blur commit back into the `INSIGHTS` entry (so the edit survives reselection);
+`Escape` reverts. The editor **stops its own keys** — `Escape` closes the whole application window
+from the host page.
+
+**What the participant proposed survives.** Entries with `kind: 'recommendation'` and no `section`
+render in their own **What Sarah suggested** block. They stay in the `INSIGHTS` array because
+selection, the playhead and the transcript all key off it — the question blocks skip them for
+having no `section`, and no scrubber label goes bold for one. This is P25's HMW10: "the app would
+be better if it included X" was being lost in the transcript.
+
+**Selection walks the document, not one container.** Rows now live in two places, so `select()`
+queries `.insight[data-index]` page-wide. Missing this is why suggestions highlighted their
+transcript line but never looked selected.
+
+**Quieter, still legible.** P24 wanted the top bar subtler but still usable for coverage checks:
+labels drop to 11.5px `#a4a4a2`, ticks to 11px, the rail to 3px, the play button to 40px. Section
+names are untouched.
+
+**Nothing unlabelled.** The transcript footer's icon-only overflow button is gone rather than
+explained — P25 could not read the icons, and it did nothing.
+
+**Caching:** the script is versioned (`insight-doc.js?v=5.1.2`). The HTML itself still caches under
+`python3 -m http.server`; append a query string when checking changes in a browser that has
+already loaded it.

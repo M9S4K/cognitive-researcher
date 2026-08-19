@@ -135,6 +135,37 @@
             { who: 'You', time: '24:47', text: 'So it’s doing two jobs at once.' },
           ],
         },
+
+        // Recommendations carry no `section`, so the question blocks skip them and
+        // they render in their own block. They stay in this array because selection,
+        // the playhead and the transcript all key off it.
+        {
+          kind: 'recommendation', stamp: '8:41', range: '8:41 – 9:06',
+          text: 'Let the department admit the course is part-time in practice, and timetable it that way.',
+          turns: [
+            { who: 'You', time: '8:28', text: 'If you could change one thing about how the course runs?' },
+            { who: 'Sarah', time: '8:41', cited: true, text: 'Just call it part-time. Everyone is working. If they admitted that and put the teaching in two blocks, nobody would be pretending.' },
+            { who: 'You', time: '9:08', text: 'Has anyone raised that with them?' },
+          ],
+        },
+        {
+          kind: 'recommendation', stamp: '13:58', range: '13:58 – 14:22',
+          text: 'Agencies should count study hours as CPD rather than as time taken off the studio.',
+          turns: [
+            { who: 'You', time: '13:44', text: 'And how does the studio treat the two campus days?' },
+            { who: 'Sarah', time: '13:58', cited: true, text: 'As days I am not there. It would cost them nothing to log it as CPD — it is the same learning they send people on courses for.' },
+            { who: 'You', time: '14:24', text: 'Would that change how you feel about taking them?' },
+          ],
+        },
+        {
+          kind: 'recommendation', stamp: '26:30', range: '26:30 – 26:58',
+          text: 'Build an in-house placement into the course — the gap she names on her own CV.',
+          turns: [
+            { who: 'You', time: '26:18', text: 'What would have made the year worth more to you?' },
+            { who: 'Sarah', time: '26:30', cited: true, text: 'A placement. Eight weeks inside a product team would do more for me than another module, and it is the exact thing I keep saying is missing.' },
+            { who: 'You', time: '27:00', text: 'Would you have taken the year off for that?' },
+          ],
+        },
       ],
     },
 
@@ -259,6 +290,34 @@
             { who: 'You', time: '29:46', text: 'Thank you — that’s a good place to stop.' },
           ],
         },
+
+        {
+          kind: 'recommendation', stamp: '11:30', range: '11:30 – 11:56',
+          text: 'Give moderators a shared log the game itself writes to, instead of a personal spreadsheet.',
+          turns: [
+            { who: 'You', time: '11:18', text: 'What would make the tooling side easier?' },
+            { who: 'Sarah', time: '11:30', cited: true, text: 'Honestly just a log the game writes itself. I am keeping the record by hand for a system that already knows everything I am writing down.' },
+            { who: 'You', time: '11:58', text: 'Has anyone asked the developers for that?' },
+          ],
+        },
+        {
+          kind: 'recommendation', stamp: '19:40', range: '19:40 – 20:04',
+          text: 'Show moderators the prior history of an account before they are asked to judge it.',
+          turns: [
+            { who: 'You', time: '19:28', text: 'What is missing at the moment you have to decide?' },
+            { who: 'Sarah', time: '19:40', cited: true, text: 'Context. Show me what this account did last month and half the hard calls stop being hard.' },
+            { who: 'You', time: '20:06', text: 'And without it?' },
+          ],
+        },
+        {
+          kind: 'recommendation', stamp: '28:20', range: '28:20 – 28:46',
+          text: 'A written handover when a moderator steps back, so decisions survive the person.',
+          turns: [
+            { who: 'You', time: '28:08', text: 'What happens when someone stops moderating?' },
+            { who: 'Sarah', time: '28:20', cited: true, text: 'Nothing is written down. Whoever picks it up starts from zero, and the same arguments happen again six months later.' },
+            { who: 'You', time: '28:48', text: 'Does anyone own fixing that?' },
+          ],
+        },
       ],
     },
   };
@@ -285,6 +344,9 @@
     playerFill: document.getElementById('player-fill'),
     playerKnob: document.getElementById('player-knob'),
     eyebrowCount: document.querySelector('.eyebrow span:last-child'),
+    recs: document.getElementById('recs'),
+    recsList: document.getElementById('recs-list'),
+    docScope: document.getElementById('doc-scope'),
   };
 
   let selected = DEFAULT_INDEX;
@@ -382,10 +444,22 @@
     });
   }
 
+  // What the participant proposed out loud, kept as its own block rather than left
+  // in the transcript. P25: "the app would be better if it included X" is currently lost.
+  function buildRecommendations() {
+    if (!els.recs || !els.recsList) return;
+    const recs = INSIGHTS
+      .map((insight, index) => ({ insight, index }))
+      .filter((entry) => entry.insight.kind === 'recommendation');
+    if (!recs.length) { els.recs.hidden = true; return; }
+    recs.forEach((entry) => els.recsList.appendChild(buildInsight(entry.insight, entry.index)));
+  }
+
   function buildInsight(insight, index) {
     const row = document.createElement('div');
     row.className = 'insight';
     row.dataset.index = index;
+    if (insight.kind === 'recommendation') row.classList.add('is-rec');
     row.innerHTML = `
       <span class="stamp-lane"><span class="stamp">${insight.stamp}</span></span>
       <div class="insight-card">
@@ -393,7 +467,11 @@
         <div class="insight-body">
           <button class="insight-hit" type="button" aria-pressed="false">
             <span class="insight-text">${insight.text}</span>
+            <span class="insight-open" aria-hidden="true">Open the moment
+              <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5 7.5 6 4 9.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
           </button>
+          <div class="insight-editor" contenteditable="false" role="textbox" aria-label="Edit this insight" hidden></div>
         </div>
       </div>`;
 
@@ -410,6 +488,7 @@
         <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M5.6 8.4 8.4 5.6M6.1 3.4 7.4 2.1a2.8 2.8 0 0 1 4 4L10.1 7.4M7.9 10.6 6.6 11.9a2.8 2.8 0 0 1-4-4L3.9 6.6" fill="none" stroke="#1a1a1a" stroke-width="1.4" stroke-linecap="round"/></svg>
         ${source}
       </span>`;
+    actions.appendChild(makeEditAction(insight, row));
     actions.appendChild(makeAction('Copy quote', 'Copied', () => {
       const cited = insight.turns.find((turn) => turn.cited);
       if (cited && navigator.clipboard) navigator.clipboard.writeText(cited.text).catch(() => {});
@@ -419,6 +498,58 @@
 
     row.querySelector('.insight-hit').addEventListener('click', () => select(index));
     return row;
+  }
+
+  // P24 wants to work in the document rather than read it — editing an insight is
+  // the first step of her affinity mapping, and retyping it elsewhere is the cost.
+  //
+  // The text normally lives inside a <button> so the whole row is one hit target;
+  // contenteditable cannot live there, so editing swaps the button for a sibling
+  // editor rather than trying to make the button itself editable.
+  function makeEditAction(insight, row) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Edit';
+
+    const hit = row.querySelector('.insight-hit');
+    const textEl = row.querySelector('.insight-text');
+    const editor = row.querySelector('.insight-editor');
+
+    function finish(commit) {
+      if (commit) insight.text = editor.textContent.trim() || insight.text;
+      textEl.textContent = insight.text;
+      editor.hidden = true;
+      editor.contentEditable = 'false';
+      hit.hidden = false;
+      button.textContent = 'Edit';
+    }
+
+    button.addEventListener('click', () => {
+      if (!editor.hidden) { finish(true); return; }
+      editor.textContent = insight.text;
+      editor.hidden = false;
+      editor.contentEditable = 'true';
+      hit.hidden = true;
+      button.textContent = 'Done';
+      editor.focus();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+
+    editor.addEventListener('blur', () => { if (!editor.hidden) finish(true); });
+    editor.addEventListener('keydown', (event) => {
+      // Escape closes the whole application window from the host page, and Enter
+      // belongs to the editor — neither should leave this box.
+      event.stopPropagation();
+      if (event.key === 'Enter') { event.preventDefault(); finish(true); }
+      if (event.key === 'Escape') { event.preventDefault(); finish(false); }
+    });
+
+    return button;
   }
 
   // Actions are simulated: the label confirms and reverts, nothing is stored.
@@ -494,14 +625,17 @@
     if (!insight) return;
     selected = index;
 
-    els.sections.querySelectorAll('.insight').forEach((row) => {
+    // Rows live in two places now — the question blocks and the suggestions block —
+    // so selection walks the document rather than one container.
+    document.querySelectorAll('.insight[data-index]').forEach((row) => {
       const isSelected = Number(row.dataset.index) === index;
       row.classList.toggle('selected', isSelected);
       row.querySelector('.insight-hit').setAttribute('aria-pressed', String(isSelected));
     });
 
+    // A suggestion belongs to no question section, so no label goes bold for it.
     els.track.querySelectorAll('.player-label').forEach((label) => {
-      label.classList.toggle('current', Number(label.dataset.section) === insight.section);
+      label.classList.toggle('current', insight.section !== undefined && Number(label.dataset.section) === insight.section);
     });
 
     movePlayhead(toSeconds(insight.stamp));
@@ -526,8 +660,19 @@
   els.summary.textContent = analysis.summary;
   buildPlayer();
   buildSections();
+  buildRecommendations();
   buildTranscript();
-  if (els.eyebrowCount) els.eyebrowCount.textContent = `Sarah Chen · ${INSIGHTS.length} insights`;
+
+  const observed = INSIGHTS.filter((insight) => insight.kind !== 'recommendation').length;
+  const proposed = INSIGHTS.length - observed;
+  if (els.eyebrowCount) {
+    els.eyebrowCount.textContent = `Sarah Chen · ${observed} insights · ${proposed} suggestions`;
+  }
+  // The session ran one section of the script, and the document says so rather than
+  // reading as an analysis of all eighteen questions.
+  if (els.docScope) {
+    els.docScope.textContent = `Section 1 of 5 · ${SECTIONS.length} questions covered · 30:49`;
+  }
   select(DEFAULT_INDEX, { immediate: true });
 
   els.transcriptPlay.addEventListener('click', () => {
