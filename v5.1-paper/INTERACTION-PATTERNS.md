@@ -137,8 +137,24 @@ Every step is a simulation. There is no backend, no parsing, no AI. Fake data is
 ### Insight choreography
 Two moves — keep them distinct, they mean different things:
 
-1. **`showSnack(text)`** — a timed message at the card's bottom edge, held `2600ms`, then gone.
-   Messages never queue or morph; a second call replaces the first.
+1. **`showSnack(text, action)`** — a timed message at the card's bottom edge, held `2600ms`, or
+   `4600ms` when it carries an action. Messages never queue or morph; a second call replaces the
+   first. **Anything the assistant did on its own reports here, so the way to undo it belongs here
+   too** — the snackbar is where attention already is, not the row it happened on.
+
+   | Message | Action |
+   |---|---|
+   | `Qn was answered earlier — skipped` | **Put it back** |
+   | `Qn is back on the list` (from the row's Undo) | **Skip it again** |
+   | `Reworded — the original is kept above` | **Undo** → `revertRewrite()` reopens the proposal |
+   | `Original kept` | **Use Rae's** |
+   | `Suggestions hidden for this question` | **Undo** |
+   | `Probe suggestions on` / `off` | **Undo**, and it rewrites `rae-suggestions` |
+   | `Note added` | **Undo** |
+
+   `.snack-action` sets `display` in a flex row, so it needs the explicit
+   `.snack-action[hidden] { display: none; }`, and `showSnack` clears its wording when there is no
+   action — a hidden button that keeps its old label still announces it to a live region.
 2. **`unlockInsight(n)` / `bumpInsight()`** — the counter appears after `420ms`.
    `unlockInsight` is the first reveal; `bumpInsight` is a straight increment on a counter
    already on screen and plays the `+1` float.

@@ -227,6 +227,7 @@ window.ResearchToolbar = (function () {
     const questionsEl = toolbarEl.querySelector('.questions');
     const snackbar = toolbarEl.querySelector('#snackbar');
     const snackbarLabel = toolbarEl.querySelector('#snackbar-label');
+    const snackAction = toolbarEl.querySelector('#snack-action');
     const manualNotes = toolbarEl.querySelector('.manual-notes');
     const suggestToggle = toolbarEl.querySelector('#suggest-toggle');
     const progressEl = toolbarEl.querySelector('.question-progress');
@@ -294,6 +295,8 @@ window.ResearchToolbar = (function () {
     // The counter no longer waits for a pill to retract, so it can arrive promptly.
     const INSIGHT_REVEAL_DELAY = 420;
     const SNACK_HOLD = 2600;
+    // A message you can act on has to outlast one you only read.
+    const SNACK_ACTION_HOLD = 4600;
 
     // Variant 2 plays a fixed story instead of per-question clicking: the researcher asks
     // Q1, and the participant answers Q4 along the way so it can be skipped.
@@ -325,17 +328,41 @@ window.ResearchToolbar = (function () {
 
     // P23 asked for "timed snackbars" instead of the pill that slid out from under
     // the card and morphed its own width. One line, one hold, gone.
-    function showSnack(text) {
+    //
+    // Anything the assistant does on its own — skipping, rewording, hiding a card —
+    // reports here, so the way to undo it belongs here too rather than only on the
+    // row it happened to.
+    function showSnack(text, action) {
       if (!snackbar) return;
       window.clearTimeout(snackTimer);
       snackbarLabel.textContent = text;
+
+      if (snackAction) {
+        snackAction.hidden = !action;
+        if (action) {
+          snackAction.textContent = action.label;
+          snackAction.onclick = (event) => {
+            event.stopPropagation();
+            action.run();
+            hideSnack();
+          };
+        } else {
+          // Clear the wording too, or the hidden button keeps announcing the last
+          // action it offered to anything reading the live region.
+          snackAction.textContent = '';
+          snackAction.onclick = null;
+        }
+      }
+
       snackbar.classList.add('visible');
-      snackTimer = window.setTimeout(() => snackbar.classList.remove('visible'), SNACK_HOLD);
+      snackTimer = window.setTimeout(() => snackbar.classList.remove('visible'),
+        action ? SNACK_ACTION_HOLD : SNACK_HOLD);
     }
 
     function hideSnack() {
       window.clearTimeout(snackTimer);
       if (snackbar) snackbar.classList.remove('visible');
+      if (snackAction) { snackAction.hidden = true; snackAction.onclick = null; }
     }
 
     // ------------------------------------------------------- status vocabulary
@@ -539,13 +566,30 @@ window.ResearchToolbar = (function () {
         question.classList.add('rewritten');
         updateCompactBar();
       }, SCRIPT_REWRITE_REVEAL);
-      showSnack('Reworded — the original is kept above');
+      showSnack('Reworded — the original is kept above', {
+        label: 'Undo',
+        run: () => revertRewrite(question),
+      });
     }
 
     function keepOriginal(question) {
       if (!question) return;
       question.classList.remove('proposing');
-      showSnack('Original kept');
+      showSnack('Original kept', {
+        label: 'Use Rae’s',
+        run: () => acceptRewrite(question),
+      });
+    }
+
+    // Accepting a rewording is as reversible as declining one.
+    function revertRewrite(question) {
+      if (!question) return;
+      question.classList.remove('rewriting', 'rewritten');
+      if (question.querySelector('.rewrite-proposal') && !question.classList.contains('answered')) {
+        question.classList.add('proposing');
+      }
+      updateCompactBar();
+      showSnack('Back to the original wording');
     }
 
     // A proposal nobody answered is withdrawn once the question has been asked.
@@ -587,7 +631,10 @@ window.ResearchToolbar = (function () {
 
         window.setTimeout(() => {
           const number = jumped.querySelector('.question-number').textContent;
-          showSnack(`Q${number} was answered earlier — skipped`);
+          showSnack(`Q${number} was answered earlier — skipped`, {
+            label: 'Put it back',
+            run: () => { restoreQuestion(jumped); showSnack(`Q${number} is back on the list`); },
+          });
           unlockInsight(SCRIPT_INSIGHTS);
 
           // Rae then offers a reworded Q3. Moving the highlight to Q2 waits for
@@ -856,7 +903,11 @@ window.ResearchToolbar = (function () {
           event.stopPropagation();
           const question = button.closest('.question');
           restoreQuestion(question);
-          showSnack('Q4 back on the list');
+          const number = question.querySelector('.question-number').textContent;
+          showSnack(`Q${number} is back on the list`, {
+            label: 'Skip it again',
+            run: () => markSkipped(question),
+          });
         });
       });
 
@@ -875,8 +926,12 @@ window.ResearchToolbar = (function () {
       questionsEl.querySelectorAll('.probe-dismiss').forEach((button) => {
         button.addEventListener('click', (event) => {
           event.stopPropagation();
-          button.closest('.probe-card').classList.add('dismissed');
-          showSnack('Suggestions hidden for this question');
+          const card = button.closest('.probe-card');
+          card.classList.add('dismissed');
+          showSnack('Suggestions hidden for this question', {
+            label: 'Undo',
+            run: () => card.classList.remove('dismissed'),
+          });
         });
       });
 
@@ -923,7 +978,10 @@ window.ResearchToolbar = (function () {
         + (stamp ? `<span class="you-stamp">${stamp}</span>` : '');
       question.appendChild(note);
       closeComposer();
-      showSnack('Note added');
+      showSnack('Note added', {
+        label: 'Undo',
+        run: () => note.remove(),
+      });
     }
 
     function openComposer() {
@@ -990,7 +1048,14 @@ window.ResearchToolbar = (function () {
         suggestionsOn = !suggestionsOn;
         writeStored(SUGGESTIONS_KEY, suggestionsOn ? 'on' : 'off');
         applySuggestions();
-        showSnack(suggestionsOn ? 'Probe suggestions on' : 'Probe suggestions off');
+        showSnack(suggestionsOn ? 'Probe suggestions on' : 'Probe suggestions off', {
+          label: 'Undo',
+          run: () => {
+            suggestionsOn = !suggestionsOn;
+            writeStored(SUGGESTIONS_KEY, suggestionsOn ? 'on' : 'off');
+            applySuggestions();
+          },
+        });
       });
     }
 

@@ -491,17 +491,24 @@
       border-radius: 11px;
       background: #f2f2f0;
       color: #3e3e3e;
+      display: flex;
+      align-items: center;
+      gap: 12px;
       font: 500 13px/17px Inter, sans-serif;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, 8px);
       transition: opacity 200ms ease, transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
     }
-    .snackbar.visible { opacity: 1; transform: translate(-50%, 0); }
+    .snackbar.visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+    #snackbar-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* A message about something reversible carries the reverse — the snackbar is where
+       attention already is at that moment, not the row it happened on. */
+    .snack-action { flex: none; padding: 4px 10px; border: 0; border-radius: 8px; background: #161414; color: #fff; font: 600 12px/16px Inter, sans-serif; cursor: pointer; }
+    .snack-action:hover { transform: none; background: #000; }
+    .snack-action[hidden] { display: none; }
     .snackbar { bottom: calc(var(--rae-foot) + 12px); }
     @media (prefers-reduced-motion: reduce) {
       .snackbar { transition-duration: 1ms; }
@@ -873,7 +880,7 @@
           <button class="view-doc" id="view-doc" type="button">View insight doc <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
         </section>
         <span class="resize-grip" id="resize-grip" aria-hidden="true" title="Drag to resize"></span>
-        <div class="snackbar" id="snackbar" role="status" aria-live="polite"><span id="snackbar-label"></span></div>
+        <div class="snackbar" id="snackbar" role="status" aria-live="polite"><span id="snackbar-label"></span><button class="snack-action" id="snack-action" type="button" hidden></button></div>
       </aside>
     </section>
   </main>
