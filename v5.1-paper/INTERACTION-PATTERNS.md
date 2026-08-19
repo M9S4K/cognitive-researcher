@@ -70,16 +70,17 @@ Every step is a simulation. There is no backend, no parsing, no AI. Fake data is
 ### Script search modal
 - `#modal-backdrop` + `.script-modal`, shown via `.visible`. Backdrop fades 180ms, card rises
   `translateY(12px) scale(.985)` → rest over 220ms.
-- **Search is a fake filter with one outcome.** Any non-empty query hides all four "Recent"
-  documents, reveals the single `#et-result` ("ET - interview script") pre-selected, flips the
-  list label `Recent` → `Results`, and activates the preview pane. Clearing the input restores
-  the recent list. Do not add real matching logic — the whole point is one deterministic result.
-- Preview pane shows a fake PDF page, `Page 1 of 8` pagination, a bottom fade, and
-  **Load this Script**.
-- `Escape` closes the modal. `Enter` (with a non-empty query) is the same as Load this Script.
+- **Search is a fake filter with one outcome.** Any non-empty query hides the invite and recent
+  groups and reveals `#results-group` holding the single `#et-result`. Clearing restores them. Do
+  not add real matching logic — the whole point is one deterministic result. **Searching selects
+  nothing** (see §13, batch 6).
+- Preview pane shows a fake PDF page titled after whichever script is chosen, `Page 1 of 8`
+  pagination and a bottom fade; before anything is chosen it reads "Choose a script to preview it".
+- `Escape` closes the modal. `Enter` commits, but **only once a script has been chosen**.
 
 ### Script-selected toast
-- `#script-selected`, top-centre, `.visible`. Copy: "Script selected / Meeting starts in 10 mins".
+- `#script-selected`, top-centre, `.visible`. A preflight card: "Ready when you are", the chosen
+  script with its section and question counts, and three steps naming what happens next.
 - **Join meeting** → hides the toast, marks the browser taskbar icon `.active`, opens the window.
 
 ### Browser window
@@ -608,3 +609,34 @@ other label in the panel.
 
 **Variant 1** (`?variant=1`, free-form) binds its click handler to the chips instead of the retired
 `.probe-row`.
+
+### Batch 6 — The prep screen
+*P21, P22, P23, P24 · HMW04 · three participants stalled at the same moment*
+
+**The script belongs to a meeting.** The modal header reads *"Attaching a script to **User
+Interview with Sarah Chen** · today, 10:30"*, and a **From this invite** group at the top of the
+list carries the script with no search at all. P21 expected it to be attached already and could not
+tell what "search your script" was for; P24 praised the search, so it stays as the fallback rather
+than the only path.
+
+**Choosing is now a separate, deliberate act.**
+- Typing **selects nothing**. The old behaviour revealed the result already wearing `.selected`,
+  which is why P23 could not tell whether the row was a button or a state.
+- Every `.document` is clickable and `chooseDocument()` gives exactly one of them `.selected` —
+  filled dark with a ✓, not a grey wash.
+- The preview activates on choice and takes the chosen document's name.
+
+**The commit point is on the modal's own edge.** `.modal-footer` replaces the `.load-script` chip
+that sat in the corner of the preview where nobody looked. It is disabled until something is
+chosen, and its hint doubles as the scope: `5 sections · 18 questions · about 30 min`. That answers
+P24's "I expected a Next button, not just Enter".
+
+**The preflight says what happens next.** The bare toast becomes a card naming the script and its
+shape, then three steps: join, Rae follows the script and writes notes, finish and the analysis
+opens. P21 asked for this before the call, not after.
+
+**Counts come from `SCRIPTS`.** `windows.html` reads `ResearchToolbar.SCRIPTS` and derives the
+section and question totals, so the modal, the footer, the preflight and the assistant's own
+section head cannot drift apart.
+
+**Layout note:** the modal is still 685×500 — header 96, body 336, footer 68.
