@@ -215,7 +215,9 @@
     .presence-btn svg { width: 15px; height: 15px; }
 
     .manual-notes { position: absolute; left: 26px; bottom: 29px; border: 0; padding: 0; background: transparent; color: #55554f; cursor: pointer; font: 300 12px/16px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+    .manual-notes { display: flex; align-items: center; gap: 6px; text-decoration: none; }
     .manual-notes:hover { transform: none; color: #161414; }
+    .manual-notes kbd { display: grid; place-items: center; min-width: 15px; height: 15px; padding: 0 3px; border: 1px solid #c9c9c6; border-radius: 4px; color: #8a8a88; font: 500 10px/1 Inter, sans-serif; }
     .question-progress { display: flex; gap: 7px; position: absolute; right: 26px; bottom: 13px; left: 26px; }
     .question-progress span { height: 5px; flex: 1; border-radius: 19px; background: #d9d9d9; transition: background 300ms ease; }
     .questions { position: relative; height: calc(100% - var(--rae-head)); padding: 0 24px 30px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
@@ -285,6 +287,28 @@
     /* The reworded line is labelled as reworded — P22 wanted the change visible as
        a change rather than a silent substitution. */
     .question-tag { display: inline-block; margin-right: 8px; padding: 2px 7px; border-radius: 5px; background: #e7e7e4; color: #6f6f6d; font: 500 10px/14px Inter, sans-serif; letter-spacing: .06em; text-transform: uppercase; vertical-align: 2px; }
+
+    /* The panel promises notes; these are the notes. Set apart from the script —
+       smaller, grey, behind their own rule — so "taking notes" and "the script" are
+       not the same thing on screen. */
+    .rae-note { flex-basis: 100%; max-height: 0; margin-left: 39px; overflow: hidden; opacity: 0; transition: max-height 340ms ease, opacity 240ms ease, margin 300ms ease; }
+    .question.answered .rae-note, .question.skipped .rae-note { max-height: 260px; margin-top: 11px; opacity: 1; }
+    .note-body { border-left: 2px solid #e1e1e1; padding: 1px 0 1px 13px; }
+    .note-text { margin: 0; color: #6f6f6d; font: 400 13.5px/1.5 Inter, sans-serif; }
+    /* Her actual words, one tap away — the check P25 currently makes by replaying audio. */
+    .note-quote { max-height: 0; margin: 0; overflow: hidden; opacity: 0; color: #3e3e3e; font: 400 13px/1.55 Inter, sans-serif; transition: max-height 300ms ease, opacity 220ms ease, margin 280ms ease; }
+    .rae-note.showing-quote .note-quote { max-height: 160px; margin-top: 9px; opacity: 1; }
+    .note-toggle { margin: 7px 0 0 15px; padding: 0; border: 0; background: none; color: #8a8a88; cursor: pointer; font: 500 11.5px/16px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+    .note-toggle:hover { transform: none; color: #161414; }
+
+    /* Your lane. Dark rule and a "You" tag, so at a glance it is never Rae's. */
+    .you-note, .you-composer { display: flex; align-items: baseline; gap: 9px; flex-basis: 100%; margin: 11px 0 0 39px; }
+    .you-tag { flex: none; padding: 2px 7px; border-radius: 5px; background: #161414; color: #fff; font: 500 10px/14px Inter, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+    .you-text { flex: 1 1 auto; min-width: 0; margin: 0; color: #3e3e3e; font: 400 13.5px/1.5 Inter, sans-serif; }
+    .you-stamp { flex: none; color: #aaaaa9; font: 400 12px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; }
+    .you-input { flex: 1 1 auto; min-width: 0; padding: 0 0 5px; border: 0; border-bottom: 1px solid #d9d9d9; background: transparent; color: #161414; font: 400 13.5px/1.5 Inter, sans-serif; outline: none; }
+    .you-input:focus { border-bottom-color: #161414; }
+    .you-input::placeholder { color: #b6b6b4; }
 
     /* Rae proposes; the researcher decides. The original is never edited underneath
        her — P23's condition for letting the assistant touch the script at all. */
@@ -704,7 +728,7 @@
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.2" y="2.7" width="11.6" height="10.6" rx="2"/><path d="M9.6 2.7v10.6"/></svg>
               </button>
             </div>
-            <button class="manual-notes" type="button">Take notes manually</button>
+            <button class="manual-notes" type="button">Add your own note <kbd>N</kbd></button>
             <div class="question-progress" aria-hidden="true"></div>
           </header>
           <section class="questions"></section>

@@ -546,3 +546,34 @@ window uses (`520ms cubic-bezier(.22, 1, .36, 1)`, `transform-origin` on the ico
 **Still out of scope:** the document's own content. It analyses the four Section 1 questions as
 though they were the whole interview, which is visibly out of step with the five-section script
 from batch 3.
+
+### Batch 4 — Notes: Rae's, and yours
+*P21, P22, P24, P25 · HMW07*
+
+The header said "Rae is taking notes" over a panel that showed only questions. P22 could not tell
+the notes from the script because there were none.
+
+**Rae's notes.** Every question in `SCRIPTS` carries a `note` (one or two lines of what she said)
+and a `quote` (the verbatim line). `.rae-note` opens under a question when it is answered or
+skipped — indented to the text column, behind its own grey rule, at 13.5px grey against the
+script's 18px black. That contrast *is* the fix: script and notes are now two visibly different
+things in the same panel.
+
+**Her words, one tap away.** `.note-toggle` reveals `.note-quote`, the verbatim line. This is the
+check P25 currently makes by replaying the recording, moved into the panel (HMW01).
+
+**Your lane.** `.manual-notes` — relabelled **Add your own note**, with an `N` chip — and the `N`
+key both call `openComposer()`, which appends a one-line `.you-composer` to the active question.
+`Enter` saves, `Escape` cancels. A saved `.you-note` carries a dark **You** tag, the question's
+timestamp, and a dark rule, so it can never be mistaken for Rae's.
+
+- **Nothing is on screen until it is asked for.** P24 rejects note-taking during interviews as an
+  attention split; the lane costs her nothing. P25: *"a mixture, so I also have all autonomy."*
+- The composer sits inside `.questions`, the surface that advances the story, so it stops both its
+  clicks and its keys. Any future control in the list must do the same.
+- `N` from compact **switches to focus first and defers the composer by 220ms** — the question
+  list is `display: none` while minimised, so an input opened before the switch completes has
+  nothing to take focus in.
+- Notes change the content height, which moves the connector line; the existing `ResizeObserver`
+  path handles it, and `updateQuestionsLine()` is called directly when the composer or a quote
+  opens.

@@ -15,14 +15,28 @@ window.ResearchToolbar = (function () {
             {
               text: 'As a masters student, what does your day typically look like?',
               stamp: '4:36',
+              note: 'The real work happens in the evening block; taught hours are the small part of the week.',
+              quote: 'The timetable says twelve hours. The actual work is every evening after that.',
               probes: [
                 { number: '1.1', text: 'How do you usually commute?' },
                 { number: '1.2', text: 'How many credit hours do you have per term?' },
               ],
             },
-            { text: 'What kind of project are you currently working on?', stamp: '9:12' },
-            { text: 'What tools or software are you using for your project?', stamp: '18:15' },
-            { text: 'What challenges have you faced during this project?', stamp: '27:41' },
+            {
+              text: 'What kind of project are you currently working on?', stamp: '9:12',
+              note: 'Game moderation study — scoped by her supervisor, narrowed twice since.',
+              quote: 'It started much broader. We cut it down twice because I could not recruit.',
+            },
+            {
+              text: 'What tools or software are you using for your project?', stamp: '18:15',
+              note: 'A spreadsheet is the system of record; screenshots stand in as evidence.',
+              quote: 'Honestly it is a spreadsheet. Everything else is screenshots pasted into it.',
+            },
+            {
+              text: 'What challenges have you faced during this project?', stamp: '27:41',
+              note: 'Deciding without context, and no handover when someone else picks it up.',
+              quote: 'You are making the call with half the picture, and nobody writes down why.',
+            },
           ],
         },
         {
@@ -66,10 +80,16 @@ window.ResearchToolbar = (function () {
         {
           name: 'Introduction',
           questions: [
-            { text: 'Tell me about yourself', stamp: '1:41' },
+            {
+              text: 'Tell me about yourself', stamp: '1:41',
+              note: 'Designer first, student second. Three days at the studio, two on campus — the MSc fits around agency work, not the other way round.',
+              quote: 'I’m a product designer, mostly. I’m doing a masters at the moment but honestly that’s the smaller half of my week — work comes first and the course fits around it.',
+            },
             {
               text: 'What are you studying?',
               stamp: '7:37',
+              note: 'MSc in HCI. Reads it as formalising practice she already has rather than learning something new.',
+              quote: 'HCI, the MSc. I’m not really learning to design — I’ve been doing that for years. I’m learning to prove I can.',
               probes: [
                 { number: '2.1', text: 'oh whereabouts in London?' },
                 { number: '2.2', text: 'and how long is your course?' },
@@ -78,10 +98,16 @@ window.ResearchToolbar = (function () {
             {
               text: 'Do you have any work experience?',
               stamp: '15:47',
+              note: 'Six years, all agency-side. Names the missing in-house experience as the gap herself.',
+              quote: 'Six, near enough. All agency though. I’ve never sat inside a product team, which I think is the gap on my CV.',
               rewrite: 'You mentioned you’re an UX designer, how many years of work experience do you have?',
             },
             // Answered on the way through Q1, which is why the assistant skips it.
-            { text: 'Where are you from?', stamp: '1:22' },
+            {
+              text: 'Where are you from?', stamp: '1:22',
+              note: 'Came up while she was introducing herself — moved to London for the job and stayed.',
+              quote: 'I’m not from London originally. I came down for the job and then just… stayed, really.',
+            },
           ],
         },
         {
@@ -194,6 +220,7 @@ window.ResearchToolbar = (function () {
     const questionsEl = toolbarEl.querySelector('.questions');
     const snackbar = toolbarEl.querySelector('#snackbar');
     const snackbarLabel = toolbarEl.querySelector('#snackbar-label');
+    const manualNotes = toolbarEl.querySelector('.manual-notes');
     const progressEl = toolbarEl.querySelector('.question-progress');
     const legendButton = toolbarEl.querySelector('#legend-btn');
     const legend = toolbarEl.querySelector('#legend');
@@ -792,6 +819,16 @@ window.ResearchToolbar = (function () {
         });
       });
 
+      questionsEl.querySelectorAll('.note-toggle').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const note = button.closest('.rae-note');
+          const showing = note.classList.toggle('showing-quote');
+          button.textContent = showing ? 'Hide' : 'Her words';
+          updateQuestionsLine();
+        });
+      });
+
       questionsEl.querySelectorAll('.proposal-use').forEach((button) => {
         button.addEventListener('click', (event) => {
           event.stopPropagation();
@@ -806,6 +843,79 @@ window.ResearchToolbar = (function () {
         });
       });
     }
+
+    // -------------------------------------------------------------- your own notes
+    // Two researchers wanted somewhere to put their own shorthand; one rejects note
+    // taking during interviews outright. So the lane exists and costs nothing until
+    // it is asked for — no field on screen, no prompt.
+    function closeComposer() {
+      const open = questionsEl.querySelector('.you-composer');
+      if (open) open.remove();
+      updateQuestionsLine();
+    }
+
+    function saveOwnNote(question, text) {
+      if (!question || !text) { closeComposer(); return; }
+      const stampEl = question.querySelector('.question-stamp');
+      const stamp = stampEl ? stampEl.textContent : '';
+      const note = document.createElement('div');
+      note.className = 'you-note';
+      note.innerHTML = `<span class="you-tag">You</span><p class="you-text">${text}</p>`
+        + (stamp ? `<span class="you-stamp">${stamp}</span>` : '');
+      question.appendChild(note);
+      closeComposer();
+      showSnack('Note added');
+    }
+
+    function openComposer() {
+      const question = questionsEl.querySelector('.question.active') || questionEls[0];
+      if (!question) return;
+      closeComposer();
+
+      const composer = document.createElement('div');
+      composer.className = 'you-composer';
+      composer.innerHTML = '<span class="you-tag">You</span>'
+        + '<input class="you-input" type="text" aria-label="Your note" placeholder="Your note — Enter to save, Esc to cancel">';
+      question.appendChild(composer);
+
+      // The list is the surface that advances the story, so the composer has to hold
+      // on to both its clicks and its keys.
+      composer.addEventListener('click', (event) => event.stopPropagation());
+      const input = composer.querySelector('.you-input');
+      input.addEventListener('keydown', (event) => {
+        event.stopPropagation();
+        if (event.key === 'Enter') saveOwnNote(question, input.value.trim());
+        if (event.key === 'Escape') closeComposer();
+      });
+      input.focus();
+      scrollQuestionToTop(question);
+      updateQuestionsLine();
+    }
+
+    if (manualNotes) {
+      manualNotes.addEventListener('click', (event) => {
+        event.stopPropagation();
+        openComposer();
+      });
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'n' && event.key !== 'N') return;
+      if (!toolbarEl.classList.contains('visible')) return;
+      if (toolbarEl.classList.contains('session-complete')) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      event.preventDefault();
+      // Minimised, the question list is display:none, so opening the composer before
+      // the mode has finished switching gives the input nothing to take focus in.
+      if (presence !== 'focus' && presence !== 'dock') {
+        setPresence('focus');
+        window.setTimeout(openComposer, 220);
+        return;
+      }
+      openComposer();
+    });
 
     // ------------------------------------------------------------------ legend
     // Four marks, four meanings. Every one of them was queried by a different
@@ -922,8 +1032,20 @@ window.ResearchToolbar = (function () {
                </div>
              </div>`
           : '';
+        // The panel says "Rae is taking notes"; this is the note. It is set apart from
+        // the script — smaller, grey, behind its own rule — because P22 could not tell
+        // the two apart when the panel showed only questions.
+        const note = q.note
+          ? `<div class="rae-note">
+               <div class="note-body">
+                 <p class="note-text">${q.note}</p>
+                 ${q.quote ? `<p class="note-quote">“${q.quote}”</p>` : ''}
+               </div>
+               ${q.quote ? '<button class="note-toggle" type="button">Her words</button>' : ''}
+             </div>`
+          : '';
         const skipNote = `<div class="skip-note"><span class="status-chip">Skipped · answered at ${q.stamp || '—'}</span><button class="status-undo" type="button">Undo</button></div>`;
-        questionDiv.innerHTML = `<span class="question-number">${index + 1}</span><p class="question-text">${q.text}</p>${stamp}${skipNote}${rewrite}${proposal}`;
+        questionDiv.innerHTML = `<span class="question-number">${index + 1}</span><p class="question-text">${q.text}</p>${stamp}${skipNote}${rewrite}${proposal}${note}`;
         questionsEl.appendChild(questionDiv);
 
         if (q.probes && q.probes.length) {
