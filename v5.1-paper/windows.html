@@ -363,9 +363,26 @@
 
     /* Session complete — swaps in over the toolbar once the session is finished. */
     .complete-surface { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 34px 14px 16px; border: 1px solid rgb(126 126 126 / 20%); border-radius: 20px; background: #fcfcfa; box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%); opacity: 0; pointer-events: none; transition: opacity 300ms ease; }
-    .research-toolbar.session-complete { height: calc(var(--rae-h, 363px) + 54px); }
+    /* The summary is not a fixed card any more — it takes the shape the assistant is
+       already in, because that is where the researcher is looking. */
+    .research-toolbar.presence-focus.session-complete { height: calc(var(--rae-h, 363px) + 54px); }
     .research-toolbar.session-complete .toolbar-surface { opacity: 0; pointer-events: none; }
     .research-toolbar.session-complete .complete-surface { opacity: 1; pointer-events: auto; }
+    /* Docked, the summary fills the column and keeps the column's square edge. */
+    .research-toolbar.presence-dock.session-complete .complete-surface { border-radius: 0; border-width: 0 0 0 1px; }
+    .research-toolbar.presence-dock.session-complete .complete-handle { display: none; }
+
+    /* Minimised, the summary stays a strip: the same three numbers and the way in. */
+    .compact-complete { display: none; align-items: center; gap: 12px; height: 100%; padding: 0 9px 0 14px; }
+    .research-toolbar.presence-compact.session-complete .compact-complete { display: flex; }
+    .research-toolbar.presence-compact.session-complete .compact-bar { display: none; }
+    .research-toolbar.presence-compact.session-complete .complete-surface { display: none; }
+    .research-toolbar.presence-compact.session-complete .toolbar-surface { opacity: 1; pointer-events: auto; }
+    .compact-check { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%; background: #e0e0e0; }
+    .compact-check svg { width: 15px; height: 11px; }
+    .compact-summary { margin: 2px 0 0; color: #3e3e3e; font: 500 13px/17px Inter, sans-serif; font-variant-numeric: tabular-nums; }
+    .compact-doc { flex: none; padding: 9px 13px; border-radius: 9px; background: #161414; color: #fff; font: 600 12px/1 Inter, sans-serif; }
+    .compact-doc:hover { transform: none; }
     .complete-handle { position: absolute; top: 10px; left: 50%; width: 53px; height: 9px; flex: none; transform: translateX(-50%); background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; }
     .complete-head { display: flex; flex-direction: column; align-items: center; gap: 16px; }
     .complete-check { display: grid; place-items: center; width: 86.66px; height: 86.66px; flex: none; border-radius: 50%; background: #e0e0e0; outline: 5.42px solid #fcfcfa; }
@@ -649,6 +666,16 @@
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M9.6 2.6h3.8v3.8M6.4 13.4H2.6V9.6M13.4 2.6 9.2 6.8M2.6 13.4l4.2-4.2"/></svg>
             </button>
           </div>
+          <div class="compact-complete" id="compact-complete" aria-hidden="true">
+            <span class="compact-check" aria-hidden="true">
+              <svg viewBox="0 0 44.13 29.83" aria-hidden="true"><path d="M0 15.389 14.393 29.826 44.133 0" fill="none" stroke="#5B5B5B" stroke-width="6"/></svg>
+            </span>
+            <div class="compact-copy">
+              <p class="compact-meta">Session complete</p>
+              <p class="compact-summary"><span id="compact-complete-insights">0</span> insights · <span id="compact-complete-questions">4/4</span> · <span id="compact-complete-duration">00:34</span></p>
+            </div>
+            <button class="compact-doc" id="compact-doc" type="button">View doc</button>
+          </div>
           <header class="toolbar-header" id="toolbar-header">
             <span class="drag-handle" id="drag-handle" aria-label="Drag research assistant"></span>
             <div class="toolbar-id">
@@ -897,12 +924,16 @@
       if (event.source === appFrame.contentWindow && event.data && event.data.rae === 'close-doc') closeDoc();
     });
 
-    document.getElementById('view-doc').addEventListener('click', () => {
+    // Both ways out of the session-complete state — the full card's button and the
+    // minimised strip's — land in the same place.
+    function openDocFromSession() {
       docReady = true;
       docTask.disabled = false;
       docTask.classList.add('available');
       openDoc();
-    });
+    }
+    document.getElementById('view-doc').addEventListener('click', openDocFromSession);
+    document.getElementById('compact-doc').addEventListener('click', openDocFromSession);
     docTask.addEventListener('click', () => {
       if (!docReady) return;
       if (appWindow.classList.contains('open')) closeDoc();

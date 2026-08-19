@@ -204,6 +204,10 @@ window.ResearchToolbar = (function () {
     const completeInsights = toolbarEl.querySelector('#complete-insights');
     const completeQuestions = toolbarEl.querySelector('#complete-questions');
     const completeDuration = toolbarEl.querySelector('#complete-duration');
+    const compactCompleteInsights = toolbarEl.querySelector('#compact-complete-insights');
+    const compactCompleteQuestions = toolbarEl.querySelector('#compact-complete-questions');
+    const compactCompleteDuration = toolbarEl.querySelector('#compact-complete-duration');
+    const compactComplete = toolbarEl.querySelector('#compact-complete');
     const toolbarTime = toolbarEl.querySelector('.toolbar-time');
     const presenceButtons = [...toolbarEl.querySelectorAll('.presence-btn')];
     const compactBar = toolbarEl.querySelector('.compact-bar');
@@ -392,18 +396,23 @@ window.ResearchToolbar = (function () {
     }
 
     function showSessionComplete() {
-      // The summary needs the whole card. Force it open without overwriting the
-      // presence the researcher actually chose.
-      setPresence('focus', { immediate: true, remember: false });
+      // The summary belongs to whichever shape the assistant is already in — docked
+      // it fills the column, minimised it stays a strip. Nothing is forced open.
+      const questions = `${questionEls.length}/${questionEls.length}`;
+      const duration = toolbarTime ? toolbarTime.textContent.trim() : '';
       if (completeInsights) completeInsights.textContent = insightCount;
-      if (completeQuestions) completeQuestions.textContent = `${questionEls.length}/${questionEls.length}`;
-      if (completeDuration && toolbarTime) completeDuration.textContent = toolbarTime.textContent.trim();
+      if (completeQuestions) completeQuestions.textContent = questions;
+      if (completeDuration) completeDuration.textContent = duration;
+      if (compactCompleteInsights) compactCompleteInsights.textContent = insightCount;
+      if (compactCompleteQuestions) compactCompleteQuestions.textContent = questions;
+      if (compactCompleteDuration) compactCompleteDuration.textContent = duration;
       if (finishButton) finishButton.classList.remove('visible');
       toolbarEl.classList.remove('has-finish');
       window.clearTimeout(insightTimer);
       hideSnack();
       closeLegend();
       toolbarEl.classList.add('session-complete');
+      applyPresence(presence);
     }
 
     function tickProbe(index) {
@@ -608,7 +617,9 @@ window.ResearchToolbar = (function () {
         button.classList.toggle('is-on', on);
         button.setAttribute('aria-pressed', String(on));
       });
-      if (compactBar) compactBar.setAttribute('aria-hidden', String(mode !== 'compact'));
+      const complete = toolbarEl.classList.contains('session-complete');
+      if (compactBar) compactBar.setAttribute('aria-hidden', String(mode !== 'compact' || complete));
+      if (compactComplete) compactComplete.setAttribute('aria-hidden', String(mode !== 'compact' || !complete));
 
       // Docking is a layout, not a position: park whatever the drag left behind
       // and let the stylesheet place the card, then hand the coordinates back.

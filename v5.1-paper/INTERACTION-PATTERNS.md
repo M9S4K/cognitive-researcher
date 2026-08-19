@@ -152,7 +152,12 @@ how much was learned, and neither waits for the other.
   call time), hides the pill, and adds `.session-complete`: the card grows `363px → 417px`, the
   working surface fades out, the complete surface fades in with a check mark, three metrics, and
   **View insight doc**.
-- **View insight doc** navigates to `insight-doc.html`. `Ctrl/⌘ + ↵` does the same while the
+- **The summary takes the shape the assistant is already in.** Nothing is forced open: docked it
+  fills the column, minimised it stays a strip (`.compact-complete` — the same three numbers and a
+  **View doc** button), and floating it grows the card as before. Only
+  `.presence-focus.session-complete` changes the height. `showSessionComplete()` fills both sets of
+  metrics and re-runs `applyPresence()` so the mode's aria state follows.
+- **View insight doc** opens the Insight Analysis application. `Ctrl/⌘ + ↵` does the same while the
   complete card is up — the branch sits ahead of the older chord handlers so finishing the session
   and opening the doc do not both fire.
 
