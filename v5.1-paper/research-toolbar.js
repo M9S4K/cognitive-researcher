@@ -161,6 +161,36 @@ window.ResearchToolbar = (function () {
 
   // Presence: how much of the screen the assistant is allowed to take. The
   // sessions split three ways on this, so it is a setting rather than a default.
+  // Every change v5.1 made to the assistant can be switched off, so it can be judged
+  // on its own rather than as part of the pile. `true` here is v5.1's behaviour;
+  // `scaling` and `line` are the two things v5.1 removed, so they default to false and
+  // turning them on restores v5. See `review.html`.
+  const FLAG_DEFAULTS = {
+    briefing: true,      // the preamble above the first question
+    recording: true,     // the idle state and the Start recording gate
+    advance: true,       // the footer's Next button
+    presence: true,      // focus / compact / dock, and resizing
+    sections: true,      // five-section framing, sticky head, real progress
+    notes: true,         // Rae's notes, "her words", and your own lane
+    probes: true,        // keyword chips rather than full sentences
+    status: true,        // strike-through, skip chip, paraphrased tag, stamps
+    proposal: true,      // rewording offered rather than applied
+    snackactions: true,  // undo buttons inside the snackbar
+    scaling: false,      // v5's focus scaling of the top question
+    line: false,         // v5's connector line down the question numbers
+  };
+
+  function readFlags() {
+    const params = new URLSearchParams(window.location.search);
+    const flags = Object.assign({}, FLAG_DEFAULTS);
+    Object.keys(FLAG_DEFAULTS).forEach((name) => {
+      const value = params.get(name);
+      if (value === 'on' || value === '1') flags[name] = true;
+      if (value === 'off' || value === '0') flags[name] = false;
+    });
+    return flags;
+  }
+
   const PRESENCE_MODES = ['focus', 'compact', 'dock'];
   const PRESENCE_KEY = 'rae-presence';
   const SUGGESTIONS_KEY = 'rae-suggestions';
@@ -168,6 +198,9 @@ window.ResearchToolbar = (function () {
   const SIZE_LIMITS = { minW: 340, maxW: 620, minH: 300, maxH: 620 };
 
   const QUESTION_SNAP_DURATION = 450;
+  // v5's focus scaling, kept only so `?scaling=on` can put it back for comparison.
+  const QUESTION_MIN_SCALE = 0.833;
+  const QUESTION_SCALE_FALLOFF = 90;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -223,7 +256,11 @@ window.ResearchToolbar = (function () {
     document.head.appendChild(style);
   }
 
-  function init(toolbarEl) {
+  // `options.flags` overrides the URL flags per instance, and `options.keys: false`
+  // skips the document-level shortcuts — both so several toolbars can run on one page
+  // side by side without fighting each other (see `review.html`).
+  function init(toolbarEl, options) {
+    const settings = options || {};
     const questionsEl = toolbarEl.querySelector('.questions');
     const snackbar = toolbarEl.querySelector('#snackbar');
     const snackbarLabel = toolbarEl.querySelector('#snackbar-label');
@@ -271,6 +308,11 @@ window.ResearchToolbar = (function () {
     // when a variant is pinned in the URL or `?dev=1` is set.
     const showVariantToggle = availableVariants.includes(requestedVariant) || params.get('dev') === '1';
 
+    const FLAGS = Object.assign(readFlags(), settings.flags || {});
+    const bindKeys = settings.keys !== false;
+    // Everything gated purely by CSS reads off the card itself.
+    Object.keys(FLAGS).forEach((name) => toolbarEl.classList.toggle(`flag-${name}`, FLAGS[name]));
+
     const handle = { dragState: { suppressClick: false } };
     let presence = 'focus';
     // P24 wants the probes dismissible so they cannot break her question order.
@@ -279,6 +321,9 @@ window.ResearchToolbar = (function () {
     let floatPosition = null;
 
     let questionEls = [];
+    let questionsLine = null;
+    let contentObserver = null;
+    let scaleRafId = null;
     let insightTimer;
     let answeredTimer;
     let labelSwapTimer;
@@ -334,6 +379,7 @@ window.ResearchToolbar = (function () {
     // row it happened to.
     function showSnack(text, action) {
       if (!snackbar) return;
+      if (!FLAGS.snackactions) action = null;
       window.clearTimeout(snackTimer);
       snackbarLabel.textContent = text;
 
@@ -476,7 +522,7 @@ window.ResearchToolbar = (function () {
       });
     }
 
-    document.addEventListener('keydown', (event) => {
+    if (bindKeys) document.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowRight') return;
       if (!toolbarEl.classList.contains('visible')) return;
       if (currentVariant !== SCRIPTED_VARIANT) return;
@@ -536,7 +582,7 @@ window.ResearchToolbar = (function () {
       const next = questionEls[SCRIPT_NEXT_INDEX];
       const probeCard = next && next.nextElementSibling;
       if (!probeCard || !probeCard.classList.contains('probe-card')) return;
-      const chip = probeCard.querySelector(`.probe-chip[data-probe="${index}"]`);
+      const chip = probeCard.querySelector(`.probe-chip[data-probe="${index}"], .probe-row[data-probe="${index}"]`);
       if (!chip || chip.classList.contains('used')) return;
       chip.classList.add('used');
       // The insight comes from what the participant said, not from the card being on
@@ -551,6 +597,13 @@ window.ResearchToolbar = (function () {
     function proposeRewrite() {
       const target = questionEls[SCRIPT_REWRITE_INDEX];
       if (!target || !target.querySelector('.rewrite-proposal')) {
+        scriptBusy = false;
+        return;
+      }
+      // With the proposal switched off this is v5's behaviour: Rae simply rewrites
+      // the question and the researcher finds out afterwards.
+      if (!FLAGS.proposal) {
+        acceptRewrite(target);
         scriptBusy = false;
         return;
       }
@@ -648,6 +701,9 @@ window.ResearchToolbar = (function () {
     // itself, so the control says what it is about to do rather than just "next" —
     // there was no visible way to move the session on at all before.
     const scriptBeats = [
+      // Without the recording gate the opening sequence has nothing to hang off, so it
+      // goes back to being the first beat — v5's behaviour.
+      ...(FLAGS.recording ? [] : [{ label: 'Begin', run: playScriptedSequence }]),
       { label: 'Next question', run: () => focusQuestion(SCRIPT_NEXT_INDEX) },   // Q2 takes the top slot
       { label: 'Log the answer', run: answerNextQuestion },                      // Q2 ticked (+1), probes open
       { label: 'Mark probe 2.1', run: () => tickProbe(0) },                      // 2.1 ticked (+1)
@@ -659,7 +715,7 @@ window.ResearchToolbar = (function () {
     function updateNextLabel() {
       if (!nextButton) return;
       const beat = scriptBeats[scriptStep];
-      nextButton.hidden = !beat || !recording;
+      nextButton.hidden = !beat || !recording || !FLAGS.advance;
       if (beat && nextLabel) nextLabel.textContent = beat.label;
     }
 
@@ -696,6 +752,15 @@ window.ResearchToolbar = (function () {
     // P25 asked for "section 1 of 5 complete", not scroll position.
     function updateProgress() {
       if (!progressEl) return;
+      if (!FLAGS.sections) {
+        // v5's bar was decorative: four segments, the first half-filled, never moving.
+        [...progressEl.children].forEach((segment, index) => {
+          segment.style.background = index === 0
+            ? 'linear-gradient(90deg, #8e8e8e 49%, #d9d9d9 49%)'
+            : '#d9d9d9';
+        });
+        return;
+      }
       const done = answeredCount();
       const total = questionEls.length || 1;
       [...progressEl.children].forEach((segment, index) => {
@@ -761,7 +826,7 @@ window.ResearchToolbar = (function () {
 
     function applyPresence(mode) {
       PRESENCE_MODES.forEach((name) => toolbarEl.classList.toggle(`presence-${name}`, name === mode));
-      document.body.dataset.raePresence = mode;
+      if (bindKeys) document.body.dataset.raePresence = mode;
       presenceButtons.forEach((button) => {
         const on = button.dataset.presence === mode;
         button.classList.toggle('is-on', on);
@@ -838,6 +903,7 @@ window.ResearchToolbar = (function () {
       });
     }
 
+    if (!FLAGS.presence) presenceButtons.forEach((button) => { button.hidden = true; });
     presenceButtons.forEach((button) => {
       button.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -892,6 +958,38 @@ window.ResearchToolbar = (function () {
         if (t < 1) snapAnimationId = requestAnimationFrame(step);
       }
       snapAnimationId = requestAnimationFrame(step);
+    }
+
+    // Both of these are v5 behaviours that v5.1 removed. They stay reachable behind
+    // `?scaling=on` / `?line=on` so the removal can be judged rather than assumed.
+    function updateQuestionScales() {
+      if (!FLAGS.scaling) return;
+      const containerTop = questionsEl.getBoundingClientRect().top + listOffset();
+      questionEls.forEach((question) => {
+        const distance = Math.abs(question.getBoundingClientRect().top - containerTop);
+        const t = Math.min(1, distance / QUESTION_SCALE_FALLOFF);
+        question.style.transform = `scale(${1 - t * (1 - QUESTION_MIN_SCALE)})`;
+      });
+    }
+
+    function updateQuestionsLine() {
+      if (!questionsLine || !questionEls.length) return;
+      const first = questionEls[0].querySelector('.question-number');
+      const last = questionEls[questionEls.length - 1].querySelector('.question-number');
+      if (!first || !last) return;
+      const originY = questionsEl.getBoundingClientRect().top - questionsEl.scrollTop;
+      const top = first.getBoundingClientRect().top - originY;
+      const bottom = last.getBoundingClientRect().bottom - originY;
+      questionsLine.style.top = `${top}px`;
+      questionsLine.style.height = `${Math.max(0, bottom - top)}px`;
+    }
+
+    // Probe cards, rewrites and notes all animate their height, which moves the ends.
+    function observeContentSize() {
+      if (!FLAGS.line || typeof ResizeObserver === 'undefined') return;
+      if (contentObserver) contentObserver.disconnect();
+      contentObserver = new ResizeObserver(() => updateQuestionsLine());
+      [...questionsEl.children].forEach((child) => contentObserver.observe(child));
     }
 
     // Undo, Use this and Keep original all live inside the question list, which is
@@ -1015,7 +1113,7 @@ window.ResearchToolbar = (function () {
       });
     }
 
-    document.addEventListener('keydown', (event) => {
+    if (bindKeys) document.addEventListener('keydown', (event) => {
       if (event.key !== 'n' && event.key !== 'N') return;
       if (!toolbarEl.classList.contains('visible')) return;
       if (toolbarEl.classList.contains('session-complete')) return;
@@ -1144,7 +1242,7 @@ window.ResearchToolbar = (function () {
 
       // What you say before the first question. It opens the session, and it is where
       // the consent to record actually happens.
-      if (script.briefing) {
+      if (script.briefing && FLAGS.briefing) {
         const briefing = document.createElement('section');
         briefing.className = 'briefing open';
         briefing.innerHTML = `<button class="briefing-head" type="button">`
@@ -1160,14 +1258,19 @@ window.ResearchToolbar = (function () {
       }
 
       // The section the researcher is in, pinned above the questions it governs.
-      const head = document.createElement('div');
-      head.className = 'section-head';
-      head.innerHTML = `<span class="section-where">Section ${ACTIVE_SECTION_INDEX + 1} of ${sections.length}</span>`
-        + `<span class="section-name">${section.name}</span>`
-        + `<span class="section-counter">0 of ${set.length}</span>`;
-      questionsEl.appendChild(head);
-      sectionHeadEl = head;
-      sectionCounterEl = head.querySelector('.section-counter');
+      const head = FLAGS.sections ? document.createElement('div') : null;
+      if (head) head.className = 'section-head';
+      if (head) {
+        head.innerHTML = `<span class="section-where">Section ${ACTIVE_SECTION_INDEX + 1} of ${sections.length}</span>`
+          + `<span class="section-name">${section.name}</span>`
+          + `<span class="section-counter">0 of ${set.length}</span>`;
+        questionsEl.appendChild(head);
+        sectionHeadEl = head;
+        sectionCounterEl = head.querySelector('.section-counter');
+      } else {
+        sectionHeadEl = null;
+        sectionCounterEl = null;
+      }
 
       set.forEach((q, index) => {
         const questionDiv = document.createElement('div');
@@ -1193,7 +1296,7 @@ window.ResearchToolbar = (function () {
         // The panel says "Rae is taking notes"; this is the note. It is set apart from
         // the script — smaller, grey, behind its own rule — because P22 could not tell
         // the two apart when the panel showed only questions.
-        const note = q.note
+        const note = (q.note && FLAGS.notes)
           ? `<div class="rae-note">
                <div class="note-body">
                  <p class="note-text">${q.note}</p>
@@ -1212,6 +1315,16 @@ window.ResearchToolbar = (function () {
           probeCard.setAttribute('aria-label', 'Suggested probes');
           // A keyword is what arrives while the participant is still talking; the
           // sentence is there for whoever wants to read it.
+          // v5 showed each probe as a full sentence in its own row. P25 asked for
+          // keywords instead; `?probes=off` puts the sentences back.
+          if (!FLAGS.probes) {
+            const rows = q.probes
+              .map((p, i) => `<div class="probe-row" data-probe="${i}"><span class="probe-row-number">${p.number}</span><p class="probe-question">${p.text}</p></div>`)
+              .join('');
+            probeCard.innerHTML = `<p class="probe-title probe-title-legacy">Consider probing</p>${rows}`;
+            questionsEl.appendChild(probeCard);
+            return;
+          }
           const chips = q.probes
             .map((p, i) => `<button class="probe-chip" type="button" data-probe="${i}">`
               + `<svg class="chip-tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 6.2 4.6 9.3 10.5 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
@@ -1231,7 +1344,7 @@ window.ResearchToolbar = (function () {
 
       // The rest of the script, named and counted but not unpacked. P24 praised the
       // sectioning; the confusion was only ever about how much there is.
-      if (sections.length > 1) {
+      if (sections.length > 1 && FLAGS.sections) {
         const upcoming = document.createElement('section');
         upcoming.className = 'upcoming';
         const rows = sections.slice(ACTIVE_SECTION_INDEX + 1)
@@ -1254,12 +1367,24 @@ window.ResearchToolbar = (function () {
       spacer.setAttribute('aria-hidden', 'true');
       questionsEl.appendChild(spacer);
 
+      if (FLAGS.line) {
+        questionsLine = document.createElement('span');
+        questionsLine.className = 'questions-line';
+        questionsLine.setAttribute('aria-hidden', 'true');
+        questionsEl.prepend(questionsLine);
+      } else {
+        questionsLine = null;
+      }
+
       questionEls = [...questionsEl.querySelectorAll('.question')];
       questionEls[0].classList.add('active');
       bindStatusControls();
       bindQuestionInteractions(variant);
-      renderProgressSegments(sections.length);
+      renderProgressSegments(FLAGS.sections ? sections.length : 4);
       updateProgress();
+      observeContentSize();
+      updateQuestionScales();
+      updateQuestionsLine();
     }
 
     // The bar has one segment per section, so it is rebuilt with the script.
@@ -1276,6 +1401,13 @@ window.ResearchToolbar = (function () {
     });
 
     questionsEl.addEventListener('scroll', () => {
+      if ((FLAGS.scaling || FLAGS.line) && !scaleRafId) {
+        scaleRafId = requestAnimationFrame(() => {
+          updateQuestionScales();
+          updateQuestionsLine();
+          scaleRafId = null;
+        });
+      }
       if (currentVariant === SCRIPTED_VARIANT) return;
       window.clearTimeout(scrollActiveTimer);
       scrollActiveTimer = window.setTimeout(() => {
@@ -1291,7 +1423,7 @@ window.ResearchToolbar = (function () {
       }, 120);
     });
 
-    document.addEventListener('keydown', (event) => {
+    if (bindKeys) document.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
       if (!toolbarEl.classList.contains('visible')) return;
       if (currentVariant === SCRIPTED_VARIANT) return;
@@ -1312,7 +1444,7 @@ window.ResearchToolbar = (function () {
     function reset() {
       scriptStep = 0;
       scriptBusy = false;
-      setRecording(false);
+      setRecording(!FLAGS.recording);
       toolbarEl.classList.remove('session-complete', 'has-finish');
       if (finishButton) finishButton.classList.remove('visible');
       renderQuestions(currentVariant);
@@ -1326,7 +1458,7 @@ window.ResearchToolbar = (function () {
       currentVariant = variant;
       scriptStep = 0;
       scriptBusy = false;
-      setRecording(false);
+      setRecording(!FLAGS.recording);
       toolbarEl.classList.remove('session-complete', 'has-finish');
       if (finishButton) finishButton.classList.remove('visible');
       renderQuestions(currentVariant);
@@ -1350,7 +1482,7 @@ window.ResearchToolbar = (function () {
     }
     setPresence(readStored(PRESENCE_KEY) || 'focus', { immediate: true, remember: false });
     applySuggestions();
-    setRecording(false);
+    setRecording(!FLAGS.recording);
 
     let toggleButton = null;
     if (showVariantToggle) {
@@ -1372,5 +1504,5 @@ window.ResearchToolbar = (function () {
     return handle;
   }
 
-  return { init, SCRIPTS };
+  return { init, SCRIPTS, FLAG_DEFAULTS };
 })();

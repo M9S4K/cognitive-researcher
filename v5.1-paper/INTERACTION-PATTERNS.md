@@ -729,3 +729,43 @@ batch 3. Only the `?dev=1` variant chip reaches it, which is why it never surfac
 
 **CSS note:** `.next-beat` sets `display: flex`, which beats the `hidden` attribute — hence the
 explicit `.next-beat[hidden] { display: none; }`. Any new footer control needs the same.
+
+### Reviewing the changes — `review.html`
+
+Every change v5.1 made to the assistant can be switched off, so it can be judged on its own rather
+than as part of the pile.
+
+**Flags.** `FLAG_DEFAULTS` in `research-toolbar.js` lists them; `readFlags()` reads
+`?notes=off&scaling=on` style parameters from the URL. `true` is v5.1's behaviour, so the two v5
+things v5.1 *removed* — `scaling` and `line` — default to **false** and turning them on restores
+v5. Each flag also lands on the card as `.flag-<name>` for the rules that are pure CSS.
+
+| Flag | Off gives you |
+|---|---|
+| `recording` | v5: no idle state, recording from the first click, opening sequence back as beat 1 |
+| `briefing` | no preamble above the first question |
+| `advance` | no Next button — clicking the list is the only way on |
+| `sections` | a flat list of four and v5's decorative progress bar |
+| `notes` | no notes under questions, no lane of your own |
+| `probes` | full-sentence probe rows instead of keyword chips |
+| `status` | v5's single check mark, no stamps, skip chips or paraphrase tags |
+| `proposal` | Rae rewrites the question instead of offering to |
+| `snackactions` | snackbar messages with no undo in them |
+| `presence` | one fixed card, no modes and no resizing |
+| `scaling` / `line` | **on** restores v5's focus scaling and connector line |
+
+**`init(el, options)`.** `options.flags` overrides the URL per instance and `options.keys: false`
+skips the document-level shortcuts, so several toolbars can run on one page without fighting over
+`N`, `→` or `document.body.dataset.raePresence`. That is what `review.html` uses.
+
+**`review.html` / `review.js`** lift the card's markup *and* its stylesheet out of `windows.html` at
+load, so the harness can never drift from the real thing. Two consequences worth knowing:
+- `windows.html`'s sheet carries `body`, `html` and bare `button` rules for the desktop screen, so
+  the review page's own `<style id="review-style">` is re-appended **after** it to win on equal
+  specificity.
+- The card is `position: absolute` inside the meeting window, so the harness resets it to
+  `relative` and gives it `--rae-h: 580px` — there is no resize grip with `presence` held off, and
+  190px of question list is not enough to judge anything by.
+
+Notes save to `localStorage` under `rae-review-notes` and export to **`REVIEW.md`** at the repo
+root, which is committed with every change listed and undecided.

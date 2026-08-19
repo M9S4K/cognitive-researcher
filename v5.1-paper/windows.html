@@ -437,6 +437,54 @@
     .next-beat[hidden] { display: none; }
     .next-beat kbd, .finish-session kbd { min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 3px; border: 1px solid rgb(255 255 255 / 45%); border-radius: 4px; color: #fff; font: 500 11px/1 'Roboto Condensed', Inter, sans-serif; }
 
+    /* ---------------------------------------------------------------- flags
+       Each v5.1 change can be switched off from the URL so it can be judged on its
+       own. `.flag-x` is present when x is ON, so the "off" rules read as :not(). */
+
+    /* status: back to v5's single check mark, with no stamp, chip or tag. */
+    .research-toolbar:not(.flag-status) .question-stamp,
+    .research-toolbar:not(.flag-status) .skip-note,
+    .research-toolbar:not(.flag-status) .question-tag,
+    .research-toolbar:not(.flag-status) .legend-btn { display: none; }
+    .research-toolbar:not(.flag-status) .question.answered .question-text,
+    .research-toolbar:not(.flag-status) .question.skipped .question-text { color: inherit; text-decoration: none; }
+    .research-toolbar:not(.flag-status) .question.answered .question-number,
+    .research-toolbar:not(.flag-status) .question.skipped .question-number { position: relative; color: transparent; background: #3e3e3e; }
+    .research-toolbar:not(.flag-status) .question.answered .question-number::after,
+    .research-toolbar:not(.flag-status) .question.skipped .question-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 17px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+    .research-toolbar:not(.flag-status) .question.answered,
+    .research-toolbar:not(.flag-status) .question.skipped { opacity: .7; }
+
+    /* notes: no note under the question, and no lane of your own. */
+    .research-toolbar:not(.flag-notes) .manual-notes { display: none; }
+
+    /* recording: no idle state, so the chip is just the clock again. */
+    .research-toolbar:not(.flag-recording) .rec-dot,
+    .research-toolbar:not(.flag-recording) .rec-label,
+    .research-toolbar:not(.flag-recording) .start-rec { display: none; }
+    .research-toolbar:not(.flag-recording) .rec-chip { border-color: transparent; background: transparent; }
+
+    /* presence: one fixed card, no modes and no resizing. */
+    /* the suggestions switch belongs to the probes change */
+    .research-toolbar:not(.flag-probes) .suggest-toggle { display: none; }
+    .research-toolbar:not(.flag-presence) .presence-switch,
+    .research-toolbar:not(.flag-presence) .resize-grip { display: none; }
+
+    /* advance: no footer control — clicking the list is the only way on, as in v5. */
+    .research-toolbar:not(.flag-advance) .toolbar-foot { justify-content: flex-end; }
+
+    /* scaling + line: the two things v5.1 removed, restored for comparison. */
+    .research-toolbar.flag-scaling .question { transform-origin: left top; }
+    .questions-line { position: absolute; left: 38px; width: 2px; background: #efefed; pointer-events: none; }
+
+    /* probes as full sentences, the way v5 showed them. */
+    .probe-title-legacy { color: #676767; font: 15px/21px 'Geist Pixel', Inter, sans-serif; letter-spacing: 0; text-transform: none; }
+    .probe-row { display: flex; gap: 9px; align-items: flex-start; margin-top: 10px; cursor: pointer; }
+    .probe-row-number { display: grid; place-items: center; width: 30px; height: 25px; flex: none; border-radius: 40px; background: #e1e1e1; color: #585858; font-size: 14px; font-weight: 600; }
+    .probe-question { margin: 1px 0 0; font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .probe-row.used .probe-row-number { position: relative; color: transparent; background: #3e3e3e; }
+    .probe-row.used .probe-row-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 15px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
     .finish-session { display: none; align-items: center; gap: 8px; margin-left: auto; padding: 10px 12px 10px 15px; border: 0; border-radius: 11px; background: #161414; color: #fff; font: 600 13px/1 Inter, sans-serif; cursor: pointer; }
     .finish-session:hover { transform: none; background: #000; }
     .finish-session.visible { display: flex; }
