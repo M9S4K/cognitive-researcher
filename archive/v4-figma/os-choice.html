@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rae — Choose your OS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; min-height: 100%;
+    background: #282828;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  body {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: clamp(48px, 10vh, 110px);
+    padding: clamp(24px, 6vw, 64px);
+    text-align: center;
+  }
+
+  h1 {
+    color: #fff;
+    font-weight: 400;
+    font-size: clamp(24px, 4vw, 52px);
+    line-height: 1.2;
+    max-width: 640px;
+  }
+
+  .options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: clamp(32px, 8vw, 130px);
+  }
+
+  .option {
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 23px;
+    color: #fff; font-family: inherit;
+    width: clamp(120px, 20vw, 190px);
+    padding: 8px; border-radius: 12px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .option:hover { transform: translateY(-4px); }
+  .option:active { transform: translateY(-1px) scale(0.98); }
+  .option:focus-visible { outline: 2px solid #7c9885; outline-offset: 6px; }
+
+  .option-label { font-size: clamp(18px, 2.4vw, 32px); font-weight: 400; }
+
+  .icon-windows {
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+    gap: 3px;
+    width: clamp(72px, 12vw, 176px); height: clamp(72px, 12vw, 176px);
+  }
+  .icon-windows span { background: #e3e3e3; }
+
+  .icon-mac {
+    width: clamp(72px, 12vw, 188px); height: clamp(72px, 12vw, 188px);
+    object-fit: contain;
+  }
+
+  #hint { position: fixed; left: 24px; bottom: 20px; color: rgba(255,255,255,0.4); font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>Please choose the OS you&rsquo;re comfortable with</h1>
+  <div class="options">
+    <button class="option" id="btnWindows">
+      <div class="icon-windows"><span></span><span></span><span></span><span></span></div>
+      <div class="option-label">Windows</div>
+    </button>
+    <button class="option" id="btnMac">
+      <img class="icon-mac" src="assets/macos-finder-icon.png" alt="">
+      <div class="option-label">MacOS</div>
+    </button>
+  </div>
+  <div id="hint">Choose an OS to continue</div>
+
+<script>
+  function choose(os) {
+    try { localStorage.setItem('rae-os', os); } catch (e) {}
+    window.location.href = 'setup.html?os=' + os;
+  }
+  document.getElementById('btnWindows').addEventListener('click', () => choose('windows'));
+  document.getElementById('btnMac').addEventListener('click', () => choose('mac'));
+</script>
+</body>
+</html>

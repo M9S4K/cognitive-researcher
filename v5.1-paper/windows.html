@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rae — Windows desktop (v5.1)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-width: 960px; min-height: 100%; margin: 0; }
+    body { overflow-x: auto; background: #282828; font-family: Inter, system-ui, sans-serif; }
+
+    .desktop {
+      position: relative;
+      min-width: 960px;
+      min-height: 100vh;
+      overflow: hidden;
+      background: #282828;
+    }
+
+    .folders {
+      position: absolute;
+      top: 36px;
+      left: 34px;
+      display: flex;
+      flex-direction: column;
+      gap: 27px;
+    }
+    .folder { width: 80px; }
+    .folder-icon { width: 80px; height: 80px; border-radius: 9px; background: #474747; }
+    .folder-label { width: 56px; height: 15px; margin-top: 10px; border-radius: 2px; background: #474747; }
+
+    .notification {
+      position: absolute;
+      right: clamp(24px, 2.36vw, 34px);
+      bottom: 100px;
+      width: 442px;
+      padding: 20px 24px;
+      border-radius: 16px;
+      background: #fff;
+      color: #000;
+      transition: transform 220ms ease, opacity 180ms ease;
+    }
+    .notification.hidden { transform: translateX(calc(100% + 40px)); opacity: 0; pointer-events: none; }
+    .notification-head { display: flex; flex-direction: column; gap: 4px; }
+    .eyebrow { margin: 0; font-size: 17px; font-weight: 400; line-height: 1.4; }
+    h1 { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.4; }
+    .actions { display: flex; gap: 17px; margin-top: 12px; }
+    button { border: 0; border-radius: 87px; padding: 12px; cursor: pointer; font: 700 18px/22px Inter, system-ui, sans-serif; transition: transform 150ms ease, opacity 150ms ease; }
+    button:hover { transform: translateY(-1px); }
+    button:focus-visible { outline: 2px solid #161414; outline-offset: 3px; }
+    .prepare { display: flex; align-items: center; gap: 8px; padding-inline: 20px; background: #161414; color: #fff; }
+    .dismiss { background: #efefef; color: #161414; }
+
+    .shortcut { display: flex; align-items: center; gap: 5px; }
+    .shortcut kbd { min-width: 19px; height: 19px; display: grid; place-items: center; padding: 0 4px; border: 1px solid rgb(255 255 255 / 50%); border-radius: 4px; color: #fff; font: 500 12px/1 'Roboto Condensed', Inter, sans-serif; }
+
+    .modal-backdrop {
+      position: fixed;
+      z-index: 2;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding-bottom: 80px;
+      background: rgb(0 0 0 / 18%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+    .modal-backdrop.visible { opacity: 1; pointer-events: auto; }
+    .script-modal {
+      width: 685px;
+      height: 500px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #fff;
+      color: #000;
+      box-shadow: 0 18px 60px rgb(0 0 0 / 25%);
+      opacity: 0;
+      transform: translateY(12px) scale(.985);
+      transition: transform 220ms ease, opacity 180ms ease;
+    }
+    .modal-backdrop.visible .script-modal { opacity: 1; transform: translateY(0) scale(1); }
+    .script-selected {
+      position: fixed;
+      z-index: 3;
+      top: 24px;
+      left: 50%;
+      display: flex;
+      align-items: center;
+      width: 484px;
+      padding: 20px 24px;
+      border-radius: 20px;
+      background: #fff;
+      color: #000;
+      box-shadow: 0 12px 36px rgb(0 0 0 / 18%);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -16px);
+      transition: opacity 180ms ease, transform 220ms ease;
+    }
+    .script-selected.visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+    .script-selected-copy { flex: 1 1 214px; min-width: 0; }
+    .script-selected-title { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.4; }
+    .script-selected-subtitle { margin: 0; font-size: 17px; font-weight: 400; line-height: 1.4; }
+    .join-meeting { display: flex; align-items: center; gap: 10px; padding: 14px 18px 14px 20px; background: #161414; color: #fff; white-space: nowrap; }
+    .join-meeting .shortcut { gap: 5px; }
+    .browser-window {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      min-width: 960px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #c0c0c0;
+      opacity: 0;
+      pointer-events: none;
+      transform-origin: 389px calc(100% - 40px);
+      transform: scale(.028, .04);
+      will-change: transform;
+      transition: transform 560ms cubic-bezier(.22, 1, .36, 1), opacity 120ms ease;
+    }
+    .browser-window.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+    .browser-tabbar { position: relative; height: 53px; background: #4b4b4b; }
+    .window-controls { position: absolute; top: 19px; left: 22px; display: flex; gap: 10px; }
+    .window-controls span { width: 20px; height: 20px; border-radius: 50%; background: rgb(245 245 245 / 40%); }
+    .browser-tab { position: absolute; top: 6px; left: 128px; display: flex; align-items: center; gap: 10px; width: 253px; height: 48px; padding: 0 12px; border-radius: 14px 14px 0 0; background: #c0c0c0; color: #000; font-size: 16px; font-weight: 500; }
+    .browser-tab-icon { width: 28px; height: 28px; border-radius: 5px; background: #8d8b8b; }
+    .address-row { height: 54px; padding: 9px 15px; background: #c0c0c0; }
+    .address { height: 36px; overflow: hidden; border-radius: 14px; background: #b0b0b0; color: #3e3e3e; font-size: 15px; line-height: 36px; padding: 0 17px; white-space: nowrap; text-overflow: ellipsis; }
+    .meeting-toolbar { position: relative; height: 82px; border-bottom: 1px solid rgb(0 0 0 / 10%); background: #d9d9d9; }
+    .teams-app { position: absolute; top: 16px; left: 13px; display: grid; place-items: center; width: 57px; color: #000; font-size: 11px; font-weight: 500; text-align: center; }
+    .teams-logo { width: 32px; height: 32px; margin-bottom: 3px; border-radius: 5px; background: #8d8b8b; }
+    .toolbar-divider { position: absolute; top: 16px; left: 81px; width: 1px; height: 49px; background: rgb(0 0 0 / 10%); }
+    .call-time { position: absolute; top: 29px; left: 101px; font-size: 14px; font-weight: 500; }
+    .participants { position: absolute; top: 14px; right: 160px; display: flex; gap: 24px; }
+    .participant { width: 46px; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+    .participant i { width: 28px; height: 28px; border-radius: 5px; background: #b1b1b1; }
+    .participant b { width: 46px; height: 8px; border-radius: 3px; background: #b1b1b1; }
+    .leave-call { position: absolute; top: 18px; right: 15px; display: flex; align-items: center; gap: 10px; padding: 10px 16px 10px 20px; border-radius: 11px; background: #555; color: #fff; font: 600 18px/22px Inter, sans-serif; }
+    .hangup { width: 22px; height: 9px; border-top: 4px solid #fff; border-radius: 50%; transform: rotate(180deg); }
+    .meeting-body { display: flex; height: calc(100vh - 189px); min-height: 500px; }
+    .teams-sidebar { width: 82px; flex: none; padding-top: 18px; border-right: 1px solid rgb(0 0 0 / 10%); background: #d9d9d9; }
+    .teams-sidebar .participant { margin: 0 auto 24px; }
+    .call-stage { position: relative; flex: 1; display: grid; place-items: center; background: #a6a6a6; }
+    .avatar { display: grid; place-items: center; width: 200px; height: 200px; border-radius: 50%; background: #656565; color: #e2e2e2; font-size: 82px; font-weight: 500; letter-spacing: -.04em; }
+    .research-toolbar {
+      position: absolute;
+      z-index: 2;
+      top: 124px;
+      left: calc(50% - 214px);
+      --rae-head: 116px;
+      width: var(--rae-w, 429px);
+      height: var(--rae-h, 363px);
+      color: #000;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
+      transition: opacity 220ms ease, transform 240ms ease, width 360ms cubic-bezier(0.32, 0.72, 0, 1), height 360ms cubic-bezier(0.32, 0.72, 0, 1);
+      cursor: grab;
+    }
+    .research-toolbar.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .research-toolbar:active { cursor: grabbing; }
+    .toolbar-surface {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid rgb(126 126 126 / 20%);
+      border-radius: 20px;
+      background: #fcfcfa;
+      box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%);
+      transition: opacity 260ms ease;
+    }
+    .toolbar-header { position: relative; height: var(--rae-head); padding: 26px 26px 0; border-bottom: 1px solid #d1d1d1; background: #eaeaea; cursor: grab; touch-action: none; }
+    .toolbar-header:active { cursor: grabbing; }
+    .drag-handle { position: absolute; top: 8px; left: 50%; width: 53px; height: 9px; cursor: grab; transform: translateX(-50%); background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; touch-action: none; }
+    .drag-handle:active { cursor: grabbing; }
+    .toolbar-id { display: flex; align-items: center; gap: 5px; }
+    .legend-btn { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: none; color: #8f8f8d; cursor: pointer; }
+    .legend-btn:hover { transform: none; color: #161414; }
+    .legend-btn svg { width: 13px; height: 13px; }
+    .legend { position: absolute; z-index: 6; top: 46px; left: 24px; width: 312px; padding: 14px 16px 15px; border: 1px solid rgb(0 0 0 / 7%); border-radius: 14px; background: #fff; box-shadow: 0 10px 34px rgb(0 0 0 / 12%); }
+    .legend-title { margin: 0 0 10px; color: #000; font: 600 12px/16px Inter, sans-serif; }
+    .legend-row { display: flex; align-items: baseline; gap: 11px; margin-top: 9px; }
+    .legend-mark { flex: none; width: 104px; color: #3e3e3e; font: 500 12px/16px Inter, sans-serif; }
+    .legend-answered { color: #9e9e9c; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #c4c4c2; }
+    .legend-mark .question-tag { margin: 0; vertical-align: 0; }
+    .legend-mark .status-chip { padding: 2px 7px; font-size: 11px; }
+    .legend-copy { color: #7e7e7d; font: 400 12px/16px Inter, sans-serif; }
+
+    .toolbar-kicker { margin: 0; font-size: 10px; font-weight: 300; letter-spacing: .11em; line-height: 14px; text-transform: uppercase; }
+    .toolbar-title { width: max-content; margin: 2px 0 0; background: linear-gradient(105deg, #111 0%, #111 40%, #a3a3a3 50%, #111 60%, #111 100%); background-size: 250% 100%; background-clip: text; -webkit-background-clip: text; color: transparent; font-size: 18px; font-weight: 500; line-height: 25px; animation: note-shimmer 5.8s ease-in-out infinite; }
+    /* The recording chip is the one piece of chrome that survives every presence
+       mode: P21 asked for proof the assistant is still listening when it is out of
+       the way. Monochrome, per the palette — the pulse carries the "live", not a colour. */
+    .rec-chip { position: absolute; top: 24px; right: 24px; display: flex; align-items: center; gap: 7px; padding: 4px 9px 4px 8px; border: 1px solid #dcdcda; border-radius: 20px; background: #fff; color: #3e3e3e; font: 500 10px/14px Inter, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .rec-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #161414; animation: rec-pulse 2.4s cubic-bezier(0.32, 0.72, 0, 1) infinite; }
+    @keyframes rec-pulse {
+      0% { box-shadow: 0 0 0 0 rgb(22 20 20 / 30%); }
+      55% { box-shadow: 0 0 0 6px rgb(22 20 20 / 0%); }
+      100% { box-shadow: 0 0 0 0 rgb(22 20 20 / 0%); }
+    }
+    .toolbar-time { font: 500 11px/14px Inter, sans-serif; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+
+    /* Presence: the three shapes the assistant can take. P23 wants it out of the
+       way, P25 wants it big and resizable, P21 wants it minimised but visibly
+       recording — so it is a setting, not a default. */
+    .presence-switch { position: absolute; right: 24px; top: 48px; display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: #dedede; }
+    .presence-btn { display: grid; place-items: center; width: 27px; height: 22px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #77776f; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+    .presence-btn:hover { transform: none; color: #161414; }
+    .presence-btn.is-on { background: #fcfcfa; color: #161414; box-shadow: 0 1px 2px rgb(0 0 0 / 12%); }
+    .presence-btn svg { width: 15px; height: 15px; }
+
+    .manual-notes { position: absolute; left: 26px; bottom: 29px; border: 0; padding: 0; background: transparent; color: #55554f; cursor: pointer; font: 300 12px/16px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+    .manual-notes:hover { transform: none; color: #161414; }
+    .question-progress { display: flex; gap: 7px; position: absolute; right: 26px; bottom: 13px; left: 26px; }
+    .question-progress span { height: 5px; flex: 1; border-radius: 19px; background: #d9d9d9; transition: background 300ms ease; }
+    .questions { position: relative; height: calc(100% - var(--rae-head)); padding: 0 24px 30px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+    .questions::-webkit-scrollbar { display: none; }
+    /* Measured in JS to span first number → last number, so it tracks the real
+       content height instead of the fixed viewport height. */
+    .questions-line { position: absolute; left: 38px; width: 2px; background: #efefed; pointer-events: none; }
+
+    /* Where in the script you are, pinned above the questions it governs. The
+       questions scroll under it, so the answer to "how far through?" never leaves. */
+    .section-head { position: sticky; z-index: 3; top: 0; display: flex; align-items: baseline; gap: 10px; margin: 0 -24px; padding: 18px 24px 14px; background: #fcfcfa; }
+    .section-where { flex: none; color: #8a8a88; font: 500 10px/14px Inter, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+    .section-name { flex: 1 1 auto; min-width: 0; overflow: hidden; color: #161414; font: 600 13px/17px Inter, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+    .section-counter { flex: none; color: #8a8a88; font: 500 11px/15px Inter, sans-serif; font-variant-numeric: tabular-nums; transition: color 220ms ease; }
+    .section-counter.is-done { color: #161414; }
+
+    /* The rest of the script: named and counted, not unpacked. */
+    .upcoming { margin: 4px 0 0 39px; padding-top: 16px; border-top: 1px solid #ececea; }
+    .upcoming-title { margin: 0 0 10px; color: #aaaaa9; font: 500 10px/14px Inter, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+    .upcoming-row { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; transition: opacity 220ms ease; }
+    .upcoming-number { flex: none; width: 14px; color: #c2c2c0; font: 600 12px/17px Inter, sans-serif; }
+    .upcoming-name { flex: 1 1 auto; min-width: 0; overflow: hidden; color: #9e9e9c; font: 500 13px/17px Inter, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+    .upcoming-count { flex: none; color: #c2c2c0; font: 400 11px/15px Inter, sans-serif; font-variant-numeric: tabular-nums; }
+    .upcoming-row.is-next .upcoming-number, .upcoming-row.is-next .upcoming-name { color: #161414; }
+    .upcoming-row.is-next .upcoming-count { color: #8a8a88; }
+    .question { position: relative; display: flex; flex-wrap: wrap; column-gap: 9px; row-gap: 0; margin-bottom: 42px; transform-origin: left top; transition: margin-bottom 280ms ease, opacity 240ms ease; }
+    .question.answered { opacity: .7; }
+    /* Rae's reworded version of a question — reads as the next line of the same block,
+       directly under the struck-through original. */
+    .question .question-rewrite { flex-basis: 100%; max-width: none; margin: 0; padding-left: 39px; max-height: 0; opacity: 0; overflow: hidden; transform: translateY(-4px); transition: max-height 300ms ease, opacity 220ms ease, transform 260ms ease; }
+    .question.rewriting .question-text:not(.question-rewrite) { text-decoration: line-through; opacity: .55; }
+    .question.rewritten .question-rewrite { max-height: 120px; opacity: 1; transform: translateY(0); }
+    .question:not(.active) { cursor: pointer; }
+    .question-number { z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 40px; background: #e1e1e1; color: #585858; font-size: 18px; font-weight: 700; line-height: 1; transition: background-color 240ms ease, color 240ms ease; }
+    .question-text { margin: 4px 0 0; flex: 1 1 0%; min-width: 0; font-size: 18px; font-weight: 500; line-height: 1.4; transition: color 240ms ease, text-decoration-color 240ms ease; }
+    /* The lane is reserved whether or not there is a stamp in it, so a question does
+       not reflow the moment it gets one. */
+    .question-stamp { flex: none; width: 42px; margin-top: 8px; color: #aaaaa9; font: 400 12px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; text-align: right; opacity: 0; transition: opacity 260ms ease; }
+    .question.answered .question-stamp, .question.skipped .question-stamp { opacity: 1; }
+    .question:not(.active) .question-number { background: #efefed; color: #aaaaa9; }
+    .question:not(.active) .question-text { color: #7e7e7d; }
+    .questions-spacer { height: 249px; flex: none; }
+    .probe-card { max-height: 0; margin-left: 39px; overflow: hidden; border: 1px solid transparent; border-radius: 14px; background: #f6f6f6; opacity: 0; transform: translateY(-6px); transition: max-height 280ms ease, margin 280ms ease, padding 280ms ease, opacity 180ms ease, transform 240ms ease; }
+    .probe-title { margin: 0; color: #676767; font: 15px/21px 'Geist Pixel', Inter, sans-serif; }
+    .probe-row { display: flex; gap: 9px; align-items: flex-start; margin-top: 10px; cursor: pointer; }
+    .probe-number { display: grid; place-items: center; width: 30px; height: 25px; flex: none; border-radius: 40px; background: #e1e1e1; color: #585858; font-size: 14px; font-weight: 600; }
+    .probe-question { margin: 1px 0 0; font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .question.probeable { cursor: pointer; }
+    .question.expanded { margin-bottom: 15px; }
+    /* P24 asked for strike-through over a check mark: it says "this is dealt with"
+       without claiming the same mark as a probe you chose to use. */
+    .question.answered .question-text,
+    .question.skipped .question-text { color: #9e9e9c; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #c4c4c2; }
+    .question.answered .question-number,
+    .question.skipped .question-number { background: #efefed; color: #b9b9b7; }
+    .question.rewritten .question-rewrite { text-decoration: none; }
+    .question.rewritten.answered .question-rewrite { text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #c4c4c2; }
+    .question.skipped { opacity: .82; }
+
+    /* Skipped is not the same as answered, so it says which moment it is standing on. */
+    .skip-note { display: flex; align-items: center; gap: 10px; flex-basis: 100%; max-height: 0; margin-left: 39px; overflow: hidden; opacity: 0; transition: max-height 260ms ease, opacity 200ms ease, margin 260ms ease; }
+    .question.skipped .skip-note { max-height: 30px; margin-top: 9px; opacity: 1; }
+    .status-chip { padding: 3px 9px; border-radius: 20px; background: #efefed; color: #6f6f6d; font: 500 12px/16px Inter, sans-serif; }
+    .status-undo { padding: 0; border: 0; background: none; color: #55554f; cursor: pointer; font: 500 12px/16px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+    .status-undo:hover { transform: none; color: #161414; }
+
+    /* The reworded line is labelled as reworded — P22 wanted the change visible as
+       a change rather than a silent substitution. */
+    .question-tag { display: inline-block; margin-right: 8px; padding: 2px 7px; border-radius: 5px; background: #e7e7e4; color: #6f6f6d; font: 500 10px/14px Inter, sans-serif; letter-spacing: .06em; text-transform: uppercase; vertical-align: 2px; }
+
+    /* Rae proposes; the researcher decides. The original is never edited underneath
+       her — P23's condition for letting the assistant touch the script at all. */
+    .rewrite-proposal { flex-basis: 100%; max-height: 0; margin-left: 39px; overflow: hidden; border: 1px solid transparent; border-radius: 14px; background: #f6f6f6; opacity: 0; transform: translateY(-6px); transition: max-height 300ms ease, margin 280ms ease, padding 280ms ease, opacity 200ms ease, transform 260ms ease; }
+    .question.proposing .rewrite-proposal { max-height: 190px; margin: 11px 11px 0 39px; padding: 11px 14px 12px; border-color: rgb(0 0 0 / 4%); opacity: 1; transform: translateY(0); }
+    .proposal-eyebrow { margin: 0; color: #8a8a88; font: 500 10px/14px Inter, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+    .proposal-text { margin: 6px 0 0; color: #3e3e3e; font: 500 14px/1.45 Inter, sans-serif; }
+    .proposal-actions { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
+    .proposal-actions button { padding: 6px 12px; border-radius: 9px; font: 600 12px/16px Inter, sans-serif; }
+    .proposal-actions button:hover { transform: none; }
+    .proposal-use { background: #161414; color: #fff; }
+    .proposal-keep { background: #e7e7e4; color: #3e3e3e; }
+
+    .question.checked .question-number { position: relative; color: transparent; background: #3e3e3e; }
+    .question.checked .question-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 17px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+    @keyframes tick-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+    .probe-row.checked .probe-number { position: relative; color: transparent; background: #3e3e3e; }
+    .probe-row.checked .probe-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 15px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+    .probe-card.revealed { max-height: 136px; margin: 0 11px 28px 39px; padding: 10px 14px 10px; border-color: rgb(0 0 0 / 3%); opacity: 1; transform: translateY(0); }
+
+    /* Compact — the whole assistant folded down to a draggable strip. Keeps the
+       recording dot, where you are, and the insight count; everything else waits. */
+    .compact-bar { display: none; align-items: center; gap: 11px; height: 100%; padding: 0 9px 0 15px; }
+    .compact-bar .rec-dot { align-self: center; }
+    /* Advancing is a click on the copy, dragging is a grab on the strip — the same
+       split the full card makes between its question list and its header. */
+    .compact-copy { flex: 1 1 auto; min-width: 0; cursor: pointer; }
+    .compact-meta { margin: 0; color: #8a8a88; font: 500 9.5px/13px Inter, sans-serif; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Two lines, so a reworded question is readable rather than cut off after five words. */
+    .compact-question { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 2px 0 0; overflow: hidden; color: #3e3e3e; font: 500 13px/17px Inter, sans-serif; }
+    .compact-count { display: flex; align-items: center; gap: 4px; flex: none; color: #717171; font: 700 13px/1 Inter, sans-serif; }
+    .compact-finish { display: none; flex: none; padding: 8px 11px; border-radius: 9px; background: #161414; color: #fff; font: 600 12px/1 Inter, sans-serif; }
+    .compact-finish:hover { transform: none; }
+    .research-toolbar.has-finish .compact-finish { display: block; }
+    .compact-expand { display: grid; place-items: center; width: 28px; height: 28px; flex: none; padding: 0; border: 0; border-radius: 8px; background: #efefed; color: #3e3e3e; cursor: pointer; }
+    .compact-expand:hover { transform: none; background: #e3e3e0; }
+    .compact-expand svg { width: 13px; height: 13px; }
+
+    .research-toolbar.presence-compact { width: 448px; height: 74px; }
+    .research-toolbar.presence-compact .toolbar-header,
+    .research-toolbar.presence-compact .questions,
+    .research-toolbar.presence-compact .insight-counter,
+    .research-toolbar.presence-compact .insight-plus,
+    .research-toolbar.presence-compact .finish-session,
+    .research-toolbar.presence-compact .snackbar,
+    .research-toolbar.presence-compact .resize-grip { display: none; }
+    .research-toolbar.presence-compact .compact-bar { display: flex; }
+    .research-toolbar.presence-compact .toolbar-surface { cursor: grab; }
+    .research-toolbar.presence-compact .toolbar-surface:active { cursor: grabbing; }
+
+    /* Dock — pinned to the edge of the meeting instead of floating over it, and the
+       call stage gives up the width rather than being covered (P23's overlap). */
+    .research-toolbar.presence-dock { top: 189px; right: 0; bottom: 0; left: auto; width: 392px; height: auto; }
+    .research-toolbar.presence-dock .toolbar-surface { border-width: 0 0 0 1px; border-radius: 0; box-shadow: -10px 0 44px rgb(0 0 0 / 7%); }
+    .research-toolbar.presence-dock .drag-handle,
+    .research-toolbar.presence-dock .resize-grip { display: none; }
+    .research-toolbar.presence-dock,
+    .research-toolbar.presence-dock .toolbar-header { cursor: default; }
+    .research-toolbar.presence-dock .complete-surface { border-radius: 0; }
+    .call-stage { transition: margin-right 340ms cubic-bezier(0.32, 0.72, 0, 1); }
+    body[data-rae-presence="dock"] .call-stage { margin-right: 392px; }
+
+    /* The three modes are different shapes; crossfading reads as a deliberate
+       switch where tweening the geometry reads as a glitch. */
+    .research-toolbar.presence-switching { opacity: 0; transition: opacity 130ms ease; }
+    .research-toolbar.resizing { transition: none; }
+
+    .resize-grip { position: absolute; z-index: 3; right: 1px; bottom: 1px; width: 20px; height: 20px; opacity: 0; cursor: nwse-resize; touch-action: none; transition: opacity 180ms ease; }
+    .resize-grip::after { content: ''; position: absolute; right: 5px; bottom: 5px; width: 8px; height: 8px; border-right: 2px solid #b6b6b4; border-bottom: 2px solid #b6b6b4; border-radius: 0 0 3px 0; }
+    .research-toolbar:hover .resize-grip { opacity: 1; }
+    .research-toolbar.session-complete .resize-grip { display: none; }
+
+    .finish-session { position: absolute; z-index: 2; left: 14px; bottom: 11px; display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 14px; border: 0; border-radius: 12px; background: #161414; color: #fff; font: 600 13px/1 Inter, sans-serif; cursor: pointer; opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity 240ms ease, transform 260ms cubic-bezier(0.34, 1.4, 0.64, 1); }
+    .finish-session.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .finish-session kbd { min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 3px; border: 1px solid rgb(255 255 255 / 50%); border-radius: 4px; color: #fff; font: 500 11px/1 'Roboto Condensed', Inter, sans-serif; }
+
+    /* Session complete — swaps in over the toolbar once the session is finished. */
+    .complete-surface { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 34px 14px 16px; border: 1px solid rgb(126 126 126 / 20%); border-radius: 20px; background: #fcfcfa; box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%); opacity: 0; pointer-events: none; transition: opacity 300ms ease; }
+    .research-toolbar.session-complete { height: calc(var(--rae-h, 363px) + 54px); }
+    .research-toolbar.session-complete .toolbar-surface { opacity: 0; pointer-events: none; }
+    .research-toolbar.session-complete .complete-surface { opacity: 1; pointer-events: auto; }
+    .complete-handle { position: absolute; top: 10px; left: 50%; width: 53px; height: 9px; flex: none; transform: translateX(-50%); background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; }
+    .complete-head { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .complete-check { display: grid; place-items: center; width: 86.66px; height: 86.66px; flex: none; border-radius: 50%; background: #e0e0e0; outline: 5.42px solid #fcfcfa; }
+    .complete-check svg { width: 44.13px; height: 29.83px; }
+    .complete-copy { display: flex; flex-direction: column; align-items: center; }
+    .complete-title { margin: 0; color: #000; font: 500 24px/140% Inter, sans-serif; text-align: center; }
+    .complete-metrics { display: flex; align-items: center; justify-content: center; gap: 24px; }
+    .metric { position: relative; display: flex; flex-direction: column; align-items: center; width: 83px; flex: none; }
+    .metric-value { color: #2e2e2e; font: 400 32px/120% 'Mona Sans', Inter, sans-serif; text-align: center; }
+    .metric-label { color: #000; font: 400 14.73px/140% Inter, sans-serif; text-align: center; }
+    .metric-sparkle { position: absolute; left: 6px; top: -1px; width: 18.42px; height: 18.42px; color: #2e2e2e; }
+    .view-doc { align-self: stretch; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 18px 16px 20px; border: 0; border-radius: 16px; background: #161414; color: #fff; font: 600 18px/22px Inter, sans-serif; cursor: pointer; }
+
+    .sparkle-icon { width: 14px; height: 14px; flex: none; }
+
+    /* A timed snackbar, not a pill that slides out from under the card and morphs
+       its own width. P23 found the old format too prominent for what it says. */
+    .snackbar {
+      position: absolute;
+      z-index: 2;
+      bottom: 14px;
+      left: 50%;
+      max-width: calc(100% - 40px);
+      padding: 8px 14px;
+      border: 1px solid rgb(0 0 0 / 6%);
+      border-radius: 11px;
+      background: #f2f2f0;
+      color: #3e3e3e;
+      font: 500 13px/17px Inter, sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 8px);
+      transition: opacity 200ms ease, transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .snackbar.visible { opacity: 1; transform: translate(-50%, 0); }
+    /* Finish Session takes the bottom-left corner, so the snackbar steps up over it. */
+    .research-toolbar.has-finish .snackbar { bottom: 56px; }
+    @media (prefers-reduced-motion: reduce) {
+      .snackbar { transition-duration: 1ms; }
+      .question-number::after, .probe-number::after { animation: none; }
+    }
+    .insight-counter {
+      position: absolute;
+      z-index: 1;
+      right: 7px;
+      bottom: 11px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px 3px 6px;
+      border-radius: 11px 8px 11px 8px;
+      background: #e1e1e1;
+      color: #717171;
+      font: 700 14px/1.2 Inter, sans-serif;
+      opacity: 0;
+      transform: translateY(5px);
+      transition: opacity 220ms ease, transform 240ms ease;
+    }
+    .insight-counter.visible { opacity: 1; transform: translateY(0); }
+    .insight-plus {
+      position: absolute;
+      z-index: 1;
+      right: 12px;
+      bottom: 32px;
+      color: #3e3e3e;
+      font: 700 14px/1 Inter, sans-serif;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .insight-plus.floating { animation: insight-plus-float 700ms ease-out; }
+    @keyframes insight-plus-float {
+      0% { opacity: 0; transform: translateY(6px); }
+      20% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-22px); }
+    }
+    @keyframes note-shimmer { 0%, 62%, 100% { background-position: 100% 50%; } 79% { background-position: 0% 50%; } }
+    @media (prefers-reduced-motion: reduce) {
+      .toolbar-title { animation: none; color: #111; background: none; }
+      .rec-dot { animation: none; }
+      .research-toolbar, .call-stage, .research-toolbar.presence-switching { transition-duration: 1ms; }
+    }
+    .modal-header { height: 85px; position: relative; padding: 22px 24px 0; border-bottom: 1px solid rgb(0 0 0 / 20%); }
+    .search-row { display: flex; align-items: center; justify-content: space-between; }
+    .search-input { width: 570px; border: 0; outline: none; padding: 0; color: #000; background: transparent; font: 400 20px/28px Inter, sans-serif; }
+    .search-input::placeholder { color: rgb(0 0 0 / 60%); }
+    .search-icon { width: 24px; height: 24px; position: relative; }
+    .search-icon::before { content: ''; position: absolute; width: 14px; height: 14px; border: 2.5px solid #1e1e1e; border-radius: 50%; top: 1px; left: 1px; }
+    .search-icon::after { content: ''; position: absolute; width: 9px; height: 2.5px; border-radius: 2px; background: #1e1e1e; transform: rotate(45deg); right: 1px; bottom: 4px; }
+    .sync { display: flex; align-items: center; gap: 8px; margin-top: 9px; color: #6c6c6c; font-size: 10px; font-weight: 500; letter-spacing: .11em; text-transform: uppercase; }
+    .sync-icons { display: flex; gap: 5px; align-items: center; }
+    .sync-icon { display: block; background-position: center; background-repeat: no-repeat; background-size: contain; filter: grayscale(1); }
+    .drive { width: 20px; height: 20px; background-image: url('assets/sync-drive.png'); }
+    .cloud { width: 24px; height: 20px; background-image: url('assets/sync-onedrive.png'); }
+    .modal-body { height: 415px; display: grid; grid-template-columns: 253px 1fr; }
+    .recent { padding-top: 16px; border-right: 1px solid rgb(0 0 0 / 20%); }
+    .recent-label { margin: 0 22px 11px; color: #6c6c6c; font-size: 10px; font-weight: 500; letter-spacing: .11em; text-transform: uppercase; }
+    .document { width: 225px; height: 47px; display: flex; align-items: center; gap: 9px; margin-left: 12px; padding: 12px; overflow: hidden; border: 0; border-radius: 10px; background: transparent; color: #000; text-align: left; font: 400 16px/22px Inter, sans-serif; white-space: nowrap; }
+    .document:hover, .document:focus-visible, .document.selected { background: #efefef; outline: none; }
+    .doc-icon { width: 19px; height: 20px; flex: none; background: center / contain no-repeat url('assets/doc-thumbnail-word.png'); filter: grayscale(1); }
+    .doc-name { overflow: hidden; text-overflow: ellipsis; }
+    .preview { position: relative; overflow: hidden; background: #f4f4f4; }
+    .preview-content { display: none; height: 100%; padding: 14px 36px 0; }
+    .preview.active .preview-content { display: block; }
+    .document-title { margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; letter-spacing: -.01em; }
+    .document-meta { display: flex; align-items: center; gap: 6px; margin-top: 1px; color: #444; font-size: 12px; line-height: 17px; }
+    .pdf-tag { padding: 2px 4px; border-radius: 5px; background: #e4e4e4; color: #686868; font-weight: 700; }
+    .page-wrap { width: 360px; height: 510px; margin: 14px 0 0; overflow: hidden; border: 1px solid #c3c3c3; background: #fff; }
+    .page { width: 361px; height: 473px; background: center top / cover no-repeat url('assets/doc-preview.png'); }
+    .preview-fade { position: absolute; right: 0; bottom: 0; left: 0; height: 55px; background: linear-gradient(transparent, #f4f4f4); }
+    .pagination { position: absolute; bottom: 11px; left: 5px; z-index: 1; padding: 3px 8px 5px; border: 1px solid rgb(0 0 0 / 5%); border-radius: 30px; background: #e0e0e0; color: #494949; font-size: 10px; font-weight: 600; }
+    .load-script { position: absolute; right: 9px; bottom: 10px; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid rgb(0 0 0 / 5%); border-radius: 30px; background: #2d2d2d; color: #fff; font: 600 12px/17px Inter, sans-serif; }
+    .load-script kbd { display: grid; place-items: center; width: 15px; height: 15px; padding: 0; border: 1px solid rgb(255 255 255 / 50%); border-radius: 3px; font: 500 10px/1 Inter, sans-serif; }
+    .preview-fade, .pagination, .load-script { display: none; }
+    .preview.active .preview-fade, .preview.active .pagination, .preview.active .load-script { display: flex; }
+    .preview.active .preview-fade { display: block; }
+
+    /* The insight analysis is its own application sitting on top of everything —
+       it opens from the taskbar the same way the browser does, and it can be closed
+       and reopened, which is how you get back into the document after the session. */
+    .app-window {
+      position: fixed;
+      z-index: 6;
+      top: 26px;
+      right: 26px;
+      bottom: 106px;
+      left: 26px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #f1f1ef;
+      box-shadow: 0 30px 90px rgb(0 0 0 / 38%);
+      opacity: 0;
+      pointer-events: none;
+      transform-origin: 457px calc(100% - 40px);
+      transform: scale(.028, .04);
+      will-change: transform;
+      transition: transform 520ms cubic-bezier(.22, 1, .36, 1), opacity 120ms ease;
+    }
+    .app-window.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+    .app-window.maximised { top: 0; right: 0; bottom: 80px; left: 0; border-radius: 0; }
+    .app-titlebar { display: flex; align-items: center; gap: 10px; flex: none; height: 44px; padding: 0 6px 0 14px; border-bottom: 1px solid rgb(0 0 0 / 8%); background: #e6e6e3; }
+    .app-icon { width: 18px; height: 18px; flex: none; border-radius: 5px; background: #8d8b8b; }
+    .app-name { flex: none; color: #161414; font: 600 13px/17px Inter, sans-serif; }
+    .app-sub { flex: 1 1 auto; min-width: 0; overflow: hidden; color: #7e7e7d; font: 400 12px/16px Inter, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+    .app-controls { display: flex; gap: 2px; flex: none; }
+    .app-btn { display: grid; place-items: center; width: 38px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #3e3e3e; cursor: pointer; }
+    .app-btn:hover { transform: none; background: rgb(0 0 0 / 8%); }
+    .app-btn svg { width: 12px; height: 12px; }
+    .app-close:hover { background: #3e3e3e; color: #fff; }
+    .app-body { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #f1f1ef; }
+    /* The document is a fixed 1440 composition, so it is scaled to the window rather
+       than being made to scroll sideways inside it. */
+    .app-frame { position: absolute; top: 0; left: 0; width: 1440px; border: 0; transform-origin: top left; }
+
+    .task-icon.doc-task { border: 0; padding: 0; cursor: default; }
+    .task-icon.doc-task:hover { transform: none; }
+    .task-icon.doc-task.available { background: #6a6a6a; cursor: pointer; }
+    .task-icon.doc-task.available:hover { background: #7a7a7a; }
+
+    .taskbar {
+      position: fixed;
+      z-index: 1;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 80px;
+      padding: 0 35px;
+      background: #373737;
+    }
+    .taskbar-tools { display: flex; align-items: center; gap: 28px; }
+    .start-and-search { display: flex; align-items: center; gap: 24px; }
+    .windows-icon { display: grid; grid-template-columns: repeat(2, 20px); gap: 3px; width: 43px; }
+    .windows-icon span, .task-icon { width: 20px; height: 20px; background: #5a5a5a; }
+    .search { width: 239px; height: 43px; border-radius: 39px; background: #5a5a5a; }
+    .task-icons { display: flex; gap: 28px; }
+    .task-icon { width: 40px; height: 40px; border-radius: 8px; }
+    .task-icon.active { background: #747474; box-shadow: 0 0 0 2px rgb(255 255 255 / 13%); }
+
+
+    @media (max-height: 740px) {
+      .folders { transform: scale(.8); transform-origin: top left; }
+      .notification { bottom: 96px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="desktop" aria-label="Windows desktop">
+    <aside class="folders" aria-label="Desktop folders">
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+    </aside>
+
+    <section class="notification" id="notification" aria-labelledby="meeting-title">
+      <div class="notification-head">
+        <p class="eyebrow">Upcoming Meeting in 15 mins</p>
+        <h1 id="meeting-title">User Interview with Sarah Chen</h1>
+      </div>
+      <div class="actions">
+        <button class="prepare" id="prepare" type="button">Prepare session <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+        <button class="dismiss" id="dismiss" type="button">Dismiss</button>
+      </div>
+    </section>
+
+    <div class="modal-backdrop" id="modal-backdrop">
+      <section class="script-modal" role="dialog" aria-modal="true" aria-label="Search your script">
+        <header class="modal-header">
+          <div class="search-row">
+            <input class="search-input" id="script-search" type="search" placeholder="|Search your script" autocomplete="off">
+            <span class="search-icon" aria-hidden="true"></span>
+          </div>
+          <div class="sync"><span class="sync-icons" aria-hidden="true"><span class="sync-icon drive"></span><span class="sync-icon cloud"></span></span>Synced</div>
+        </header>
+        <div class="modal-body">
+          <div class="recent">
+            <p class="recent-label" id="list-label">Recent</p>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">Blockchain UX research</span></button>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">BOI UX AI interaction design study</span></button>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">DT - UT script</span></button>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">IoT device user satisfaction survey</span></button>
+            <button class="document search-result" id="et-result" type="button" hidden><span class="doc-icon"></span><span class="doc-name">ET - interview script</span></button>
+          </div>
+          <div class="preview" id="preview">
+            <div class="preview-content">
+              <p class="document-title">Emerging tech - User Interview script.pdf</p>
+              <div class="document-meta"><span class="pdf-tag">PDF</span><span>Edited 30 minutes ago</span></div>
+              <div class="page-wrap"><div class="page"></div></div>
+            </div>
+            <div class="preview-fade"></div>
+            <span class="pagination">Page 1 of 8</span>
+            <button class="load-script" type="button">Load this Script <kbd>↵</kbd></button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="script-selected" id="script-selected" aria-live="polite">
+      <div class="script-selected-copy">
+        <p class="script-selected-title">Script selected</p>
+        <p class="script-selected-subtitle">Meeting starts in 10 mins</p>
+      </div>
+      <button class="join-meeting" type="button">Join meeting <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+    </aside>
+
+    <section class="browser-window" id="browser-window" aria-label="Meeting with Sarah Chen">
+      <header class="browser-tabbar">
+        <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="browser-tab"><span class="browser-tab-icon"></span>Meeting with Sarah Chen</div>
+      </header>
+      <div class="address-row"><div class="address">teams.microsoft.com/light-meetings/launch?p=Jj8TXMCKVXNtGXeRPt&amp;anon=true&amp;launchAgent=join_launcher_web&amp;lightExperience=true&amp;correlationId=5b415204-8ede-44d...</div></div>
+      <div class="meeting-toolbar">
+        <div class="teams-app"><span class="teams-logo"></span>MS Teams</div><span class="toolbar-divider"></span><span class="call-time">00:34</span>
+        <div class="participants" aria-hidden="true"><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span></div>
+        <button class="leave-call" id="leave-call" type="button"><span class="hangup"></span>Leave</button>
+      </div>
+      <div class="meeting-body">
+        <aside class="teams-sidebar" aria-hidden="true"><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span></aside>
+        <main class="call-stage"><div class="avatar">SC</div></main>
+      </div>
+      <aside class="research-toolbar" id="research-toolbar" aria-label="Research assistant">
+        <div class="toolbar-surface">
+          <div class="compact-bar" id="compact-bar" aria-hidden="true">
+            <i class="rec-dot" aria-hidden="true"></i>
+            <div class="compact-copy" id="compact-copy">
+              <p class="compact-meta" id="compact-meta">Section 1 of 5 · 0 of 4</p>
+              <p class="compact-question" id="compact-label">Tell me about yourself</p>
+            </div>
+            <span class="compact-count"><svg class="sparkle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg><span id="compact-insights">0</span></span>
+            <button class="compact-finish" id="compact-finish" type="button">Finish</button>
+            <button class="compact-expand" id="compact-expand" type="button" aria-label="Expand the assistant">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M9.6 2.6h3.8v3.8M6.4 13.4H2.6V9.6M13.4 2.6 9.2 6.8M2.6 13.4l4.2-4.2"/></svg>
+            </button>
+          </div>
+          <header class="toolbar-header" id="toolbar-header">
+            <span class="drag-handle" id="drag-handle" aria-label="Drag research assistant"></span>
+            <div class="toolbar-id">
+              <p class="toolbar-kicker">Research Assistant</p>
+              <button class="legend-btn" id="legend-btn" type="button" aria-expanded="false" aria-label="What the marks mean">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.1"/><path d="M8 7.2v4" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".75" fill="currentColor" stroke="none"/></svg>
+              </button>
+            </div>
+            <div class="legend" id="legend" hidden>
+              <p class="legend-title">What the marks mean</p>
+              <div class="legend-row"><span class="legend-mark legend-answered">Asked it</span><span class="legend-copy">Answered — Rae logged the answer</span></div>
+              <div class="legend-row"><span class="legend-mark"><span class="status-chip">Skipped · 1:22</span></span><span class="legend-copy">Skipped — she answered it earlier, with the time</span></div>
+              <div class="legend-row"><span class="legend-mark"><span class="question-tag">paraphrased</span></span><span class="legend-copy">Reworded — you accepted Rae's wording</span></div>
+              <div class="legend-row"><span class="legend-mark">Asked it</span><span class="legend-copy">Still to ask</span></div>
+            </div>
+            <p class="toolbar-title">Rae is taking notes</p>
+            <span class="rec-chip" aria-label="Recording in progress"><i class="rec-dot" aria-hidden="true"></i>Rec<span class="toolbar-time">00:34</span></span>
+            <div class="presence-switch" role="group" aria-label="Assistant presence">
+              <button class="presence-btn is-on" type="button" data-presence="focus" aria-pressed="true" title="Focus — floating card">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.7" y="4" width="10.6" height="8" rx="2"/></svg>
+              </button>
+              <button class="presence-btn" type="button" data-presence="compact" aria-pressed="false" title="Compact — fold down to a strip">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.7" y="6.6" width="10.6" height="2.8" rx="1.4"/></svg>
+              </button>
+              <button class="presence-btn" type="button" data-presence="dock" aria-pressed="false" title="Dock — pin beside the call">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.2" y="2.7" width="11.6" height="10.6" rx="2"/><path d="M9.6 2.7v10.6"/></svg>
+              </button>
+            </div>
+            <button class="manual-notes" type="button">Take notes manually</button>
+            <div class="question-progress" aria-hidden="true"></div>
+          </header>
+          <section class="questions"></section>
+          <div class="insight-counter" id="insight-counter" aria-hidden="true">
+            <svg class="sparkle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg>
+            <span id="insight-count">0</span>
+          </div>
+          <span class="insight-plus" id="insight-plus" aria-hidden="true">+1</span>
+          <button class="finish-session" id="finish-session" type="button">Finish Session <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+        </div>
+
+        <section class="complete-surface" aria-label="Session complete">
+          <span class="complete-handle" aria-hidden="true"></span>
+          <div class="complete-head">
+            <span class="complete-check" aria-hidden="true">
+              <svg viewBox="0 0 44.13 29.83" xmlns="http://www.w3.org/2000/svg"><path d="M0 15.389 14.393 29.826 44.133 0" fill="none" stroke="#5B5B5B" stroke-width="5"/></svg>
+            </span>
+            <div class="complete-copy">
+              <p class="complete-title">Session Complete</p>
+              <p class="complete-title">Nice work!</p>
+            </div>
+          </div>
+          <div class="complete-metrics">
+            <div class="metric">
+              <svg class="metric-sparkle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg>
+              <span class="metric-value" id="complete-insights">0</span>
+              <span class="metric-label">Insights</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="complete-questions">4/4</span>
+              <span class="metric-label">Questions</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="complete-duration">00:34</span>
+              <span class="metric-label">Duration</span>
+            </div>
+          </div>
+          <button class="view-doc" id="view-doc" type="button">View insight doc <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+        </section>
+        <span class="resize-grip" id="resize-grip" aria-hidden="true" title="Drag to resize"></span>
+        <div class="snackbar" id="snackbar" role="status" aria-live="polite"><span id="snackbar-label"></span></div>
+      </aside>
+    </section>
+  </main>
+
+  <section class="app-window" id="app-window" aria-label="Insight Analysis" aria-hidden="true">
+    <header class="app-titlebar">
+      <span class="app-icon" aria-hidden="true"></span>
+      <span class="app-name">Insight Analysis</span>
+      <span class="app-sub">User Interview with Sarah Chen</span>
+      <div class="app-controls">
+        <button class="app-btn" id="app-min" type="button" aria-label="Minimise">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6h8" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+        <button class="app-btn" id="app-max" type="button" aria-label="Maximise">
+          <svg viewBox="0 0 12 12" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="7" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+        <button class="app-btn app-close" id="app-close" type="button" aria-label="Close">
+          <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.1"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="app-body" id="app-body">
+      <iframe class="app-frame" id="app-frame" title="Insight analysis"></iframe>
+    </div>
+  </section>
+
+  <footer class="taskbar" aria-label="Windows taskbar">
+    <div class="taskbar-tools">
+      <div class="start-and-search">
+        <div class="windows-icon" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="search" aria-hidden="true"></div>
+      </div>
+      <div class="task-icons"><span class="task-icon" id="browser-task" aria-hidden="true"></span><button class="task-icon doc-task" id="doc-task" type="button" aria-label="Insight Analysis" disabled></button><span class="task-icon" aria-hidden="true"></span></div>
+    </div>
+  </footer>
+
+  <script src="research-toolbar.js"></script>
+  <script>
+    const notification = document.getElementById('notification');
+    const modal = document.getElementById('modal-backdrop');
+    const search = document.getElementById('script-search');
+    const listLabel = document.getElementById('list-label');
+    const etResult = document.getElementById('et-result');
+    const preview = document.getElementById('preview');
+    const loadScript = document.querySelector('.load-script');
+    const selectedToast = document.getElementById('script-selected');
+    const joinMeeting = document.querySelector('.join-meeting');
+    const browserWindow = document.getElementById('browser-window');
+    const browserTask = document.getElementById('browser-task');
+    const researchToolbar = document.getElementById('research-toolbar');
+    const toolbar = ResearchToolbar.init(researchToolbar);
+    let toolbarTimer;
+    const recentDocuments = [...document.querySelectorAll('.document:not(.search-result)')];
+
+    function showSearchResult() {
+      const hasQuery = search.value.trim().length > 0;
+      listLabel.textContent = hasQuery ? 'Results' : 'Recent';
+      recentDocuments.forEach((document) => { document.hidden = hasQuery; });
+      etResult.hidden = !hasQuery;
+      etResult.classList.toggle('selected', hasQuery);
+      preview.classList.toggle('active', hasQuery);
+    }
+
+    function selectScript() {
+      modal.classList.remove('visible');
+      selectedToast.classList.add('visible');
+    }
+    document.getElementById('dismiss').addEventListener('click', () => notification.classList.add('hidden'));
+    document.getElementById('prepare').addEventListener('click', () => {
+      notification.classList.add('hidden');
+      window.setTimeout(() => {
+        modal.classList.add('visible');
+        search.focus();
+      }, 220);
+    });
+    search.addEventListener('input', showSearchResult);
+    etResult.addEventListener('click', () => preview.classList.add('active'));
+    loadScript.addEventListener('click', selectScript);
+    joinMeeting.addEventListener('click', () => {
+      selectedToast.classList.remove('visible');
+      browserTask.classList.add('active');
+      browserWindow.classList.add('open');
+      window.clearTimeout(toolbarTimer);
+      toolbarTimer = window.setTimeout(() => researchToolbar.classList.add('visible'), 500);
+    });
+    document.getElementById('leave-call').addEventListener('click', () => {
+      browserWindow.classList.remove('open');
+      browserTask.classList.remove('active');
+      researchToolbar.classList.remove('visible');
+      window.clearTimeout(toolbarTimer);
+      toolbar.reset();
+    });
+
+    // Both the header and the compact strip drag the card. Docked, it belongs to the
+    // layout rather than to the pointer, so dragging is off.
+    function makeDraggable(surface) {
+      if (!surface) return;
+      surface.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button')) return;
+        if (researchToolbar.classList.contains('presence-dock')) return;
+        const toolbarRect = researchToolbar.getBoundingClientRect();
+        const browserRect = browserWindow.getBoundingClientRect();
+        const offsetX = event.clientX - toolbarRect.left;
+        const offsetY = event.clientY - toolbarRect.top;
+        let moved = false;
+        surface.setPointerCapture(event.pointerId);
+
+        const move = (moveEvent) => {
+          if (Math.abs(moveEvent.clientX - event.clientX) > 4 || Math.abs(moveEvent.clientY - event.clientY) > 4) moved = true;
+          const maxX = browserRect.width - toolbarRect.width;
+          const maxY = browserRect.height - toolbarRect.height;
+          const x = Math.max(0, Math.min(maxX, moveEvent.clientX - browserRect.left - offsetX));
+          const y = Math.max(0, Math.min(maxY, moveEvent.clientY - browserRect.top - offsetY));
+          researchToolbar.style.left = `${x}px`;
+          researchToolbar.style.top = `${y}px`;
+        };
+        const stop = () => {
+          toolbar.dragState.suppressClick = moved;
+          surface.removeEventListener('pointermove', move);
+          surface.removeEventListener('pointerup', stop);
+          surface.removeEventListener('pointercancel', stop);
+        };
+        surface.addEventListener('pointermove', move);
+        surface.addEventListener('pointerup', stop);
+        surface.addEventListener('pointercancel', stop);
+      });
+    }
+    makeDraggable(document.getElementById('toolbar-header'));
+    makeDraggable(document.getElementById('compact-bar'));
+    // ------------------------------------------------------- insight analysis app
+    // The analysis is an application that opens on top of everything, not a page the
+    // call navigates away to. That is also what gives the researcher a way back into
+    // the document after the session-complete card is gone: the taskbar icon stays.
+    const appWindow = document.getElementById('app-window');
+    const appBody = document.getElementById('app-body');
+    const appFrame = document.getElementById('app-frame');
+    const docTask = document.getElementById('doc-task');
+    let docReady = false;
+
+    // The document is a fixed 1440 composition. Scale it to the window instead of
+    // letting it scroll sideways, and give the iframe the matching unscaled height.
+    function fitAppFrame() {
+      const box = appBody.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      const scale = box.width / 1440;
+      appFrame.style.transform = `scale(${scale})`;
+      appFrame.style.height = `${box.height / scale}px`;
+    }
+
+    function openDoc() {
+      if (!appFrame.getAttribute('src')) {
+        // Carry a pinned variant through so the doc analyses the script that was
+        // actually run. The default is left off, since pinning it would also switch
+        // on the dev variant chip.
+        const pinned = new URLSearchParams(window.location.search).get('variant');
+        appFrame.src = pinned === '1' ? 'insight-doc.html?variant=1' : 'insight-doc.html';
+      }
+      appWindow.classList.add('open');
+      appWindow.setAttribute('aria-hidden', 'false');
+      docTask.classList.add('active');
+      requestAnimationFrame(fitAppFrame);
+      // Again once the open animation has settled, since the body is mid-scale until then.
+      window.setTimeout(fitAppFrame, 560);
+    }
+
+    function closeDoc() {
+      appWindow.classList.remove('open');
+      appWindow.setAttribute('aria-hidden', 'true');
+      docTask.classList.remove('active');
+    }
+
+    window.addEventListener('resize', fitAppFrame);
+    // The document asks to be closed rather than navigating itself, because it is
+    // running inside this window now.
+    window.addEventListener('message', (event) => {
+      if (event.source === appFrame.contentWindow && event.data && event.data.rae === 'close-doc') closeDoc();
+    });
+
+    document.getElementById('view-doc').addEventListener('click', () => {
+      docReady = true;
+      docTask.disabled = false;
+      docTask.classList.add('available');
+      openDoc();
+    });
+    docTask.addEventListener('click', () => {
+      if (!docReady) return;
+      if (appWindow.classList.contains('open')) closeDoc();
+      else openDoc();
+    });
+    document.getElementById('app-close').addEventListener('click', closeDoc);
+    document.getElementById('app-min').addEventListener('click', closeDoc);
+    document.getElementById('app-max').addEventListener('click', () => {
+      appWindow.classList.toggle('maximised');
+      window.setTimeout(fitAppFrame, 60);
+    });
+    document.addEventListener('keydown', (event) => {
+      const finishSession = document.getElementById('finish-session');
+      if (event.ctrlKey && event.key === 'Enter' && finishSession.classList.contains('visible')) { finishSession.click(); return; }
+      if (event.ctrlKey && event.key === 'Enter' && researchToolbar.classList.contains('session-complete')) { document.getElementById('view-doc').click(); return; }
+      if (event.ctrlKey && event.key === 'Enter' && selectedToast.classList.contains('visible')) joinMeeting.click();
+      else if (event.ctrlKey && event.key === 'Enter' && !modal.classList.contains('visible')) document.getElementById('prepare').click();
+      if (event.key === 'Enter' && modal.classList.contains('visible') && search.value.trim()) selectScript();
+      if (event.key === 'Escape' && appWindow.classList.contains('open')) { closeDoc(); return; }
+      if (event.key === 'Escape') modal.classList.remove('visible');
+    });
+
+    if (new URLSearchParams(window.location.search).get('skip') === 'call') {
+      notification.classList.add('hidden');
+      browserTask.classList.add('active');
+      browserWindow.classList.add('open');
+      researchToolbar.classList.add('visible');
+    }
+  </script>
+</body>
+</html>

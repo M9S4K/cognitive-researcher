@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rae — Insight doc</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-width: 1440px; min-height: 100%; margin: 0; }
+    html { background: #f1f1ef; }
+    body { overflow-x: auto; background: #f1f1ef; color: #000; font-family: Inter, system-ui, sans-serif; }
+
+    /* The page is a fixed 1440 composition, centred in anything wider. The
+       transcript panel is pinned to the same grid via the same offset. */
+    .page { width: 1440px; margin: 0 auto; padding: 72px 0 110px 172px; }
+    .page > * { width: 721px; }
+
+    .doc-title { margin: 0 0 30px; color: #000; font: 700 34px/42px Inter, sans-serif; letter-spacing: -.03em; }
+
+    /* ---------------------------------------------------------------- player
+       A card at the head of the document rather than a floating control: the
+       section labels sit on the scrubber, so the recording doubles as the
+       document's table of contents. */
+    .player { display: flex; align-items: center; gap: 20px; padding: 18px 26px 18px 18px; border-radius: 16px; background: #fff; box-shadow: 0 2px 20px rgb(0 0 0 / 5%); }
+    .player-play { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border: 0; border-radius: 50%; background: #1a1a1a; cursor: pointer; }
+    .player-play svg { margin-left: 3px; }
+    .player-play:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 3px; }
+    .player-elapsed { flex: none; width: 46px; color: #1a1a1a; font: 400 15px/20px Inter, sans-serif; }
+    .player-total { flex: none; width: 46px; color: #7e7e7d; font: 400 15px/20px Inter, sans-serif; text-align: right; }
+    .player-track { position: relative; flex: 1 1 auto; min-width: 0; height: 46px; }
+    .player-label { position: absolute; top: 0; padding-left: 2px; white-space: nowrap; color: #7e7e7d; font: 500 13px/17px Inter, sans-serif; transition: color 180ms ease, font-weight 180ms ease; }
+    .player-label.current { color: #000; font-weight: 600; }
+    .player-tick { position: absolute; top: 24px; width: 1px; height: 16px; background: #d5d5d1; }
+    .player-rail { position: absolute; top: 30px; left: 0; right: 0; height: 4px; border-radius: 19px; background: #e1e1e1; }
+    .player-fill { position: absolute; top: 30px; left: 0; height: 4px; border-radius: 19px; background: #1a1a1a; transition: width 300ms cubic-bezier(0.32, 0.72, 0, 1); }
+    .player-knob { position: absolute; top: 26px; width: 12px; height: 12px; border-radius: 50%; background: #1a1a1a; transform: translateX(-50%); transition: left 300ms cubic-bezier(0.32, 0.72, 0, 1); }
+
+    /* -------------------------------------------------------------- document */
+    .summary-block { padding-top: 46px; }
+    .block-title { margin: 0 0 10px; color: #000; font: 700 21px/28px Inter, sans-serif; letter-spacing: -.02em; }
+    .eyebrow { display: flex; align-items: center; gap: 8px; padding-bottom: 14px; color: #7e7e7d; font: 400 10px/14px Inter, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+    .eyebrow i { width: 3px; height: 3px; border-radius: 50%; background: #c9c9c6; }
+    .summary { margin: 0 0 42px; color: #3e3e3e; font: 400 18px/30px Inter, sans-serif; }
+
+    .section { padding-bottom: 34px; }
+    .section-head { display: flex; align-items: center; gap: 16px; padding-bottom: 8px; }
+    .section-name { margin: 0; flex: none; color: #000; font: 700 21px/28px Inter, sans-serif; letter-spacing: -.02em; }
+    .section-rule { flex: 1 1 auto; min-width: 0; height: 1px; background: #e0e0dc; }
+    /* The question the section answers, verbatim from the script the assistant ran. */
+    .section-question { margin: 0 0 14px; padding-left: 80px; color: #7e7e7d; font: 400 13.5px/20px Inter, sans-serif; }
+    .section-note { color: #aaaaa9; }
+
+    /* ------------------------------------------------------------- insights
+       Every row keeps the same two lanes — a 62px stamp lane and the body —
+       so timestamps hold one column whether or not a row is selected. */
+    .insight { display: flex; align-items: flex-start; gap: 18px; padding: 9px 0; }
+    .stamp-lane { flex: none; width: 62px; padding-top: 3px; transition: padding-top 150ms ease; }
+    .stamp { color: #96968f; font: 400 13px/24px Inter, sans-serif; }
+    .insight-card { display: flex; flex: 1 1 auto; min-width: 0; border: 1px solid transparent; border-radius: 10px; overflow: clip; transition: background 150ms ease, border-color 150ms ease; }
+    .insight-bar { flex: none; width: 0; background: #1a1a1a; transition: width 150ms ease; }
+    .insight-body { flex: 1 1 auto; min-width: 0; padding: 0; transition: padding 150ms ease; }
+    .insight-hit { display: block; width: 100%; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+    .insight-hit:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 4px; border-radius: 6px; }
+    .insight-text { color: #3e3e3e; font: 400 17px/29px Inter, sans-serif; transition: color 150ms ease; }
+    .insight:not(.selected):hover .insight-text { color: #1a1a1a; }
+
+    .insight.selected .stamp-lane { padding-top: 18px; }
+    .insight.selected .stamp { display: inline-block; padding: 4px 11px; border-radius: 20px; background: #1a1a1a; color: #fcfcfa; font: 500 13px/18px Inter, sans-serif; }
+    .insight.selected .insight-card { background: #fff; border-color: #e7e7e4; box-shadow: 0 1px 10px rgb(0 0 0 / 4%); }
+    .insight.selected .insight-bar { width: 3px; }
+    .insight.selected .insight-body { padding: 15px 22px 14px 15px; }
+    .insight.selected .insight-text { color: #000; font-weight: 500; }
+    .insight.selected .insight-actions { display: flex; }
+
+    .insight-actions { display: none; align-items: center; gap: 16px; padding-top: 9px; }
+    .insight-actions button { border: 0; padding: 0; background: none; color: #7e7e7d; font: 400 13px/18px Inter, sans-serif; cursor: pointer; }
+    .insight-actions button:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 3px; border-radius: 4px; }
+    .evidence-mark { display: flex; align-items: center; gap: 7px; color: #1a1a1a; font: 500 13px/18px Inter, sans-serif; }
+
+    /* ------------------------------------------------------------ transcript
+       Pinned to the same 1440 grid as the page, so it holds its place beside
+       the document instead of drifting to the window edge. */
+    .transcript {
+      position: fixed;
+      z-index: 3;
+      top: 72px;
+      left: max(979px, calc(50% + 259px));
+      display: flex;
+      flex-direction: column;
+      width: 404px;
+      height: 778px;
+      max-height: calc(100vh - 110px);
+      border-radius: 28px 28px 24px 24px;
+      background: #fcfcfa;
+      box-shadow: 0 8px 60px rgb(0 0 0 / 10%);
+      overflow: clip;
+    }
+    .transcript-head { flex: none; padding: 30px 30px 28px; background: linear-gradient(180deg, #cececc, #dcdcda); }
+    .transcript-title { margin: 0; color: #000; font: 700 17px/24px Inter, sans-serif; letter-spacing: -.01em; }
+    .transcript-body { position: relative; display: flex; flex-direction: column; gap: 24px; flex: 1 1 auto; min-height: 0; padding: 26px 30px 26px; overflow-y: auto; scrollbar-width: none;
+      /* The transcript is scrolled to the cited moment, so turns are usually cut
+         off at both ends — fade them out instead of letting them hit the edges. */
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+      mask-image: linear-gradient(to bottom, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%); }
+    .transcript-body::-webkit-scrollbar { display: none; }
+
+    .turn { opacity: .62; }
+    .turn-meta { display: flex; align-items: center; gap: 10px; padding-bottom: 6px; }
+    .turn-who { flex: none; width: 54px; color: #7e7e7d; font: 600 11px/16px Inter, sans-serif; letter-spacing: .07em; text-transform: uppercase; }
+    .turn-time { color: #aaaaa9; font: 300 12px/16px Inter, sans-serif; }
+    .turn-text { color: #3e3e3e; font: 400 14.5px/24px Inter, sans-serif; }
+    /* The cited line is the one intense moment on the screen: everything around
+       it is dimmed and it is set two steps larger. */
+    .turn.cited { display: flex; gap: 18px; opacity: 1; }
+    .turn.cited::before { content: ''; flex: none; width: 3px; background: #1a1a1a; }
+    .turn.cited .turn-who { width: auto; color: #000; }
+    .turn.cited .turn-time { color: #7e7e7d; }
+    .turn.cited .turn-text { color: #000; font: 400 19px/31px Inter, sans-serif; letter-spacing: -.01em; }
+
+    .transcript-foot { display: flex; align-items: center; gap: 12px; flex: none; padding: 20px 30px 26px; }
+    .transcript-play { display: flex; align-items: center; justify-content: center; gap: 10px; flex: 1 1 auto; height: 52px; border: 0; border-radius: 14px; background: #1a1a1a; color: #fcfcfa; font: 500 15px/20px Inter, sans-serif; cursor: pointer; }
+    .transcript-more { display: grid; place-items: center; flex: none; width: 52px; height: 52px; border: 0; border-radius: 14px; background: #efefed; cursor: pointer; }
+    .transcript-play:focus-visible, .transcript-more:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 3px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .player-fill, .player-knob, .player-label,
+      .insight-card, .insight-bar, .insight-body, .insight-text, .stamp-lane { transition-duration: 1ms; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1 class="doc-title">User Interview with Sarah Chen</h1>
+
+    <div class="player" aria-label="Recording">
+      <button class="player-play" type="button" aria-label="Play recording">
+        <svg width="14" height="17" viewBox="0 0 13 15" aria-hidden="true"><path d="M1 1.2 12 7.5 1 13.8Z" fill="#fcfcfa"/></svg>
+      </button>
+      <span class="player-elapsed" id="player-elapsed">02:20</span>
+      <div class="player-track" id="player-track">
+        <span class="player-rail"></span>
+        <span class="player-fill" id="player-fill"></span>
+        <span class="player-knob" id="player-knob"></span>
+      </div>
+      <span class="player-total">30:49</span>
+    </div>
+
+    <section class="summary-block">
+      <h2 class="block-title">Summary</h2>
+      <div class="eyebrow">
+        <span>Insight Analysis</span>
+        <i aria-hidden="true"></i>
+        <span>Sarah Chen · 12 insights</span>
+      </div>
+      <p class="summary">Sarah is a UX designer six years into agency work, doing a one-year MSc in Human-Computer Interaction alongside three days a week at a London studio. She frames the degree as a hedge rather than a change of direction — a credential for a move in-house she has not made yet.</p>
+    </section>
+
+    <div id="sections"></div>
+  </div>
+
+  <aside class="transcript" aria-label="Interview transcript">
+    <div class="transcript-head">
+      <p class="transcript-title">Interview Transcript</p>
+    </div>
+    <div class="transcript-body" id="transcript-body"></div>
+    <div class="transcript-foot">
+      <button class="transcript-play" id="transcript-play" type="button">
+        <svg width="12" height="14" viewBox="0 0 13 15" aria-hidden="true"><path d="M1 1.2 12 7.5 1 13.8Z" fill="#fcfcfa"/></svg>
+        <span id="transcript-play-label">Play from 2:20</span>
+      </button>
+      <button class="transcript-more" type="button" aria-label="More actions">
+        <svg width="17" height="17" viewBox="0 0 14 14" aria-hidden="true"><path d="M4.6 9.9h5.1M4.6 7h4.1M4.6 4.1h5.1" fill="none" stroke="#3e3e3e" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <script src="insight-doc.js"></script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rae — Setup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; min-height: 100%;
+    background: #282828;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow-x: hidden;
+  }
+  body { position: relative; min-height: 100vh; }
+
+  /* ---------- Windows chrome: left rail + full-width taskbar — decorative, hidden on narrow viewports ---------- */
+  .chrome-windows, .chrome-mac { display: none; }
+  body[data-os="windows"] .chrome-windows { display: block; }
+  body[data-os="mac"] .chrome-mac { display: block; }
+
+  .dock-rail {
+    position: fixed; left: clamp(12px, 2.5vw, 34px); top: clamp(12px, 2.5vw, 36px);
+    display: flex; flex-direction: column; gap: clamp(10px, 1.8vw, 27px);
+    z-index: 1;
+  }
+  .dock-item { display: flex; flex-direction: column; gap: 8px; width: clamp(40px, 6vw, 80px); }
+  .dock-icon { width: 100%; aspect-ratio: 1; border-radius: 18%; background: #474747; }
+  .dock-label { width: 70%; height: 18%; min-height: 8px; border-radius: 4px; background: #474747; }
+
+  .dock-bar {
+    position: fixed; left: 0; bottom: 0; width: 100%; background: #373737;
+    display: flex; align-items: center; justify-content: center;
+    padding: clamp(10px, 2vw, 20px) clamp(16px, 4vw, 35px); gap: clamp(12px, 3vw, 28px);
+    flex-wrap: wrap; z-index: 1;
+  }
+  .dock-bar-group { display: flex; align-items: center; gap: clamp(10px, 2vw, 24px); }
+  .dock-bar-grid { display: flex; flex-wrap: wrap; gap: 3px; width: 32px; }
+  .dock-bar-grid span { width: 14px; height: 14px; background: #5a5a5a; display: block; }
+  .dock-bar-pill { width: clamp(110px, 16vw, 239px); height: clamp(24px, 4vw, 43px); border-radius: 39px; background: #5a5a5a; }
+  .dock-bar-sq { width: clamp(24px, 4vw, 40px); height: clamp(24px, 4vw, 40px); border-radius: 8px; background: #5a5a5a; }
+
+  /* ---------- Mac chrome: right rail (wide, short icons) + floating rounded dock ---------- */
+  .mac-rail {
+    position: fixed; right: clamp(12px, 2.5vw, 34px); top: clamp(12px, 2.5vw, 36px);
+    display: flex; flex-direction: column; gap: clamp(10px, 1.8vw, 27px);
+    z-index: 1;
+  }
+  .mac-rail-item { display: flex; flex-direction: column; align-items: center; gap: 8px; width: clamp(40px, 6vw, 80px); }
+  .mac-rail-icon { width: 100%; height: clamp(28px, 3.9vw, 56px); border-radius: 14%; background: #474747; }
+  .mac-rail-label { width: 70%; height: 10px; min-height: 8px; border-radius: 4px; background: #474747; }
+
+  .mac-dock {
+    position: fixed; left: 50%; bottom: clamp(10px, 2.4vw, 30px); transform: translateX(-50%);
+    background: #373737; border-radius: 24px;
+    display: flex; align-items: center; gap: clamp(6px, 1.7vw, 24px);
+    padding: clamp(8px, 1.4vw, 20px); z-index: 1;
+    flex-wrap: nowrap; justify-content: center;
+  }
+  .mac-dock-icon { width: clamp(28px, 5.6vw, 80px); height: clamp(28px, 5.6vw, 80px); min-width: 28px; border-radius: 24%; background: #5a5a5a; }
+
+  @media (max-width: 620px) {
+    .dock-rail, .dock-bar, .mac-rail, .mac-dock { display: none; }
+  }
+
+  /* ---------- Notification card — always swoops in from the right; vertical position depends on OS ---------- */
+  .notification {
+    position: fixed; right: clamp(12px, 3vw, 32px);
+    width: min(420px, calc(100vw - 24px));
+    background: #fff; border-radius: 16px; padding: clamp(16px, 3vw, 24px);
+    display: flex; flex-direction: column; gap: 12px; color: #000;
+    transform: translateX(calc(100% + 40px)); opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.35s ease;
+    z-index: 3;
+  }
+  .notification.visible { transform: translateX(0); opacity: 1; }
+
+  body[data-os="windows"] .notification { bottom: clamp(96px, 8vw, 130px); }
+  body[data-os="mac"] .notification { top: clamp(24px, 3vw, 48px); }
+  @media (max-width: 620px) {
+    body[data-os="windows"] .notification { bottom: 16px; }
+    body[data-os="mac"] .notification { top: 16px; }
+  }
+
+  .notification-eyebrow { font-size: clamp(14px, 1.6vw, 17px); font-weight: 400; }
+  .notification-title { font-size: clamp(18px, 2.4vw, 24px); font-weight: 600; }
+  .notification-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-prepare, .btn-dismiss {
+    border: none; border-radius: 87px; padding: 12px 18px; font-family: inherit;
+    font-size: clamp(14px, 1.6vw, 18px); font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .btn-prepare { background: #161414; color: #fff; }
+  .btn-dismiss { background: #efefef; color: #161414; }
+
+  /* ---------- Search overlay ---------- */
+  .search-scrim {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+    z-index: 4;
+  }
+  .search-scrim.visible { opacity: 1; pointer-events: auto; }
+
+  .search-card {
+    width: min(685px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    border-radius: 20px; background: #f4f4f4;
+    transform: scale(0.94);
+    transition: transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
+    color: #000;
+  }
+  .search-scrim.visible .search-card { transform: scale(1); }
+
+  .search-header {
+    position: sticky; top: 0; background: #fff; border-radius: 20px 20px 0 0;
+    padding: clamp(16px, 3vw, 25px) clamp(16px, 4vw, 32px) 20px;
+    border-bottom: 1px solid #e6e6e6;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .search-query {
+    font-family: inherit; font-size: clamp(15px, 2vw, 20px); color: #000;
+    border: none; outline: none; background: none; padding: 0; flex: 1; min-width: 0;
+  }
+  .search-query::placeholder { color: #000; opacity: 0.6; }
+  .search-icon { width: 20px; height: 20px; min-width: 20px; border-radius: 50%; border: 2px solid #000; position: relative; opacity: 0.55; }
+  .search-icon::after {
+    content: ''; position: absolute; width: 8px; height: 2px; background: #000;
+    right: -7px; bottom: 1px; transform: rotate(45deg);
+  }
+  .search-synced { display: flex; align-items: center; gap: 5px; padding: 12px clamp(16px, 4vw, 32px) 0; opacity: 0.5; font-size: 14px; }
+  .sync-icon { width: 20px; height: 20px; object-fit: contain; }
+  .sync-icon-wide { width: 24px; }
+
+  /* Fixed-shape body: sidebar + preview always same size, content crossfades (opacity only) — no height jump, no bounce */
+  .search-body { display: flex; flex-wrap: wrap; min-height: 420px; }
+
+  .results-sidebar { position: relative; width: 240px; flex: 0 0 auto; padding: 16px; }
+  .results-preview { position: relative; flex: 1 1 320px; min-width: 280px; background: #f4f4f4; padding: 16px clamp(16px, 3vw, 32px) 70px; }
+
+  .sidebar-layer, .preview-layer {
+    position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    transition: opacity 0.18s ease; overflow-y: auto;
+  }
+  .sidebar-layer.visible, .preview-layer.visible { opacity: 1; pointer-events: auto; }
+
+  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase; color: #999; padding: 4px 8px 10px; }
+  .dummy-item { display: flex; align-items: flex-start; gap: 9px; padding: 8px; border-radius: 8px; }
+  .dummy-icon { font-size: 16px; line-height: 1.3; }
+  .dummy-name { font-size: 13px; color: #333; letter-spacing: -0.1px; }
+  .dummy-meta { font-size: 11px; color: #999; margin-top: 2px; }
+
+  .result-item {
+    display: flex; align-items: center; gap: 9px; padding: 12px;
+    background: #efefef; border-radius: 10px; font-size: 15px; letter-spacing: -0.16px;
+  }
+  .result-item-icon { width: 19px; height: 20px; object-fit: contain; flex-shrink: 0; }
+
+  .preview-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 21px; padding: clamp(16px, 3vw, 32px); }
+  .search-empty-thumb { width: min(154px, 40vw); height: min(138px, 36vw); background: #d9d9d9; border-radius: 16px; }
+  .search-empty-line { height: 22px; border-radius: 16px; background: #d9d9d9; width: 100%; max-width: 408px; }
+  .search-empty-line.l2 { max-width: 265px; }
+
+  .preview-match { display: flex; flex-direction: column; gap: 12px; }
+  .pdf-doc { width: 100%; max-width: 360px; height: 260px; background: #fff; border: 0.5px solid #c3c3c3; overflow: hidden; align-self: flex-start; }
+  .pdf-doc-img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  .pdf-meta-name { font-size: 14px; letter-spacing: -0.14px; color: #000; margin-bottom: 4px; }
+  .pdf-meta-tags { display: flex; align-items: center; gap: 6px; }
+  .pdf-tag { background: #e4e4e4; border-radius: 5px; padding: 2px 4px; font-size: 12px; font-weight: 700; color: #686868; }
+  .pdf-edited { font-size: 12px; color: #444; }
+  .page-pill {
+    align-self: flex-start;
+    background: #e0e0e0; border: 1px solid rgba(0,0,0,0.05); border-radius: 30px;
+    padding: 2px 8px; font-size: 10px; font-weight: 600; color: #494949;
+  }
+  .load-btn {
+    position: absolute; right: clamp(16px, 3vw, 32px); bottom: 16px;
+    background: #e0e0e0; border: 1px solid rgba(0,0,0,0.05); border-radius: 30px;
+    padding: 8px 12px; display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: #292929; cursor: pointer; font-family: inherit;
+  }
+  .load-btn .key {
+    border: 0.7px solid rgba(73,73,73,0.5); border-radius: 3.5px;
+    width: 14.5px; height: 14.5px; display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+
+  #hint {
+    position: fixed; left: 24px; bottom: 20px; color: rgba(255,255,255,0.4);
+    font-size: 12px; font-family: 'Inter', sans-serif; z-index: 50;
+  }
+  @media (max-width: 620px) { #hint { bottom: 10px; left: 12px; } }
+</style>
+</head>
+<body>
+
+  <div class="chrome-windows">
+    <div class="dock-rail">
+      <div class="dock-item"><div class="dock-icon"></div><div class="dock-label"></div></div>
+      <div class="dock-item"><div class="dock-icon"></div><div class="dock-label"></div></div>
+      <div class="dock-item"><div class="dock-icon"></div><div class="dock-label"></div></div>
+      <div class="dock-item"><div class="dock-icon"></div><div class="dock-label"></div></div>
+      <div class="dock-item"><div class="dock-icon"></div><div class="dock-label"></div></div>
+      <div class="dock-item"><div class="dock-icon"></div><div class="dock-label"></div></div>
+    </div>
+
+    <div class="dock-bar">
+      <div class="dock-bar-group">
+        <div class="dock-bar-grid"><span></span><span></span><span></span><span></span></div>
+        <div class="dock-bar-pill"></div>
+      </div>
+      <div class="dock-bar-sq"></div>
+      <div class="dock-bar-sq"></div>
+      <div class="dock-bar-sq"></div>
+    </div>
+  </div>
+
+  <div class="chrome-mac">
+    <div class="mac-rail">
+      <div class="mac-rail-item"><div class="mac-rail-icon"></div><div class="mac-rail-label"></div></div>
+      <div class="mac-rail-item"><div class="mac-rail-icon"></div><div class="mac-rail-label"></div></div>
+      <div class="mac-rail-item"><div class="mac-rail-icon"></div><div class="mac-rail-label"></div></div>
+      <div class="mac-rail-item"><div class="mac-rail-icon"></div><div class="mac-rail-label"></div></div>
+      <div class="mac-rail-item"><div class="mac-rail-icon"></div><div class="mac-rail-label"></div></div>
+      <div class="mac-rail-item"><div class="mac-rail-icon"></div><div class="mac-rail-label"></div></div>
+    </div>
+
+    <div class="mac-dock">
+      <div class="mac-dock-icon"></div><div class="mac-dock-icon"></div><div class="mac-dock-icon"></div>
+      <div class="mac-dock-icon"></div><div class="mac-dock-icon"></div><div class="mac-dock-icon"></div>
+      <div class="mac-dock-icon"></div><div class="mac-dock-icon"></div><div class="mac-dock-icon"></div>
+    </div>
+  </div>
+
+  <div class="notification" id="notification">
+    <div class="notification-eyebrow">Upcoming Meeting in 15 mins</div>
+    <div class="notification-title">User Interview with Sarah Chen</div>
+    <div class="notification-actions">
+      <button class="btn-prepare" id="btnPrepare">Prepare session</button>
+      <button class="btn-dismiss" id="btnDismiss">Dismiss</button>
+    </div>
+  </div>
+
+  <div class="search-scrim" id="searchScrim">
+    <div class="search-card" id="searchCard">
+      <div class="search-header">
+        <input class="search-query" id="searchQuery" type="text" placeholder="Search your script" autocomplete="off" spellcheck="false">
+        <span class="search-icon"></span>
+      </div>
+      <div class="search-synced" id="searchSynced" style="display:none;">
+        <img class="sync-icon" src="assets/sync-drive.png" alt="">
+        <img class="sync-icon sync-icon-wide" src="assets/sync-onedrive.png" alt="">
+        <span>synced</span>
+      </div>
+      <div class="search-body">
+        <div class="results-sidebar">
+          <div class="sidebar-layer visible" id="sidebarDummy">
+            <div class="sidebar-label">Research Files</div>
+            <div class="dummy-item"><span class="dummy-icon">📄</span><div><div class="dummy-name">UX Research Script — P01 Sarah.pdf</div><div class="dummy-meta">PDF · 2 hours ago</div></div></div>
+            <div class="dummy-item"><span class="dummy-icon">📝</span><div><div class="dummy-name">Interview Guide v2.docx</div><div class="dummy-meta">DOCX · Yesterday</div></div></div>
+            <div class="dummy-item"><span class="dummy-icon">📋</span><div><div class="dummy-name">Screener Q4 2025.pdf</div><div class="dummy-meta">PDF · 3 days ago</div></div></div>
+            <div class="dummy-item"><span class="dummy-icon">✏️</span><div><div class="dummy-name">Usability Test Script.pdf</div><div class="dummy-meta">PDF · Last week</div></div></div>
+            <div class="dummy-item"><span class="dummy-icon">📊</span><div><div class="dummy-name">Competitor Analysis Notes.docx</div><div class="dummy-meta">DOCX · 2 weeks ago</div></div></div>
+          </div>
+          <div class="sidebar-layer" id="sidebarMatch">
+            <div class="result-item"><img class="result-item-icon" src="assets/doc-thumbnail-word.png" alt="">Emerging tech user interv...</div>
+          </div>
+        </div>
+        <div class="results-preview">
+          <div class="preview-layer preview-empty visible" id="previewEmpty">
+            <div class="search-empty-thumb"></div>
+            <div class="search-empty-line l1"></div>
+            <div class="search-empty-line l2"></div>
+          </div>
+          <div class="preview-layer preview-match" id="previewMatch">
+            <div class="pdf-doc"><img class="pdf-doc-img" src="assets/doc-preview.png" alt=""></div>
+            <div class="pdf-meta">
+              <div class="pdf-meta-name">Emerging tech - User Interview script.pdf</div>
+              <div class="pdf-meta-tags">
+                <span class="pdf-tag">PDF</span>
+                <span class="pdf-edited">Edited 30 minutes ago</span>
+              </div>
+            </div>
+            <div class="page-pill">Page 1 of 8</div>
+            <button class="load-btn" id="btnLoad">Load this Script <span class="key">↵</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div id="hint">Click "Prepare session" to begin</div>
+
+<script>
+  let storedOsPref = '';
+  try { storedOsPref = localStorage.getItem('rae-os') || ''; } catch (e) {}
+  const currentOs = new URLSearchParams(window.location.search).get('os') || storedOsPref || 'windows';
+  document.body.setAttribute('data-os', currentOs === 'mac' ? 'mac' : 'windows');
+
+  const notification = document.getElementById('notification');
+  const searchScrim = document.getElementById('searchScrim');
+  const searchCard = document.getElementById('searchCard');
+  const searchQuery = document.getElementById('searchQuery');
+  const searchSynced = document.getElementById('searchSynced');
+  const hint = document.getElementById('hint');
+
+  setTimeout(() => notification.classList.add('visible'), 1200);
+
+  document.getElementById('btnDismiss').addEventListener('click', () => {
+    notification.classList.remove('visible');
+    hint.textContent = '';
+  });
+
+  document.getElementById('btnPrepare').addEventListener('click', () => {
+    notification.classList.remove('visible');
+    setTimeout(openSearch, 350);
+  });
+
+  const SCRIPT_NAME = 'Emerging tech user interview';
+  const sidebarDummy = document.getElementById('sidebarDummy');
+  const sidebarMatch = document.getElementById('sidebarMatch');
+  const previewEmpty = document.getElementById('previewEmpty');
+  const previewMatch = document.getElementById('previewMatch');
+
+  function setMatch(isMatch) {
+    sidebarDummy.classList.toggle('visible', !isMatch);
+    sidebarMatch.classList.toggle('visible', isMatch);
+    previewEmpty.classList.toggle('visible', !isMatch);
+    previewMatch.classList.toggle('visible', isMatch);
+  }
+
+  function openSearch() {
+    searchScrim.classList.add('visible');
+    hint.textContent = 'Type to search your script…';
+    searchQuery.value = '';
+    searchSynced.style.display = 'none';
+    setMatch(false);
+    setTimeout(() => searchQuery.focus(), 350);
+  }
+
+  searchQuery.addEventListener('input', () => {
+    const q = searchQuery.value.trim().toLowerCase();
+    if (!q) {
+      searchSynced.style.display = 'none';
+      setMatch(false);
+      hint.textContent = 'Type to search your script…';
+      return;
+    }
+    searchSynced.style.display = 'flex';
+    const matches = SCRIPT_NAME.toLowerCase().includes(q) || q.split(' ').every(w => SCRIPT_NAME.toLowerCase().includes(w));
+    setMatch(matches);
+    hint.textContent = matches ? 'Click "Load this Script" to start the session' : 'No matching script found';
+  });
+
+  document.getElementById('btnLoad').addEventListener('click', () => {
+    window.location.href = 'session.html?os=' + currentOs;
+  });
+</script>
+</body>
+</html>

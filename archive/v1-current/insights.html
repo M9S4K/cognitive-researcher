@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research Assistant — Insight Doc</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f7f6f4;
+      color: #2a2a2a;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Sticky header block ── */
+    .header-block {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: white;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    /* Topbar */
+    .topbar {
+      padding: 0.875rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 0.875rem; }
+
+    .doc-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #7c9885;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: #f0f4f1;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    .sep { width: 1px; height: 14px; background: #e0e0e0; }
+
+    .session-info { display: flex; align-items: center; gap: 0.625rem; }
+
+    .info-item {
+      font-size: 0.82rem;
+      color: #6b6b6b;
+    }
+
+    .info-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #c8c8c8;
+    }
+
+    .btn-export {
+      padding: 0.5rem 1.1rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #6b7f73;
+      background: white;
+      border: 1.5px solid #b8cabe;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      min-width: 90px;
+    }
+
+    .btn-export:hover { background: #f0f4f1; border-color: #8a9d91; }
+    .btn-export.done  { color: #5a7060; border-color: #7c9885; background: #f0f4f1; }
+
+    /* Timeline */
+    .timeline-strip {
+      padding: 0.75rem 2rem 1rem;
+      position: relative;
+    }
+
+    .timeline-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #c0c0c0;
+      margin-bottom: 0.5rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timeline-track {
+      position: relative;
+      height: 4px;
+      background: #ebebeb;
+      border-radius: 2px;
+      margin-bottom: 0;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #c8d8cc;
+      border: 2px solid white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 0 1px #b8cabe;
+    }
+
+    .timeline-dot:hover,
+    .timeline-dot.active {
+      background: #6b7f73;
+      box-shadow: 0 0 0 3px rgba(107,127,115,0.2);
+      width: 13px;
+      height: 13px;
+    }
+
+    .timeline-playhead {
+      position: absolute;
+      top: -6px;
+      width: 2px;
+      height: 16px;
+      background: #6b7f73;
+      border-radius: 1px;
+      transform: translateX(-50%);
+      transition: left 0.45s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .timeline-playhead.visible { opacity: 1; }
+
+    /* ── Main layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      padding: 2rem 1.5rem 3rem;
+      border-right: 1px solid #e8e8e8;
+      position: sticky;
+      top: 109px; /* header-block height */
+      height: calc(100vh - 109px);
+      overflow-y: auto;
+    }
+
+    .sidebar-section { margin-bottom: 2.5rem; }
+
+    .sidebar-heading {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.875rem;
+    }
+
+    .insight-card {
+      padding: 0.875rem 1rem;
+      border-radius: 8px;
+      border: 1.5px solid #ebebeb;
+      background: white;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .insight-card:hover {
+      border-color: #c0d0c4;
+      background: #fafcfa;
+    }
+
+    .insight-card.active {
+      border-color: #7c9885;
+      background: #f4f8f5;
+    }
+
+    .insight-ts {
+      font-size: 0.7rem;
+      color: #b0b0b0;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 0.25rem;
+    }
+
+    .insight-card.active .insight-ts { color: #7c9885; }
+
+    .insight-text {
+      font-size: 0.83rem;
+      color: #3a3a3a;
+      line-height: 1.45;
+    }
+
+    /* Patterns */
+    .pattern-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.83rem;
+      color: #4a4a4a;
+      line-height: 1.45;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .pattern-item:last-child { border-bottom: none; }
+
+    .pattern-icon { font-size: 0.75rem; margin-top: 0.15rem; flex-shrink: 0; color: #9a9a9a; }
+
+    /* ── Main content ── */
+    .main-content { padding: 2.5rem 3rem 4rem; max-width: 680px; }
+
+    /* Summary */
+    .summary-block {
+      background: white;
+      border-radius: 12px;
+      padding: 1.75rem 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 0.4s ease 0.05s forwards;
+    }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    .summary-block { transform: translateY(8px); }
+
+    .summary-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+    }
+
+    .summary-text {
+      font-size: 0.925rem;
+      color: #3a3a3a;
+      line-height: 1.7;
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      gap: 0;
+      margin-bottom: 2.5rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: fadeUp 0.4s ease 0.15s forwards;
+    }
+
+    .stat {
+      flex: 1;
+      padding: 1.25rem 1.5rem;
+      border-right: 1px solid #f0f0f0;
+    }
+
+    .stat:last-child { border-right: none; }
+
+    .stat-value {
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-label { font-size: 0.75rem; color: #9a9a9a; }
+
+    /* Transcript section */
+    .section-heading {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 1rem;
+    }
+
+    .transcript-block {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 0.875rem;
+      border: 1.5px solid #ebebeb;
+      border-left: 3px solid #e8e8e8;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    .transcript-block.revealed {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.35s ease, transform 0.35s ease, border-color 0.25s ease, background 0.25s ease;
+    }
+
+    .transcript-block:hover { border-left-color: #b8cabe; }
+
+    .transcript-block.active {
+      border-left-color: #7c9885;
+      background: #f6faf7;
+    }
+
+    .tx-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .tx-ts {
+      font-size: 0.72rem;
+      font-variant-numeric: tabular-nums;
+      color: #9a9a9a;
+      background: #f5f5f5;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .transcript-block.active .tx-ts {
+      background: #e8f0ea;
+      color: #5a7060;
+    }
+
+    .tx-label {
+      font-size: 0.72rem;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .tx-quote {
+      font-size: 0.9rem;
+      color: #2a2a2a;
+      line-height: 1.65;
+    }
+
+    .tx-quote em {
+      font-style: normal;
+      color: #5a7060;
+      font-weight: 500;
+    }
+
+    .tx-insight-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.875rem;
+      font-size: 0.72rem;
+      color: #7c9885;
+      background: #f0f4f1;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky header -->
+  <div class="header-block" id="headerBlock">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="doc-tag">Insight Doc</span>
+        <div class="sep"></div>
+        <div class="session-info">
+          <span class="info-item">Participant P-01</span>
+          <div class="info-dot"></div>
+          <span class="info-item">Semi-Structured Interview</span>
+          <div class="info-dot"></div>
+          <span class="info-item">42:18</span>
+          <div class="info-dot"></div>
+          <span class="info-item">May 19, 2026</span>
+        </div>
+      </div>
+      <button class="btn-export" id="exportBtn">Export →</button>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-strip">
+      <div class="timeline-labels">
+        <span>0:00</span>
+        <span>10:00</span>
+        <span>20:00</span>
+        <span>30:00</span>
+        <span>42:18</span>
+      </div>
+      <div class="timeline-track" id="timelineTrack">
+        <div class="timeline-playhead" id="playhead"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout -->
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Key Insights</div>
+        <div id="insightList"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Patterns</div>
+        <div class="pattern-item">
+          <span class="pattern-icon">◆</span>
+          <span>Tool fragmentation — 3+ tools used across a single session</span>
+        </div>
+        <div class="pattern-item">
+          <span class="pattern-icon">◆</span>
+          <span>Solo researcher overwhelm appears across all interview phases</span>
+        </div>
+        <div class="pattern-item">
+          <span class="pattern-icon">◆</span>
+          <span>High trust in AI for transcription; lower trust for insight interpretation</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value">5</div>
+          <div class="stat-label">Key insights</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">8/8</div>
+          <div class="stat-label">Questions covered</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">3</div>
+          <div class="stat-label">Patterns detected</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">42:18</div>
+          <div class="stat-label">Session duration</div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="summary-block">
+        <div class="summary-label">AI Summary</div>
+        <div class="summary-text">
+          P-01 is an experienced solo UX researcher who relies on an ad-hoc stack of Notion, Google Docs, and sticky notes. The session surfaced a consistent core tension: the cognitive cost of managing a research script and live note-taking simultaneously degrades the quality of both. Participant expressed strong interest in ambient AI assistance, specifically a tool that captures and surfaces information without requiring researcher attention — framed as a "quiet co-pilot."
+        </div>
+      </div>
+
+      <!-- Transcript -->
+      <div class="section-heading">Transcript Highlights</div>
+      <div id="transcriptList"></div>
+
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_SECS = 2538; // 42:18
+
+    const INSIGHTS = [
+      {
+        id: 0,
+        ts: '09:14',
+        pct: 21.8,
+        text: 'Post-session write-up takes 2–3 hours, creating compounding research debt',
+        txLabel: 'On documentation time'
+      },
+      {
+        id: 1,
+        ts: '12:33',
+        pct: 29.7,
+        text: 'Cognitive overload peaks when managing script and live notes simultaneously',
+        txLabel: 'On session overwhelm'
+      },
+      {
+        id: 2,
+        ts: '18:42',
+        pct: 44.2,
+        text: 'Note-taking competes directly with active listening — central pain point',
+        txLabel: 'On note-taking in the moment'
+      },
+      {
+        id: 3,
+        ts: '31:07',
+        pct: 73.6,
+        text: 'Insight prioritisation is entirely intuitive — no structured method in place',
+        txLabel: 'On insight selection'
+      },
+      {
+        id: 4,
+        ts: '38:55',
+        pct: 92.0,
+        text: 'Researchers want a "quiet co-pilot" — assistance without interruption',
+        txLabel: 'On ideal tooling'
+      }
+    ];
+
+    const TRANSCRIPT = [
+      {
+        insightId: 0,
+        ts: '09:14',
+        speaker: 'P-01',
+        quote: 'After the session I\'ll write everything up in Notion — but that takes me like two, sometimes <em>three hours</em>. And by then I\'ve already forgotten half the nuance. The emotional texture of the thing is gone.'
+      },
+      {
+        insightId: 1,
+        ts: '12:33',
+        speaker: 'P-01',
+        quote: 'There was this session — three tasks, no second researcher. I just started to <em>lose the thread</em>. I couldn\'t track where I was in the script and take notes at the same time. Something has to give, and it\'s always the notes.'
+      },
+      {
+        insightId: 2,
+        ts: '18:42',
+        speaker: 'P-01',
+        quote: 'I type fast, but I\'m in catch-up mode the entire time. You miss things — like the facial expression when someone says "yeah that makes sense" but <em>clearly it doesn\'t</em>. That non-verbal stuff is gold and it just slips through.'
+      },
+      {
+        insightId: 3,
+        ts: '31:07',
+        speaker: 'P-01',
+        quote: 'Honestly, no system. I just go on instinct — I know what a good insight sounds like when I hear it. But <em>I do worry</em> that I\'m missing things because I\'m not being systematic. It\'s all pattern recognition from experience.'
+      },
+      {
+        insightId: 4,
+        ts: '38:55',
+        speaker: 'P-01',
+        quote: 'What I\'d want is something quiet. Like a stage manager — it\'s there, it\'s tracking everything, but it <em>doesn\'t interrupt</em>. The participant shouldn\'t feel watched. It just helps me catch what I\'d otherwise miss.'
+      }
+    ];
+
+    const insightList    = document.getElementById('insightList');
+    const transcriptList = document.getElementById('transcriptList');
+    const timelineTrack  = document.getElementById('timelineTrack');
+    const playhead       = document.getElementById('playhead');
+    const exportBtn      = document.getElementById('exportBtn');
+
+    let activeId = null;
+
+    // Build timeline dots
+    INSIGHTS.forEach(ins => {
+      const dot = document.createElement('div');
+      dot.className = 'timeline-dot';
+      dot.style.left = `${ins.pct}%`;
+      dot.dataset.id = ins.id;
+      dot.addEventListener('click', () => activate(ins.id));
+      timelineTrack.appendChild(dot);
+    });
+
+    // Build sidebar insight cards
+    INSIGHTS.forEach(ins => {
+      const card = document.createElement('div');
+      card.className = 'insight-card';
+      card.id = `insight-${ins.id}`;
+      card.innerHTML = `<div class="insight-ts">${ins.ts}</div><div class="insight-text">${ins.text}</div>`;
+      card.addEventListener('click', () => activate(ins.id));
+      insightList.appendChild(card);
+    });
+
+    // Build transcript blocks (staggered reveal on load)
+    TRANSCRIPT.forEach((tx, i) => {
+      const ins = INSIGHTS[tx.insightId];
+      const block = document.createElement('div');
+      block.className = 'transcript-block';
+      block.id = `tx-${tx.insightId}`;
+      block.innerHTML = `
+        <div class="tx-meta">
+          <span class="tx-ts">${tx.ts}</span>
+          <span class="tx-label">${ins.txLabel}</span>
+        </div>
+        <div class="tx-quote">${tx.quote}</div>
+        <div class="tx-insight-tag">🔍 ${ins.text}</div>`;
+      block.addEventListener('click', () => activate(tx.insightId));
+      transcriptList.appendChild(block);
+
+      // Staggered reveal
+      setTimeout(() => block.classList.add('revealed'), 100 + i * 80);
+    });
+
+    function activate(id) {
+      // Deactivate previous
+      if (activeId !== null) {
+        document.getElementById(`insight-${activeId}`)?.classList.remove('active');
+        document.getElementById(`tx-${activeId}`)?.classList.remove('active');
+        timelineTrack.querySelector(`.timeline-dot[data-id="${activeId}"]`)?.classList.remove('active');
+      }
+
+      if (activeId === id) {
+        // Toggle off
+        activeId = null;
+        playhead.classList.remove('visible');
+        return;
+      }
+
+      activeId = id;
+      const ins = INSIGHTS[id];
+
+      // Activate sidebar card
+      document.getElementById(`insight-${id}`)?.classList.add('active');
+
+      // Activate transcript block + scroll into view
+      const txBlock = document.getElementById(`tx-${id}`);
+      txBlock?.classList.add('active');
+      txBlock?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // Activate timeline dot
+      timelineTrack.querySelector(`.timeline-dot[data-id="${id}"]`)?.classList.add('active');
+
+      // Move playhead
+      playhead.style.left = `${ins.pct}%`;
+      playhead.classList.add('visible');
+    }
+
+    // Export button
+    exportBtn.addEventListener('click', () => {
+      exportBtn.textContent = 'Exporting…';
+      exportBtn.disabled = true;
+      setTimeout(() => {
+        exportBtn.textContent = 'Exported ✓';
+        exportBtn.classList.add('done');
+        setTimeout(() => {
+          exportBtn.textContent = 'Export →';
+          exportBtn.classList.remove('done');
+          exportBtn.disabled = false;
+        }, 2500);
+      }, 1200);
+    });
+
+    // Set sticky top offset for sidebar based on header height
+    function updateSidebarTop() {
+      const h = document.getElementById('headerBlock').offsetHeight;
+      document.querySelector('.sidebar').style.top = h + 'px';
+      document.querySelector('.sidebar').style.height = `calc(100vh - ${h}px)`;
+    }
+
+    updateSidebarTop();
+    window.addEventListener('resize', updateSidebarTop);
+  </script>
+</body>
+</html>

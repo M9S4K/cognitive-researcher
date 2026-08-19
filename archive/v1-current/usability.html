@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research Assistant — Usability Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f7f6f4;
+      color: #2a2a2a;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      background: white;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 0.875rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .session-meta { display: flex; align-items: center; gap: 0.875rem; }
+
+    .session-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #7c9885;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: #f0f4f1;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    .sep { width: 1px; height: 14px; background: #e0e0e0; }
+
+    .participant-label { font-size: 0.9rem; color: #4a4a4a; font-weight: 500; }
+
+    .session-timer {
+      font-size: 0.88rem;
+      color: #9a9a9a;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      min-height: calc(100vh - 53px);
+    }
+
+    /* ── Main ── */
+    .main { padding: 3rem 3rem 3rem 3.5rem; max-width: 620px; }
+
+    /* Progress */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2.75rem;
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 3px;
+      background: #ebebeb;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #7c9885;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .progress-label { font-size: 0.78rem; color: #b0b0b0; white-space: nowrap; }
+
+    /* Task card */
+    .task-card {
+      background: white;
+      border-radius: 14px;
+      padding: 2.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.03);
+      margin-bottom: 2rem;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeUp 0.35s ease forwards;
+    }
+
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    .task-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #7c9885;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+    }
+
+    .task-text {
+      font-size: 1.35rem;
+      font-weight: 400;
+      color: #1a1a1a;
+      line-height: 1.5;
+      letter-spacing: -0.015em;
+    }
+
+    /* Timer row */
+    .timer-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .task-timer-display {
+      font-size: 2rem;
+      font-weight: 300;
+      color: #1a1a1a;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+      min-width: 90px;
+    }
+
+    .task-timer-display.paused { color: #b0b0b0; }
+
+    .btn-pause {
+      padding: 0.5rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #4a4a4a;
+      background: white;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .btn-pause:hover { border-color: #b0b0b0; color: #2a2a2a; }
+    .btn-pause.active { border-color: #8a9d91; color: #5a7060; background: #f7faf8; }
+
+    /* Thinking aloud toggle */
+    .thinking-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding: 0.875rem 1rem;
+      border-radius: 8px;
+      border: 1.5px solid #e8e8e8;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .thinking-row:hover { border-color: #c0c0c0; }
+
+    .thinking-row.active {
+      border-color: #8a9d91;
+      background: #f7faf8;
+    }
+
+    .thinking-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d4d4d4;
+      flex-shrink: 0;
+      transition: background 0.2s ease;
+    }
+
+    .thinking-row.active .thinking-dot {
+      background: #7c9885;
+      animation: breathe 1.8s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    .thinking-label { font-size: 0.88rem; color: #4a4a4a; }
+    .thinking-row.active .thinking-label { color: #3a5a43; font-weight: 500; }
+
+    .thinking-hint {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: #b0b0b0;
+    }
+
+    .thinking-row.active .thinking-hint { color: #7c9885; }
+
+    /* Probe section */
+    .probe-heading {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+    }
+
+    .probe-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+    .btn-probe {
+      padding: 0.45rem 0.875rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #4a4a4a;
+      background: white;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .btn-probe:hover { border-color: #8a9d91; color: #3a5a43; background: #f7faf8; }
+
+    .probe-log {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 2.5rem;
+      min-height: 0;
+    }
+
+    .probe-entry {
+      display: flex;
+      gap: 0.625rem;
+      align-items: baseline;
+      font-size: 0.82rem;
+      color: #6b6b6b;
+      opacity: 0;
+      animation: noteIn 0.25s ease forwards;
+    }
+
+    @keyframes noteIn { to { opacity: 1; } }
+
+    .probe-time {
+      font-size: 0.75rem;
+      color: #9a9a9a;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Action buttons */
+    .actions { display: flex; gap: 0.75rem; align-items: center; }
+
+    .btn-complete {
+      padding: 0.875rem 1.75rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+      background: #6b7f73;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .btn-complete:hover {
+      background: #5a6d62;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(107,127,115,0.2);
+    }
+
+    .btn-abandon {
+      padding: 0.875rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #9a9a9a;
+      background: transparent;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .btn-abandon:hover { border-color: #b0b0b0; color: #6b6b6b; }
+
+    /* End screen */
+    .end-screen {
+      display: none;
+      flex-direction: column;
+      align-items: flex-start;
+      padding-top: 2rem;
+      gap: 0.75rem;
+    }
+
+    .end-screen.visible {
+      display: flex;
+      animation: fadeUp 0.4s ease forwards;
+      opacity: 0;
+    }
+
+    .end-check {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #f0f4f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .end-title { font-size: 1.4rem; font-weight: 500; color: #1a1a1a; letter-spacing: -0.01em; }
+    .end-sub { font-size: 0.95rem; color: #6b6b6b; margin-bottom: 0.75rem; }
+
+    .btn-insights {
+      padding: 0.875rem 1.75rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+      background: #6b7f73;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .btn-insights:hover {
+      background: #5a6d62;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(107,127,115,0.2);
+    }
+
+    /* ── Right panel ── */
+    .panel {
+      background: white;
+      border-left: 1px solid #e8e8e8;
+      padding: 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+      position: sticky;
+      top: 53px;
+      height: calc(100vh - 53px);
+      overflow-y: auto;
+    }
+
+    .panel-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.875rem;
+    }
+
+    /* Behavioral cues */
+    .cues-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .cue {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.625rem;
+      padding: 0.625rem 0.875rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      opacity: 0;
+      animation: cueIn 0.4s ease forwards;
+    }
+
+    @keyframes cueIn {
+      from { opacity: 0; transform: translateX(6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .cue.hesitation  { background: #fffbee; border: 1px solid #f0dc98; color: #6b5010; }
+    .cue.confusion   { background: #fff4e8; border: 1px solid #f0b878; color: #6b3808; }
+    .cue.frustration { background: #fff0f0; border: 1px solid #f0a8a8; color: #7a2020; }
+
+    .cue-icon { font-size: 0.85rem; line-height: 1.6; flex-shrink: 0; }
+
+    .cue-body { display: flex; flex-direction: column; gap: 0.1rem; }
+
+    .cue-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.7;
+    }
+
+    .cue-desc { font-size: 0.8rem; line-height: 1.4; }
+
+    .cues-empty {
+      font-size: 0.82rem;
+      color: #c0c0c0;
+      font-style: italic;
+    }
+
+    /* AI status + notes */
+    .ai-status { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+
+    .ai-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #7c9885;
+      flex-shrink: 0;
+      animation: breathe 2.2s ease-in-out infinite;
+    }
+
+    .ai-status-text { font-size: 0.8rem; color: #7c9885; }
+
+    .notes-stream { display: flex; flex-direction: column; gap: 0.6rem; }
+
+    .note {
+      font-size: 0.82rem;
+      color: #4a4a4a;
+      line-height: 1.55;
+      padding: 0.6rem 0.75rem;
+      background: #fafafa;
+      border-left: 2px solid #d4d4d4;
+      border-radius: 0 6px 6px 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      opacity: 0;
+      animation: noteIn2 0.3s ease forwards;
+    }
+
+    @keyframes noteIn2 { to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="session-meta">
+      <span class="session-tag">Usability Test</span>
+      <div class="sep"></div>
+      <span class="participant-label">Participant P-01</span>
+    </div>
+    <span class="session-timer" id="sessionTimer">00:00</span>
+  </div>
+
+  <!-- Layout -->
+  <div class="layout">
+
+    <!-- Main -->
+    <div class="main">
+
+      <div class="progress-row">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-label" id="progressLabel">Task 1 of 5</span>
+      </div>
+
+      <!-- Active task view -->
+      <div id="taskView">
+
+        <div class="task-card" id="taskCard">
+          <div class="task-eyebrow" id="taskEyebrow">Task 1</div>
+          <div class="task-text" id="taskText"></div>
+        </div>
+
+        <!-- Task timer -->
+        <div class="timer-row">
+          <span class="task-timer-display" id="taskTimerDisplay">00:00</span>
+          <button class="btn-pause" id="pauseBtn">Pause</button>
+        </div>
+
+        <!-- Thinking aloud toggle -->
+        <div class="thinking-row" id="thinkingToggle">
+          <div class="thinking-dot"></div>
+          <span class="thinking-label">User is thinking aloud</span>
+          <span class="thinking-hint" id="thinkingHint">tap to activate</span>
+        </div>
+
+        <!-- Probe log -->
+        <div class="probe-heading">Log Probe</div>
+        <div class="probe-actions">
+          <button class="btn-probe" data-reason="Redirected to task">Redirected to task</button>
+          <button class="btn-probe" data-reason="Asked to think aloud">Asked to think aloud</button>
+          <button class="btn-probe" data-reason="Clarified task wording">Clarified task wording</button>
+          <button class="btn-probe" data-reason="Answered question neutrally">Answered question</button>
+        </div>
+        <div class="probe-log" id="probeLog"></div>
+
+        <!-- Actions -->
+        <div class="actions">
+          <button class="btn-complete" id="completeBtn">Mark Complete ✓</button>
+          <button class="btn-abandon" id="abandonBtn">Abandon Task</button>
+        </div>
+
+      </div>
+
+      <!-- End screen -->
+      <div class="end-screen" id="endScreen">
+        <div class="end-check">✓</div>
+        <div class="end-title">Session complete</div>
+        <div class="end-sub">All tasks covered. Ready to review insights.</div>
+        <button class="btn-insights" onclick="window.location.href='insights.html'">View Insight Doc →</button>
+      </div>
+
+    </div>
+
+    <!-- Right panel -->
+    <div class="panel">
+
+      <div>
+        <div class="panel-title">Behavioral Cues</div>
+        <div class="cues-list" id="cuesList">
+          <span class="cues-empty">No signals yet</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title">AI Notes</div>
+        <div class="ai-status">
+          <div class="ai-dot"></div>
+          <span class="ai-status-text">AI is observing…</span>
+        </div>
+        <div class="notes-stream" id="notesStream"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const TASKS = [
+      {
+        title: "Add a new team member to the 'Q3 Research' project",
+        cues: [
+          { sec: 9,  type: 'hesitation',  icon: '⚡', label: 'Hesitation', desc: 'Paused before navigating' },
+          { sec: 22, type: 'confusion',   icon: '🔄', label: 'Confusion',  desc: 'Scanned menu twice' }
+        ],
+        note: "Navigated to Settings first. Found team management under the project menu on second attempt."
+      },
+      {
+        title: "Create a new usability test session and upload a script",
+        cues: [
+          { sec: 8,  type: 'hesitation',  icon: '⚡', label: 'Hesitation', desc: 'Paused at dashboard' }
+        ],
+        note: "Paused at the dashboard before locating the 'New Session' button. Upload step was smooth."
+      },
+      {
+        title: "Find the insight report from last week's interview with Alex T.",
+        cues: [
+          { sec: 7,  type: 'hesitation',  icon: '⚡', label: 'Hesitation',  desc: 'Unsure where to start' },
+          { sec: 19, type: 'confusion',   icon: '🔄', label: 'Confusion',   desc: 'Tried search, no results' },
+          { sec: 32, type: 'frustration', icon: '⚠️', label: 'Frustration', desc: 'Audible sigh, stopped scanning' }
+        ],
+        note: "Searched by participant name — not available. Tried date filter. Expressed frustration aloud."
+      },
+      {
+        title: "Change notification settings to receive session reminders only",
+        cues: [
+          { sec: 11, type: 'hesitation', icon: '⚡', label: 'Hesitation', desc: 'Read all options slowly' },
+          { sec: 25, type: 'confusion',  icon: '🔄', label: 'Confusion',  desc: 'Confused by category labels' }
+        ],
+        note: "Found Settings quickly but spent time parsing notification categories."
+      },
+      {
+        title: "Export the most recent session summary as a PDF",
+        cues: [
+          { sec: 8, type: 'hesitation', icon: '⚡', label: 'Hesitation', desc: 'Export option not visible on first scan' }
+        ],
+        note: "Went directly to the session. Export button found after scrolling down on the insight doc."
+      }
+    ];
+
+    let taskIdx     = 0;
+    let taskSecs    = 0;
+    let sessionSecs = 0;
+    let taskPaused  = false;
+    let thinkingOn  = false;
+    let cueTimeouts = [];
+
+    const taskCard        = document.getElementById('taskCard');
+    const taskEyebrow     = document.getElementById('taskEyebrow');
+    const taskText        = document.getElementById('taskText');
+    const progressFill    = document.getElementById('progressFill');
+    const progressLabel   = document.getElementById('progressLabel');
+    const taskTimerEl     = document.getElementById('taskTimerDisplay');
+    const sessionTimerEl  = document.getElementById('sessionTimer');
+    const pauseBtn        = document.getElementById('pauseBtn');
+    const thinkingToggle  = document.getElementById('thinkingToggle');
+    const thinkingHint    = document.getElementById('thinkingHint');
+    const probeLog        = document.getElementById('probeLog');
+    const completeBtn     = document.getElementById('completeBtn');
+    const abandonBtn      = document.getElementById('abandonBtn');
+    const taskView        = document.getElementById('taskView');
+    const endScreen       = document.getElementById('endScreen');
+    const cuesList        = document.getElementById('cuesList');
+    const notesStream     = document.getElementById('notesStream');
+
+    function fmt(s) {
+      return String(Math.floor(s / 60)).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
+    }
+
+    // Session timer (always runs)
+    setInterval(() => {
+      sessionSecs++;
+      sessionTimerEl.textContent = fmt(sessionSecs);
+    }, 1000);
+
+    // Task timer (pauses when paused or thinking aloud)
+    setInterval(() => {
+      if (!taskPaused && !thinkingOn) {
+        taskSecs++;
+        taskTimerEl.textContent = fmt(taskSecs);
+      }
+    }, 1000);
+
+    function renderTask(i) {
+      const t = TASKS[i];
+
+      // Re-trigger animation
+      taskCard.style.animation = 'none';
+      taskCard.offsetHeight;
+      taskCard.style.animation = 'fadeUp 0.35s ease forwards';
+
+      taskEyebrow.textContent = `Task ${i + 1}`;
+      taskText.textContent    = t.title;
+
+      progressFill.style.width  = `${((i + 1) / TASKS.length) * 100}%`;
+      progressLabel.textContent = `Task ${i + 1} of ${TASKS.length}`;
+
+      completeBtn.textContent = i === TASKS.length - 1 ? 'Finish Session' : 'Mark Complete ✓';
+
+      // Reset task timer
+      taskSecs = 0;
+      taskTimerEl.textContent = '00:00';
+      taskTimerEl.classList.remove('paused');
+
+      // Reset pause/thinking state
+      taskPaused = false;
+      thinkingOn = false;
+      pauseBtn.textContent = 'Pause';
+      pauseBtn.classList.remove('active');
+      thinkingToggle.classList.remove('active');
+      thinkingHint.textContent = 'tap to activate';
+
+      // Clear probe log
+      probeLog.innerHTML = '';
+
+      // Clear previous cue timeouts and reset panel
+      cueTimeouts.forEach(clearTimeout);
+      cueTimeouts = [];
+      cuesList.innerHTML = '<span class="cues-empty">No signals yet</span>';
+
+      // Schedule cues
+      t.cues.forEach(c => {
+        const id = setTimeout(() => addCue(c), c.sec * 1000);
+        cueTimeouts.push(id);
+      });
+
+      // Add AI note after delay
+      setTimeout(() => addNote(t.note), 1600);
+    }
+
+    function addCue(c) {
+      // Remove empty placeholder
+      const empty = cuesList.querySelector('.cues-empty');
+      if (empty) empty.remove();
+
+      const el = document.createElement('div');
+      el.className = `cue ${c.type}`;
+      el.innerHTML = `
+        <span class="cue-icon">${c.icon}</span>
+        <div class="cue-body">
+          <span class="cue-label">${c.label}</span>
+          <span class="cue-desc">${c.desc}</span>
+        </div>`;
+      cuesList.appendChild(el);
+    }
+
+    function addNote(text) {
+      const el = document.createElement('div');
+      el.className   = 'note';
+      el.textContent = text;
+      notesStream.appendChild(el);
+    }
+
+    function addProbeEntry(reason) {
+      const el = document.createElement('div');
+      el.className = 'probe-entry';
+      el.innerHTML = `<span class="probe-time">${fmt(taskSecs)}</span><span>${reason}</span>`;
+      probeLog.appendChild(el);
+    }
+
+    // Pause / resume
+    pauseBtn.addEventListener('click', () => {
+      taskPaused = !taskPaused;
+      pauseBtn.textContent = taskPaused ? 'Resume' : 'Pause';
+      pauseBtn.classList.toggle('active', taskPaused);
+      taskTimerEl.classList.toggle('paused', taskPaused);
+    });
+
+    // Thinking aloud toggle
+    thinkingToggle.addEventListener('click', () => {
+      thinkingOn = !thinkingOn;
+      thinkingToggle.classList.toggle('active', thinkingOn);
+      thinkingHint.textContent = thinkingOn ? 'timer paused' : 'tap to activate';
+    });
+
+    // Probe buttons
+    document.querySelectorAll('.btn-probe').forEach(btn => {
+      btn.addEventListener('click', () => addProbeEntry(btn.dataset.reason));
+    });
+
+    // Complete / abandon
+    completeBtn.addEventListener('click', () => advanceTask('complete'));
+    abandonBtn.addEventListener('click',  () => advanceTask('abandon'));
+
+    function advanceTask(outcome) {
+      cueTimeouts.forEach(clearTimeout);
+      cueTimeouts = [];
+
+      if (taskIdx < TASKS.length - 1) {
+        taskIdx++;
+        renderTask(taskIdx);
+      } else {
+        endSession();
+      }
+    }
+
+    function endSession() {
+      taskView.style.display = 'none';
+      endScreen.classList.add('visible');
+    }
+
+    renderTask(0);
+  </script>
+</body>
+</html>

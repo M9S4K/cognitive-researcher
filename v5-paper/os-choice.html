@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rae — Choose your OS</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400;500&display=swap');
+
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { min-width: 760px; min-height: 100%; margin: 0; }
+    body {
+      min-height: 100vh;
+      overflow-x: auto;
+      background: #282828;
+      color: #fff;
+      font-family: 'Mona Sans', Inter, system-ui, sans-serif;
+    }
+
+    .choice-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: clamp(96px, 17.09vh, 175px) 40px clamp(112px, 18vw, 328px);
+      background: #282828;
+    }
+
+    h1 {
+      width: min(721.88px, 100%);
+      margin: 0;
+      font-size: clamp(38px, 3.62vw, 52.07px);
+      font-weight: 400;
+      line-height: 1.2;
+      text-align: center;
+      letter-spacing: -0.035em;
+    }
+
+    .options {
+      width: min(806.59px, 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: clamp(90px, 14.45vh, 148px);
+    }
+
+    .option {
+      width: 188px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 23px;
+      padding: 0;
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      transition: transform 160ms ease, opacity 160ms ease;
+    }
+
+    .option:hover { transform: translateY(-5px); }
+    .option:active { transform: translateY(-2px) scale(.985); }
+    .option:focus-visible { outline: 2px solid #fff; outline-offset: 12px; }
+
+    .windows-mark {
+      width: 185.95px;
+      height: 185.59px;
+      display: grid;
+      grid-template: repeat(2, 88px) / repeat(2, 87.65px);
+      gap: 9.58px 10.65px;
+    }
+    .windows-mark span { background: #e3e3e3; }
+
+    .mac-mark {
+      width: 187.79px;
+      height: 187.83px;
+      object-fit: contain;
+      filter: saturate(0%);
+    }
+
+    .label { font-size: 32px; font-weight: 400; line-height: 1.2; }
+    .divider { width: 1px; height: 124.59px; background: rgb(255 255 255 / 10%); }
+
+    @media (max-height: 760px) {
+      .choice-screen { padding-top: 72px; padding-bottom: 72px; }
+      .options { margin-top: 80px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="choice-screen">
+    <h1>Please choose the OS<br>you’re most comfortable with</h1>
+
+    <section class="options" aria-label="Operating system selection">
+      <button class="option" type="button" data-os="Windows" aria-label="Choose Windows">
+        <span class="windows-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span class="label">Windows</span>
+      </button>
+
+      <span class="divider" aria-hidden="true"></span>
+
+      <button class="option" type="button" data-os="MacOS" aria-label="Choose MacOS">
+        <img class="mac-mark" src="assets/macos-finder-icon.png" alt="">
+        <span class="label">MacOS</span>
+      </button>
+    </section>
+  </main>
+
+  <script>
+    document.querySelectorAll('[data-os]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const os = button.dataset.os;
+        localStorage.setItem('rae-os', os.toLowerCase());
+        window.location.href = os === 'Windows' ? 'windows.html' : 'mac.html';
+      });
+    });
+  </script>
+</body>
+</html>

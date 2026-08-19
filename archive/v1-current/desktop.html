@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research Assistant — Desktop</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #1a1e2e;
+      user-select: none;
+    }
+
+    /* ── Wallpaper ── */
+    .wallpaper {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(107,127,115,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(90,110,160,0.2) 0%, transparent 55%),
+        radial-gradient(ellipse at 60% 80%, rgba(60,80,130,0.15) 0%, transparent 50%),
+        linear-gradient(145deg, #0f1220 0%, #1a1e2e 40%, #1e2438 100%);
+      z-index: 0;
+    }
+
+    /* ── Menu bar ── */
+    .menubar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 28px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      z-index: 100;
+      font-size: 13px;
+      color: rgba(255,255,255,0.88);
+    }
+
+    .menubar-left { display: flex; align-items: center; gap: 18px; }
+    .menubar-right { display: flex; align-items: center; gap: 14px; }
+    .apple-logo { font-size: 14px; opacity: 0.9; }
+    .menu-item { font-size: 13px; color: rgba(255,255,255,0.88); cursor: default; }
+    .menu-item.bold { font-weight: 600; }
+    .menubar-icon { font-size: 13px; opacity: 0.8; }
+    .clock {
+      font-size: 12.5px;
+      color: rgba(255,255,255,0.88);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Static desktop icons (top-right) ── */
+    .desktop-icons {
+      position: fixed;
+      top: 48px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      z-index: 1;
+    }
+
+    .desktop-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: default;
+      width: 72px;
+    }
+
+    .icon-img {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+    }
+
+    .icon-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.85);
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+
+    /* ── Draggable file icons ── */
+    .desktop-file {
+      position: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: default;
+      z-index: 2;
+      transition: transform 0.12s ease, opacity 0.18s ease;
+    }
+
+    .desktop-file:hover { transform: scale(1.06); }
+    .desktop-file.dragging { opacity: 0.25; transform: scale(0.92); }
+
+    .df-body {
+      width: 48px; height: 58px;
+      background: white;
+      border-radius: 4px 11px 4px 4px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.38), 0 0 0 0.5px rgba(0,0,0,0.08);
+    }
+
+    /* Dog-ear */
+    .df-body::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 13px; height: 13px;
+      background: #d4d4d4;
+      clip-path: polygon(100% 0, 100% 100%, 0 100%);
+      border-radius: 0 0 0 2px;
+    }
+
+    .df-body::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 13px; height: 13px;
+      background: #e8e8e8;
+      clip-path: polygon(0 0, 100% 100%, 0 100%);
+    }
+
+    .df-badge {
+      font-size: 0.5rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      background: #e53935;
+      color: white;
+      padding: 1.5px 4px;
+      border-radius: 2px;
+      z-index: 1;
+    }
+
+    .df-badge.docx { background: #1565c0; }
+    .df-badge.key  { background: #6b3fa0; }
+
+    .df-label {
+      font-size: 10.5px;
+      color: rgba(255,255,255,0.82);
+      text-align: center;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+      max-width: 72px;
+      line-height: 1.3;
+    }
+
+    /* ── Dock ── */
+    .dock {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 18px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    .dock-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: default;
+      transition: transform 0.15s ease;
+      position: relative;
+    }
+
+    .dock-item:hover { transform: translateY(-6px) scale(1.12); }
+
+    .dock-icon {
+      width: 48px; height: 48px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+    }
+
+    .dock-dot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.5);
+    }
+
+    .dock-sep {
+      width: 1px; height: 44px;
+      background: rgba(255,255,255,0.2);
+      margin: 0 4px;
+      align-self: center;
+    }
+
+    /* ── Notification ── */
+    .notification {
+      position: fixed;
+      top: 44px;
+      right: -360px;
+      width: 330px;
+      background: rgba(248,248,248,0.94);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(0,0,0,0.1);
+      padding: 14px 16px 14px 14px;
+      z-index: 200;
+      transition: right 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+
+    .notification.visible { right: 12px; }
+
+    .notif-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .notif-app-icon {
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      background: linear-gradient(145deg, #e8524a, #c0392b);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+
+    .notif-app-name {
+      font-size: 12px; font-weight: 600;
+      color: #666;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+
+    .notif-time { margin-left: auto; font-size: 11px; color: #999; }
+    .notif-title { font-size: 13.5px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
+    .notif-body { font-size: 12.5px; color: #555; line-height: 1.4; margin-bottom: 12px; }
+
+    .notif-actions { display: flex; gap: 8px; }
+
+    .notif-btn {
+      flex: 1; padding: 6px 10px;
+      font-size: 12.5px; font-weight: 500;
+      border-radius: 7px; border: none;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    .notif-btn.secondary { background: rgba(0,0,0,0.07); color: #444; }
+    .notif-btn.secondary:hover { background: rgba(0,0,0,0.12); }
+    .notif-btn.primary { background: #6b7f73; color: white; }
+    .notif-btn.primary:hover { background: #5a6d62; }
+
+    /* ── Dynamic Island pill ── */
+    .di-pill {
+      position: fixed;
+      top: 36px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-18px);
+      background: #0f0f0f;
+      border-radius: 20px;
+      overflow: hidden;
+      z-index: 150;
+      opacity: 0;
+      pointer-events: none;
+      width: 280px;
+      height: 36px;
+      transition:
+        width  0.42s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+        border-radius 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.25s ease,
+        transform 0.35s cubic-bezier(0.34, 1.1, 0.64, 1);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.06);
+    }
+
+    .di-pill.show {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .di-pill.expanded {
+      width: 420px;
+      height: 118px;
+      border-radius: 18px;
+    }
+
+    .di-pill.ready { width: 340px; height: 36px; }
+
+    /* Compact label */
+    .di-compact {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 0 16px;
+      cursor: pointer; opacity: 1;
+      transition: opacity 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .di-pill.expanded .di-compact { opacity: 0; pointer-events: none; }
+    .di-compact-icon { font-size: 0.85rem; }
+
+    .di-compact-text {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: 0.01em;
+    }
+
+    .di-compact-text strong { color: rgba(255,255,255,0.88); font-weight: 500; }
+
+    .di-compact-ready { display: flex; align-items: center; gap: 10px; }
+
+    .di-ready-check { font-size: 0.78rem; color: #7c9885; font-weight: 600; }
+
+    .di-ready-name {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.6);
+      max-width: 140px;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .di-sep { width: 1px; height: 12px; background: rgba(255,255,255,0.12); }
+
+    .btn-join {
+      padding: 0.3rem 0.75rem;
+      font-size: 0.75rem; font-weight: 500;
+      color: white; background: #6b7f73;
+      border: none; border-radius: 5px;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-join:hover { background: #5a6d62; }
+
+    /* Expanded content */
+    .di-expanded-content {
+      position: absolute; inset: 0;
+      padding: 14px 16px 14px;
+      display: flex; flex-direction: column; gap: 10px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.15s ease;
+    }
+
+    .di-pill.expanded .di-expanded-content {
+      opacity: 1; pointer-events: all;
+      transition: opacity 0.2s ease 0.25s;
+    }
+
+    .di-heading { font-size: 0.72rem; color: rgba(255,255,255,0.45); letter-spacing: 0.01em; }
+
+    .di-drop-zone {
+      flex: 1;
+      border: 1.5px dashed rgba(255,255,255,0.18);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      display: flex; align-items: center;
+      gap: 10px; padding: 0 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .di-drop-zone:hover,
+    .di-drop-zone.drag-over {
+      border-color: rgba(124,152,133,0.65);
+      background: rgba(124,152,133,0.08);
+    }
+
+    .di-drop-icon { font-size: 1.1rem; opacity: 0.45; }
+    .di-drop-text { font-size: 0.8rem; color: rgba(255,255,255,0.4); flex: 1; }
+    .di-drop-hint { font-size: 0.7rem; color: rgba(255,255,255,0.2); }
+
+    input[type="file"] { display: none; }
+
+    /* ── Hint strip ── */
+    .hint {
+      position: fixed;
+      bottom: 90px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: rgba(255,255,255,0.28);
+      z-index: 1;
+      letter-spacing: 0.03em;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
+    }
+
+    /* ── Ctrl+K shortcut badge (shown after pill appears) ── */
+    .kbd-hint {
+      position: fixed;
+      bottom: 90px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.28);
+      z-index: 2;
+      display: flex; align-items: center; gap: 6px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease 0.6s;
+      white-space: nowrap;
+    }
+
+    .kbd-hint.show { opacity: 1; }
+
+    .kbd {
+      font-size: 10.5px;
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 4px;
+      padding: 1.5px 5px;
+      font-family: -apple-system, monospace;
+      color: rgba(255,255,255,0.45);
+    }
+
+    /* ── Ctrl+K Command Palette ── */
+    .kbar-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex; align-items: flex-start;
+      justify-content: center;
+      padding-top: 80px;
+      z-index: 600;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .kbar-overlay.open { opacity: 1; pointer-events: all; }
+
+    .kbar {
+      width: min(680px, 92vw);
+      max-height: min(460px, 72vh);
+      background: rgba(20,22,28,0.97);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 0.5px rgba(255,255,255,0.04);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      transform: translateY(-10px) scale(0.98);
+      transition: transform 0.22s cubic-bezier(0.34, 1.1, 0.64, 1);
+    }
+
+    .kbar-overlay.open .kbar { transform: translateY(0) scale(1); }
+
+    .kbar-search {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
+    }
+
+    .kbar-search-icon { font-size: 0.88rem; opacity: 0.35; flex-shrink: 0; }
+
+    .kbar-input {
+      flex: 1;
+      font-size: 0.92rem;
+      color: rgba(255,255,255,0.9);
+      background: transparent; border: none; outline: none;
+      font-family: inherit;
+      caret-color: #7c9885;
+    }
+
+    .kbar-input::placeholder { color: rgba(255,255,255,0.2); }
+
+    .kbar-esc {
+      font-size: 0.67rem;
+      color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 4px; padding: 2px 6px;
+      font-family: -apple-system, monospace;
+      flex-shrink: 0; cursor: pointer;
+      transition: color 0.1s ease;
+    }
+
+    .kbar-esc:hover { color: rgba(255,255,255,0.4); }
+
+    .kbar-body {
+      display: flex; flex: 1;
+      overflow: hidden; min-height: 0;
+    }
+
+    .kbar-list {
+      width: 230px; flex-shrink: 0;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      overflow-y: auto; padding: 6px 0;
+    }
+
+    .kbar-section-lbl {
+      font-size: 0.61rem; font-weight: 600;
+      color: rgba(255,255,255,0.2);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      padding: 6px 14px 4px;
+    }
+
+    .kbar-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 12px;
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+
+    .kbar-item:hover { background: rgba(255,255,255,0.05); }
+
+    .kbar-item.active {
+      background: rgba(124,152,133,0.14);
+      border-left: 2px solid rgba(124,152,133,0.5);
+      padding-left: 10px;
+    }
+
+    .kbar-item-icon { font-size: 0.85rem; flex-shrink: 0; opacity: 0.7; }
+
+    .kbar-item-info { flex: 1; min-width: 0; }
+
+    .kbar-item-name {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.72);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .kbar-item.active .kbar-item-name { color: rgba(255,255,255,0.92); }
+
+    .kbar-item-meta { font-size: 0.64rem; color: rgba(255,255,255,0.27); margin-top: 1px; }
+
+    .kbar-preview {
+      flex: 1; overflow-y: auto;
+      padding: 16px 18px;
+      background: rgba(0,0,0,0.12);
+    }
+
+    .kbar-preview-empty {
+      height: 100%; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 0.8rem; color: rgba(255,255,255,0.13);
+    }
+
+    .kp-filename {
+      font-size: 0.8rem; font-weight: 600;
+      color: rgba(255,255,255,0.72);
+      margin-bottom: 5px;
+      word-break: break-word;
+    }
+
+    .kp-meta {
+      font-size: 0.67rem; color: rgba(255,255,255,0.27);
+      display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .kp-tag {
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px; padding: 1.5px 5px;
+      font-size: 0.6rem; font-weight: 700;
+      letter-spacing: 0.06em; color: rgba(255,255,255,0.4);
+    }
+
+    .kp-divider { height: 1px; background: rgba(255,255,255,0.07); margin-bottom: 11px; }
+
+    .kp-section-lbl {
+      font-size: 0.61rem; font-weight: 600;
+      color: rgba(124,152,133,0.55);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .kp-questions { display: flex; flex-direction: column; gap: 5px; }
+
+    .kp-q {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 5px;
+      border-left: 2px solid rgba(124,152,133,0.22);
+    }
+
+    .kp-q-num {
+      font-size: 0.63rem; color: rgba(124,152,133,0.5);
+      font-weight: 600; flex-shrink: 0;
+      margin-top: 1px; min-width: 14px;
+    }
+
+    .kp-q-text { font-size: 0.76rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
+
+    .kp-load-btn {
+      display: block; width: 100%;
+      margin-top: 14px; padding: 8px 12px;
+      font-size: 0.8rem; font-weight: 500;
+      color: white; background: #6b7f73;
+      border: none; border-radius: 7px;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.15s ease;
+    }
+
+    .kp-load-btn:hover { background: #5a6d62; }
+
+    /* ── No results ── */
+    .kbar-empty {
+      padding: 18px 14px;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wallpaper"></div>
+
+  <!-- Menu bar -->
+  <div class="menubar">
+    <div class="menubar-left">
+      <span class="apple-logo">&#63743;</span>
+      <span class="menu-item bold">Finder</span>
+      <span class="menu-item">File</span>
+      <span class="menu-item">Edit</span>
+      <span class="menu-item">View</span>
+      <span class="menu-item">Go</span>
+    </div>
+    <div class="menubar-right">
+      <span class="menubar-icon">🔋</span>
+      <span class="menubar-icon">📶</span>
+      <span class="clock" id="clock">9:41 AM</span>
+    </div>
+  </div>
+
+  <!-- Static desktop icons (top-right) -->
+  <div class="desktop-icons">
+    <div class="desktop-icon">
+      <div class="icon-img" style="background: linear-gradient(145deg, #e8524a, #c0392b);">📅</div>
+      <span class="icon-label">Calendar</span>
+    </div>
+    <div class="desktop-icon">
+      <div class="icon-img" style="background: linear-gradient(145deg, #4a9eff, #2c7be5);">📁</div>
+      <span class="icon-label">Research</span>
+    </div>
+  </div>
+
+  <!-- Draggable research files -->
+  <div class="desktop-file" draggable="true" data-name="UX Research Script — P01 Sarah.pdf" style="top: 36%; left: 13%;">
+    <div class="df-body"><span class="df-badge">PDF</span></div>
+    <span class="df-label">UX Research Script P01.pdf</span>
+  </div>
+  <div class="desktop-file" draggable="true" data-name="Interview Guide v2.docx" style="top: 52%; left: 20%;">
+    <div class="df-body"><span class="df-badge docx">DOC</span></div>
+    <span class="df-label">Interview Guide v2.docx</span>
+  </div>
+  <div class="desktop-file" draggable="true" data-name="Screener Q4 2025.pdf" style="top: 27%; left: 8%;">
+    <div class="df-body"><span class="df-badge">PDF</span></div>
+    <span class="df-label">Screener Q4 2025.pdf</span>
+  </div>
+
+  <!-- Dock -->
+  <div class="dock">
+    <div class="dock-item">
+      <div class="dock-icon" style="background: linear-gradient(145deg, #4a9eff, #2c7be5);">🌐</div>
+      <div class="dock-dot"></div>
+    </div>
+    <div class="dock-item">
+      <div class="dock-icon" style="background: linear-gradient(145deg, #e8524a, #c0392b);">📅</div>
+      <div class="dock-dot"></div>
+    </div>
+    <div class="dock-item">
+      <div class="dock-icon" style="background: linear-gradient(145deg, #7c9885, #5a6d62);">🧠</div>
+      <div class="dock-dot"></div>
+    </div>
+    <div class="dock-sep"></div>
+    <div class="dock-item">
+      <div class="dock-icon" style="background: linear-gradient(145deg, #555, #333);">📂</div>
+    </div>
+  </div>
+
+  <!-- macOS Notification -->
+  <div class="notification" id="notification">
+    <div class="notif-header">
+      <div class="notif-app-icon">📅</div>
+      <span class="notif-app-name">Calendar</span>
+      <span class="notif-time">now</span>
+    </div>
+    <div class="notif-title">UX Research · P-01</div>
+    <div class="notif-body">Starting in 12 minutes — Sarah Chen<br>Add your script before joining.</div>
+    <div class="notif-actions">
+      <button class="notif-btn secondary" id="dismissBtn">Dismiss</button>
+      <button class="notif-btn primary" id="prepareBtn">Prepare Session</button>
+    </div>
+  </div>
+
+  <!-- Dynamic Island pill -->
+  <div class="di-pill" id="diPill">
+    <!-- Compact state (default + ready) -->
+    <div class="di-compact" id="diCompact">
+      <span class="di-compact-icon" id="diIdleIcon">📄</span>
+      <span class="di-compact-text" id="diIdleText">Add script for <strong>UX Research · P-01</strong></span>
+      <div class="di-compact-ready" id="diReady" style="display:none">
+        <span class="di-ready-check">✓ Script ready</span>
+        <span class="di-ready-name" id="diFileName"></span>
+        <div class="di-sep"></div>
+        <button class="btn-join" onclick="window.location.href='call.html'">Join →</button>
+      </div>
+    </div>
+
+    <!-- Expanded drop zone -->
+    <div class="di-expanded-content">
+      <div class="di-heading">Drop your questionnaire — I'll guide you through it</div>
+      <div class="di-drop-zone" id="diDropZone">
+        <span class="di-drop-icon">📄</span>
+        <span class="di-drop-text">Click or drag PDF / DOCX here</span>
+        <span class="di-drop-hint">PDF, DOCX</span>
+      </div>
+    </div>
+
+    <input type="file" id="fileInput" accept=".pdf,.docx">
+  </div>
+
+  <!-- Hints -->
+  <div class="hint" id="hint">Your next meeting starts in 12 minutes</div>
+  <div class="kbd-hint" id="kbdHint">
+    <span class="kbd">⌘K</span>
+    <span>to find your script — or drag a file up to the pill</span>
+  </div>
+
+  <!-- Ctrl+K Command Palette -->
+  <div class="kbar-overlay" id="kbarOverlay">
+    <div class="kbar">
+      <div class="kbar-search">
+        <span class="kbar-search-icon">⌕</span>
+        <input type="text" class="kbar-input" id="kbarInput" placeholder="Search research files…">
+        <span class="kbar-esc" id="kbarEsc">esc</span>
+      </div>
+      <div class="kbar-body">
+        <div class="kbar-list" id="kbarList"></div>
+        <div class="kbar-preview" id="kbarPreview">
+          <div class="kbar-preview-empty">Select a file to preview</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Clock ──
+    function updateClock() {
+      const now = new Date();
+      let h = now.getHours();
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      document.getElementById('clock').textContent = `${h}:${m} ${ampm}`;
+    }
+    updateClock();
+    setInterval(updateClock, 10000);
+
+    // ── Files data ──
+    const FILES = [
+      {
+        name: 'UX Research Script — P01 Sarah.pdf',
+        icon: '📄', type: 'PDF', modified: '2 hours ago',
+        questions: [
+          "Can you walk me through how you currently manage your research projects?",
+          "What tools do you use to keep track of participant notes during sessions?",
+          "Tell me about the last time a research session felt overwhelming.",
+          "What does your note-taking process look like in the moment?",
+          "If you could change one thing about your research workflow, what would it be?",
+          "Is there anything else you'd like to share about your process?",
+        ]
+      },
+      {
+        name: 'Interview Guide v2.docx',
+        icon: '📝', type: 'DOCX', modified: 'Yesterday',
+        questions: [
+          "Describe your typical day doing user research.",
+          "How do you synthesize findings after a session?",
+          "What's the most time-consuming part of your workflow?",
+          "How do you share findings with stakeholders?",
+        ]
+      },
+      {
+        name: 'Screener Q4 2025.pdf',
+        icon: '📋', type: 'PDF', modified: '3 days ago',
+        questions: [
+          "How often do you conduct user research sessions?",
+          "What is your primary research methodology?",
+          "Do you work solo or in a team?",
+        ]
+      },
+      {
+        name: 'Usability Test Script — Checkout Flow.pdf',
+        icon: '🧪', type: 'PDF', modified: 'Last week',
+        questions: [
+          "Please navigate to the checkout page.",
+          "Walk me through completing a purchase.",
+          "What would you expect after clicking 'Pay Now'?",
+          "Is there anything confusing about this screen?",
+        ]
+      },
+      {
+        name: 'Competitor Analysis Notes.docx',
+        icon: '📊', type: 'DOCX', modified: '2 weeks ago',
+        questions: [
+          "Figma vs. Maze — key differentiators",
+          "UserTesting.com — pricing tier analysis",
+          "Dovetail — synthesis workflow notes",
+        ]
+      },
+    ];
+
+    // ── Dynamic Island helpers ──
+    function handleFileReady(name) {
+      const pill = document.getElementById('diPill');
+      const wasExpanded = pill.classList.contains('expanded');
+      pill.classList.remove('expanded');
+
+      const delay = wasExpanded ? 430 : 60;
+      setTimeout(() => {
+        document.getElementById('diIdleIcon').style.display = 'none';
+        document.getElementById('diIdleText').style.display = 'none';
+        document.getElementById('diFileName').textContent = name;
+        document.getElementById('diReady').style.display = 'flex';
+        pill.classList.add('ready');
+      }, delay);
+    }
+
+    // ── Notification flow ──
+    setTimeout(() => {
+      document.getElementById('notification').classList.add('visible');
+    }, 1500);
+
+    document.getElementById('dismissBtn').addEventListener('click', () => {
+      const notif = document.getElementById('notification');
+      notif.style.transition = 'right 0.3s ease';
+      notif.style.right = '-360px';
+      document.getElementById('hint').style.opacity = '0';
+    });
+
+    document.getElementById('prepareBtn').addEventListener('click', () => {
+      const notif = document.getElementById('notification');
+      notif.style.transition = 'right 0.3s ease, opacity 0.3s ease';
+      notif.style.opacity = '0';
+      setTimeout(() => notif.style.display = 'none', 300);
+      document.getElementById('hint').style.opacity = '0';
+
+      // Show pill
+      const pill = document.getElementById('diPill');
+      pill.classList.add('show');
+
+      // Show keyboard hint
+      document.getElementById('kbdHint').classList.add('show');
+    });
+
+    // Compact click → expand
+    document.getElementById('diCompact').addEventListener('click', (e) => {
+      if (e.target.closest('.btn-join')) return;
+      const pill = document.getElementById('diPill');
+      if (!pill.classList.contains('ready')) {
+        pill.classList.toggle('expanded');
+      }
+    });
+
+    // Drop zone click → file picker
+    document.getElementById('diDropZone').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    // File picker change
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      handleFileReady(file.name);
+    });
+
+    // ── Drag & Drop from desktop files ──
+    document.querySelectorAll('.desktop-file').forEach(file => {
+      file.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', file.dataset.name);
+        e.dataTransfer.effectAllowed = 'copy';
+        file.classList.add('dragging');
+
+        // Ensure pill is visible and expand it
+        const pill = document.getElementById('diPill');
+        if (!pill.classList.contains('show')) {
+          pill.classList.add('show');
+          document.getElementById('kbdHint').classList.add('show');
+        }
+        if (!pill.classList.contains('ready')) {
+          setTimeout(() => pill.classList.add('expanded'), 120);
+        }
+      });
+
+      file.addEventListener('dragend', () => {
+        file.classList.remove('dragging');
+        // If not dropped on pill, collapse after brief pause
+        const pill = document.getElementById('diPill');
+        setTimeout(() => {
+          if (pill.classList.contains('expanded') && !pill.classList.contains('ready')) {
+            pill.classList.remove('expanded');
+          }
+        }, 500);
+      });
+    });
+
+    const dropZone = document.getElementById('diDropZone');
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const name = e.dataTransfer.getData('text/plain');
+      if (name) handleFileReady(name);
+    });
+
+    // ── Ctrl+K / ⌘K Command Palette ──
+    let kActive = 0;
+    let kFiltered = [...FILES];
+
+    function openKbar() {
+      document.getElementById('kbarOverlay').classList.add('open');
+      document.getElementById('kbarInput').value = '';
+      kFiltered = [...FILES];
+      kActive = 0;
+      renderKbarList();
+      setTimeout(() => document.getElementById('kbarInput').focus(), 40);
+    }
+
+    function closeKbar() {
+      document.getElementById('kbarOverlay').classList.remove('open');
+    }
+
+    function renderKbarList() {
+      const list = document.getElementById('kbarList');
+
+      if (kFiltered.length === 0) {
+        list.innerHTML = '<div class="kbar-empty">No files match</div>';
+        document.getElementById('kbarPreview').innerHTML = '<div class="kbar-preview-empty">No results</div>';
+        return;
+      }
+
+      list.innerHTML =
+        `<div class="kbar-section-lbl">Research Files (${kFiltered.length})</div>` +
+        kFiltered.map((f, i) => `
+          <div class="kbar-item${i === kActive ? ' active' : ''}" data-idx="${i}">
+            <span class="kbar-item-icon">${f.icon}</span>
+            <div class="kbar-item-info">
+              <div class="kbar-item-name">${f.name}</div>
+              <div class="kbar-item-meta">${f.type} · ${f.modified}</div>
+            </div>
+          </div>
+        `).join('');
+
+      list.querySelectorAll('.kbar-item').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+          // Update active class without rebuilding list (preserves click event)
+          list.querySelectorAll('.kbar-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+          kActive = parseInt(item.dataset.idx);
+          renderKbarPreview();
+        });
+        item.addEventListener('click', () => {
+          kActive = parseInt(item.dataset.idx);
+          selectKbarFile();
+        });
+      });
+
+      // Scroll active into view
+      const activeEl = list.querySelector('.active');
+      if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+
+      renderKbarPreview();
+    }
+
+    function renderKbarPreview() {
+      const preview = document.getElementById('kbarPreview');
+      if (kActive < 0 || kActive >= kFiltered.length) {
+        preview.innerHTML = '<div class="kbar-preview-empty">Select a file to preview</div>';
+        return;
+      }
+      const f = kFiltered[kActive];
+      preview.innerHTML = `
+        <div class="kp-filename">${f.name}</div>
+        <div class="kp-meta">
+          <span class="kp-tag">${f.type}</span>
+          <span>${f.modified}</span>
+          <span>${f.questions.length} questions</span>
+        </div>
+        <div class="kp-divider"></div>
+        <div class="kp-section-lbl">Research Questions</div>
+        <div class="kp-questions">
+          ${f.questions.map((q, i) => `
+            <div class="kp-q">
+              <span class="kp-q-num">Q${i+1}</span>
+              <span class="kp-q-text">${q}</span>
+            </div>
+          `).join('')}
+        </div>
+        <button class="kp-load-btn" id="kpLoadBtn">Load this script →</button>
+      `;
+      document.getElementById('kpLoadBtn').addEventListener('click', selectKbarFile);
+    }
+
+    function selectKbarFile() {
+      if (kActive < 0 || kActive >= kFiltered.length) return;
+      const f = kFiltered[kActive];
+
+      // Make sure pill is visible
+      const pill = document.getElementById('diPill');
+      if (!pill.classList.contains('show')) {
+        pill.classList.add('show');
+        document.getElementById('kbdHint').classList.add('show');
+      }
+
+      handleFileReady(f.name);
+      closeKbar();
+    }
+
+    // Search input
+    document.getElementById('kbarInput').addEventListener('input', () => {
+      const q = document.getElementById('kbarInput').value.toLowerCase().trim();
+      kFiltered = q
+        ? FILES.filter(f => f.name.toLowerCase().includes(q))
+        : [...FILES];
+      kActive = kFiltered.length > 0 ? 0 : -1;
+      renderKbarList();
+    });
+
+    document.getElementById('kbarInput').addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeKbar(); return; }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        kActive = Math.min(kActive + 1, kFiltered.length - 1);
+        renderKbarList();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        kActive = Math.max(kActive - 1, 0);
+        renderKbarList();
+      } else if (e.key === 'Enter') {
+        selectKbarFile();
+      }
+    });
+
+    document.getElementById('kbarEsc').addEventListener('click', closeKbar);
+
+    // Click outside to close
+    document.getElementById('kbarOverlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('kbarOverlay')) closeKbar();
+    });
+
+    // Global keyboard shortcut
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        if (document.getElementById('kbarOverlay').classList.contains('open')) {
+          closeKbar();
+        } else {
+          openKbar();
+        }
+      }
+      if (e.key === 'Escape') closeKbar();
+    });
+  </script>
+</body>
+</html>

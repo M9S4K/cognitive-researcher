@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research Assistant — Interview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f7f6f4;
+      color: #2a2a2a;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: white;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 0.875rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .session-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+    }
+
+    .session-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #7c9885;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: #f0f4f1;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+    }
+
+    .sep {
+      width: 1px;
+      height: 14px;
+      background: #e0e0e0;
+    }
+
+    .participant-label {
+      font-size: 0.9rem;
+      color: #4a4a4a;
+      font-weight: 500;
+    }
+
+    .timer {
+      font-size: 0.88rem;
+      color: #9a9a9a;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      min-height: calc(100vh - 53px);
+    }
+
+    /* ── Main column ── */
+    .main {
+      padding: 3rem 3rem 3rem 3.5rem;
+      max-width: 620px;
+    }
+
+    /* Progress bar */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2.75rem;
+    }
+
+    .progress-track {
+      flex: 1;
+      height: 3px;
+      background: #ebebeb;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #7c9885;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .progress-label {
+      font-size: 0.78rem;
+      color: #b0b0b0;
+      white-space: nowrap;
+    }
+
+    /* Question card */
+    .question-card {
+      background: white;
+      border-radius: 14px;
+      padding: 2.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.03);
+      margin-bottom: 2rem;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeUp 0.35s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .q-number {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #7c9885;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+    }
+
+    .q-text {
+      font-size: 1.35rem;
+      font-weight: 400;
+      color: #1a1a1a;
+      line-height: 1.5;
+      letter-spacing: -0.015em;
+    }
+
+    /* Follow-up chips */
+    .followups-heading {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.75rem;
+    }
+
+    .followups {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .chip {
+      background: white;
+      border: 1.5px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 0.7rem 1rem;
+      font-size: 0.875rem;
+      color: #4a4a4a;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+
+    .chip:hover {
+      border-color: #8a9d91;
+      background: #f7faf8;
+      color: #1a1a1a;
+    }
+
+    /* Action buttons */
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .btn-next {
+      padding: 0.875rem 1.75rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+      background: #6b7f73;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      letter-spacing: 0.01em;
+    }
+
+    .btn-next:hover:not(:disabled) {
+      background: #5a6d62;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(107,127,115,0.2);
+    }
+
+    .btn-next:disabled {
+      background: #c4c4c4;
+      cursor: not-allowed;
+    }
+
+    .btn-end {
+      padding: 0.875rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #9a9a9a;
+      background: transparent;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-end:hover {
+      border-color: #b0b0b0;
+      color: #6b6b6b;
+    }
+
+    /* End screen */
+    .end-screen {
+      display: none;
+      flex-direction: column;
+      align-items: flex-start;
+      padding-top: 2rem;
+      gap: 0.75rem;
+      opacity: 0;
+      animation: fadeUp 0.4s ease forwards;
+    }
+
+    .end-screen.visible {
+      display: flex;
+    }
+
+    .end-check {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #f0f4f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .end-title {
+      font-size: 1.4rem;
+      font-weight: 500;
+      color: #1a1a1a;
+      letter-spacing: -0.01em;
+    }
+
+    .end-sub {
+      font-size: 0.95rem;
+      color: #6b6b6b;
+      margin-bottom: 0.75rem;
+    }
+
+    .btn-insights {
+      padding: 0.875rem 1.75rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+      background: #6b7f73;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .btn-insights:hover {
+      background: #5a6d62;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(107,127,115,0.2);
+    }
+
+    /* ── Right panel ── */
+    .panel {
+      background: white;
+      border-left: 1px solid #e8e8e8;
+      padding: 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+      position: sticky;
+      top: 53px;
+      height: calc(100vh - 53px);
+      overflow-y: auto;
+    }
+
+    .panel-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #b0b0b0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.875rem;
+    }
+
+    /* Insight badge */
+    .insight-badge {
+      display: none;
+      gap: 0.625rem;
+      background: #fffbee;
+      border: 1px solid #f0dc98;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      align-items: flex-start;
+    }
+
+    .insight-badge.visible {
+      display: flex;
+      animation: badgeIn 0.4s ease forwards;
+    }
+
+    @keyframes badgeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .insight-icon { font-size: 0.95rem; line-height: 1.5; }
+
+    .insight-body { display: flex; flex-direction: column; gap: 0.2rem; }
+
+    .insight-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #b08a20;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .insight-msg {
+      font-size: 0.82rem;
+      color: #6b5010;
+      line-height: 1.45;
+    }
+
+    /* AI status */
+    .ai-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .ai-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #7c9885;
+      flex-shrink: 0;
+      animation: breathe 2.2s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.35; transform: scale(0.8); }
+    }
+
+    .ai-status-text {
+      font-size: 0.8rem;
+      color: #7c9885;
+    }
+
+    /* Notes stream */
+    .notes-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .note {
+      font-size: 0.82rem;
+      color: #4a4a4a;
+      line-height: 1.55;
+      padding: 0.6rem 0.75rem;
+      background: #fafafa;
+      border-left: 2px solid #d4d4d4;
+      border-radius: 0 6px 6px 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      opacity: 0;
+      transform: translateY(5px);
+      animation: noteIn 0.3s ease forwards;
+    }
+
+    @keyframes noteIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="session-meta">
+      <span class="session-tag">Interview</span>
+      <div class="sep"></div>
+      <span class="participant-label" id="participantDisplay">Participant P-01</span>
+    </div>
+    <span class="timer" id="timer">00:00</span>
+  </div>
+
+  <!-- Layout -->
+  <div class="layout">
+
+    <!-- Left: question area -->
+    <div class="main">
+
+      <div class="progress-row">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-label" id="progressLabel">1 of 8</span>
+      </div>
+
+      <!-- Active question view -->
+      <div id="questionView">
+        <div class="question-card" id="questionCard">
+          <div class="q-number" id="qNumber">Question 1</div>
+          <div class="q-text" id="qText"></div>
+        </div>
+
+        <div class="followups-heading">Suggested follow-ups</div>
+        <div class="followups" id="followups"></div>
+
+        <div class="actions">
+          <button class="btn-next" id="nextBtn">Next Question →</button>
+          <button class="btn-end" id="endBtn">End Session</button>
+        </div>
+      </div>
+
+      <!-- End screen -->
+      <div class="end-screen" id="endScreen">
+        <div class="end-check">✓</div>
+        <div class="end-title">Session complete</div>
+        <div class="end-sub">All questions covered. Ready to review insights.</div>
+        <button class="btn-insights" onclick="window.location.href='insights.html'">View Insight Doc →</button>
+      </div>
+
+    </div>
+
+    <!-- Right: AI panel -->
+    <div class="panel">
+
+      <div>
+        <div class="insight-badge" id="insightBadge">
+          <span class="insight-icon">🔍</span>
+          <div class="insight-body">
+            <span class="insight-label">New insight</span>
+            <span class="insight-msg" id="insightMsg"></span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title">AI Notes</div>
+        <div class="ai-status">
+          <div class="ai-dot"></div>
+          <span class="ai-status-text">AI is taking notes…</span>
+        </div>
+        <div class="notes-stream" id="notesStream"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const DATA = [
+      {
+        q: "Can you walk me through how you currently manage your research projects?",
+        followups: [
+          "What does that look like on a typical week?",
+          "Do you use any specific tools for organisation?"
+        ],
+        note: "Uses an ad-hoc system — mix of Notion and folders. No dedicated research tool.",
+        insight: null
+      },
+      {
+        q: "What tools do you use to keep track of participant notes during sessions?",
+        followups: [
+          "Have you tried anything that didn't work out?",
+          "How do you feel about the current setup?"
+        ],
+        note: "Mentions Google Docs and sticky notes. Finds it fragmented and hard to search later.",
+        insight: null
+      },
+      {
+        q: "Tell me about the last time a research session felt particularly overwhelming. What happened?",
+        followups: [
+          "What specifically triggered that feeling?",
+          "What would have made it easier?",
+          "Has this happened more than once?"
+        ],
+        note: "Solo session, 3 tasks, no second researcher. Lost track of probes mid-task.",
+        insight: "Cognitive overload peaks when managing the script and live notes simultaneously"
+      },
+      {
+        q: "How do you currently share findings with your team after a session?",
+        followups: [
+          "How long does the write-up usually take?",
+          "Does anyone else contribute to it?"
+        ],
+        note: "Sends a Notion doc. Write-up takes 2–3 hours post-session.",
+        insight: null
+      },
+      {
+        q: "What does your note-taking process look like in the moment — during a live session?",
+        followups: [
+          "Do you ever feel you miss things while noting?",
+          "Would you trust an AI to take notes on your behalf?"
+        ],
+        note: "Types fast, misses non-verbal cues. Describes it as 'playing catch-up the whole time'.",
+        insight: "Note-taking competes directly with active listening — central pain point"
+      },
+      {
+        q: "If you could change one thing about your current research workflow, what would it be?",
+        followups: [
+          "Why that specifically over everything else?",
+          "Have you looked for solutions to this already?"
+        ],
+        note: "Wants automated note-taking. Has tried Otter.ai but found it too generic for UX work.",
+        insight: null
+      },
+      {
+        q: "How do you decide which insights from a session are worth documenting?",
+        followups: [
+          "Is there a framework you follow?",
+          "Do you worry about missing important signals?"
+        ],
+        note: "No formal framework. Goes on instinct and pattern recognition across sessions.",
+        insight: "Insight prioritisation is entirely intuitive — no structured method in place"
+      },
+      {
+        q: "Is there anything else about your research process you'd like to share?",
+        followups: [
+          "Anything we haven't covered that feels important?",
+          "Any tool or approach you wish existed?"
+        ],
+        note: "Mentions wanting a 'quiet co-pilot' — something that assists without interrupting.",
+        insight: null
+      }
+    ];
+
+    let idx = 0;
+    let secs = 0;
+
+    const qCard    = document.getElementById('questionCard');
+    const qNumber  = document.getElementById('qNumber');
+    const qText    = document.getElementById('qText');
+    const followEl = document.getElementById('followups');
+    const fillEl   = document.getElementById('progressFill');
+    const labelEl  = document.getElementById('progressLabel');
+    const nextBtn  = document.getElementById('nextBtn');
+    const endBtn   = document.getElementById('endBtn');
+    const qView    = document.getElementById('questionView');
+    const endScr   = document.getElementById('endScreen');
+    const notes    = document.getElementById('notesStream');
+    const badge    = document.getElementById('insightBadge');
+    const badgeMsg = document.getElementById('insightMsg');
+    const timerEl  = document.getElementById('timer');
+
+    // Timer
+    setInterval(() => {
+      secs++;
+      timerEl.textContent =
+        String(Math.floor(secs / 60)).padStart(2,'0') + ':' +
+        String(secs % 60).padStart(2,'0');
+    }, 1000);
+
+    function render(i) {
+      const d = DATA[i];
+
+      // Re-trigger card animation
+      qCard.style.animation = 'none';
+      qCard.offsetHeight;
+      qCard.style.animation = 'fadeUp 0.35s ease forwards';
+
+      qNumber.textContent = `Question ${i + 1}`;
+      qText.textContent   = d.q;
+
+      // Follow-up chips
+      followEl.innerHTML = '';
+      d.followups.forEach(f => {
+        const b = document.createElement('button');
+        b.className   = 'chip';
+        b.textContent = f;
+        followEl.appendChild(b);
+      });
+
+      // Progress
+      fillEl.style.width    = `${((i + 1) / DATA.length) * 100}%`;
+      labelEl.textContent   = `${i + 1} of ${DATA.length}`;
+      nextBtn.textContent   = i === DATA.length - 1 ? 'Finish Session' : 'Next Question →';
+
+      // Hide previous insight
+      badge.classList.remove('visible');
+
+      // Append note after delay
+      setTimeout(() => addNote(d.note), 1400);
+
+      // Show insight after longer delay
+      if (d.insight) {
+        setTimeout(() => {
+          badgeMsg.textContent = d.insight;
+          badge.classList.add('visible');
+        }, 2600);
+      }
+    }
+
+    function addNote(text) {
+      const el = document.createElement('div');
+      el.className   = 'note';
+      el.textContent = text;
+      notes.appendChild(el);
+      notes.scrollTop = notes.scrollHeight;
+    }
+
+    nextBtn.addEventListener('click', () => {
+      if (idx < DATA.length - 1) {
+        idx++;
+        render(idx);
+      } else {
+        endSession();
+      }
+    });
+
+    endBtn.addEventListener('click', endSession);
+
+    function endSession() {
+      qView.style.display = 'none';
+      endScr.classList.add('visible');
+    }
+
+    render(0);
+  </script>
+</body>
+</html>

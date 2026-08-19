@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rae — Windows desktop</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-width: 960px; min-height: 100%; margin: 0; }
+    body { overflow-x: auto; background: #282828; font-family: Inter, system-ui, sans-serif; }
+
+    .desktop {
+      position: relative;
+      min-width: 960px;
+      min-height: 100vh;
+      overflow: hidden;
+      background: #282828;
+    }
+
+    .folders {
+      position: absolute;
+      top: 36px;
+      left: 34px;
+      display: flex;
+      flex-direction: column;
+      gap: 27px;
+    }
+    .folder { width: 80px; }
+    .folder-icon { width: 80px; height: 80px; border-radius: 9px; background: #474747; }
+    .folder-label { width: 56px; height: 15px; margin-top: 10px; border-radius: 2px; background: #474747; }
+
+    .notification {
+      position: absolute;
+      right: clamp(24px, 2.36vw, 34px);
+      bottom: 100px;
+      width: 442px;
+      padding: 20px 24px;
+      border-radius: 16px;
+      background: #fff;
+      color: #000;
+      transition: transform 220ms ease, opacity 180ms ease;
+    }
+    .notification.hidden { transform: translateX(calc(100% + 40px)); opacity: 0; pointer-events: none; }
+    .notification-head { display: flex; flex-direction: column; gap: 4px; }
+    .eyebrow { margin: 0; font-size: 17px; font-weight: 400; line-height: 1.4; }
+    h1 { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.4; }
+    .actions { display: flex; gap: 17px; margin-top: 12px; }
+    button { border: 0; border-radius: 87px; padding: 12px; cursor: pointer; font: 700 18px/22px Inter, system-ui, sans-serif; transition: transform 150ms ease, opacity 150ms ease; }
+    button:hover { transform: translateY(-1px); }
+    button:focus-visible { outline: 2px solid #161414; outline-offset: 3px; }
+    .prepare { display: flex; align-items: center; gap: 8px; padding-inline: 20px; background: #161414; color: #fff; }
+    .dismiss { background: #efefef; color: #161414; }
+
+    .shortcut { display: flex; align-items: center; gap: 5px; }
+    .shortcut kbd { min-width: 19px; height: 19px; display: grid; place-items: center; padding: 0 4px; border: 1px solid rgb(255 255 255 / 50%); border-radius: 4px; color: #fff; font: 500 12px/1 'Roboto Condensed', Inter, sans-serif; }
+
+    .modal-backdrop {
+      position: fixed;
+      z-index: 2;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding-bottom: 80px;
+      background: rgb(0 0 0 / 18%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+    .modal-backdrop.visible { opacity: 1; pointer-events: auto; }
+    .script-modal {
+      width: 685px;
+      height: 500px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #fff;
+      color: #000;
+      box-shadow: 0 18px 60px rgb(0 0 0 / 25%);
+      opacity: 0;
+      transform: translateY(12px) scale(.985);
+      transition: transform 220ms ease, opacity 180ms ease;
+    }
+    .modal-backdrop.visible .script-modal { opacity: 1; transform: translateY(0) scale(1); }
+    .script-selected {
+      position: fixed;
+      z-index: 3;
+      top: 24px;
+      left: 50%;
+      display: flex;
+      align-items: center;
+      width: 484px;
+      padding: 20px 24px;
+      border-radius: 20px;
+      background: #fff;
+      color: #000;
+      box-shadow: 0 12px 36px rgb(0 0 0 / 18%);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -16px);
+      transition: opacity 180ms ease, transform 220ms ease;
+    }
+    .script-selected.visible { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+    .script-selected-copy { flex: 1 1 214px; min-width: 0; }
+    .script-selected-title { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.4; }
+    .script-selected-subtitle { margin: 0; font-size: 17px; font-weight: 400; line-height: 1.4; }
+    .join-meeting { display: flex; align-items: center; gap: 10px; padding: 14px 18px 14px 20px; background: #161414; color: #fff; white-space: nowrap; }
+    .join-meeting .shortcut { gap: 5px; }
+    .browser-window {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      min-width: 960px;
+      overflow: hidden;
+      border-radius: 20px;
+      background: #c0c0c0;
+      opacity: 0;
+      pointer-events: none;
+      transform-origin: 389px calc(100% - 40px);
+      transform: scale(.028, .04);
+      will-change: transform;
+      transition: transform 560ms cubic-bezier(.22, 1, .36, 1), opacity 120ms ease;
+    }
+    .browser-window.open { opacity: 1; pointer-events: auto; transform: scale(1); }
+    .browser-tabbar { position: relative; height: 53px; background: #4b4b4b; }
+    .window-controls { position: absolute; top: 19px; left: 22px; display: flex; gap: 10px; }
+    .window-controls span { width: 20px; height: 20px; border-radius: 50%; background: rgb(245 245 245 / 40%); }
+    .browser-tab { position: absolute; top: 6px; left: 128px; display: flex; align-items: center; gap: 10px; width: 253px; height: 48px; padding: 0 12px; border-radius: 14px 14px 0 0; background: #c0c0c0; color: #000; font-size: 16px; font-weight: 500; }
+    .browser-tab-icon { width: 28px; height: 28px; border-radius: 5px; background: #8d8b8b; }
+    .address-row { height: 54px; padding: 9px 15px; background: #c0c0c0; }
+    .address { height: 36px; overflow: hidden; border-radius: 14px; background: #b0b0b0; color: #3e3e3e; font-size: 15px; line-height: 36px; padding: 0 17px; white-space: nowrap; text-overflow: ellipsis; }
+    .meeting-toolbar { position: relative; height: 82px; border-bottom: 1px solid rgb(0 0 0 / 10%); background: #d9d9d9; }
+    .teams-app { position: absolute; top: 16px; left: 13px; display: grid; place-items: center; width: 57px; color: #000; font-size: 11px; font-weight: 500; text-align: center; }
+    .teams-logo { width: 32px; height: 32px; margin-bottom: 3px; border-radius: 5px; background: #8d8b8b; }
+    .toolbar-divider { position: absolute; top: 16px; left: 81px; width: 1px; height: 49px; background: rgb(0 0 0 / 10%); }
+    .call-time { position: absolute; top: 29px; left: 101px; font-size: 14px; font-weight: 500; }
+    .participants { position: absolute; top: 14px; right: 160px; display: flex; gap: 24px; }
+    .participant { width: 46px; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+    .participant i { width: 28px; height: 28px; border-radius: 5px; background: #b1b1b1; }
+    .participant b { width: 46px; height: 8px; border-radius: 3px; background: #b1b1b1; }
+    .leave-call { position: absolute; top: 18px; right: 15px; display: flex; align-items: center; gap: 10px; padding: 10px 16px 10px 20px; border-radius: 11px; background: #555; color: #fff; font: 600 18px/22px Inter, sans-serif; }
+    .hangup { width: 22px; height: 9px; border-top: 4px solid #fff; border-radius: 50%; transform: rotate(180deg); }
+    .meeting-body { display: flex; height: calc(100vh - 189px); min-height: 500px; }
+    .teams-sidebar { width: 82px; flex: none; padding-top: 18px; border-right: 1px solid rgb(0 0 0 / 10%); background: #d9d9d9; }
+    .teams-sidebar .participant { margin: 0 auto 24px; }
+    .call-stage { position: relative; flex: 1; display: grid; place-items: center; background: #a6a6a6; }
+    .avatar { display: grid; place-items: center; width: 200px; height: 200px; border-radius: 50%; background: #656565; color: #e2e2e2; font-size: 82px; font-weight: 500; letter-spacing: -.04em; }
+    .research-toolbar {
+      position: absolute;
+      z-index: 2;
+      top: 124px;
+      left: calc(50% - 214px);
+      width: 429px;
+      height: 363px;
+      color: #000;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
+      transition: opacity 220ms ease, transform 240ms ease, height 360ms cubic-bezier(0.32, 0.72, 0, 1);
+      cursor: grab;
+    }
+    .research-toolbar.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .research-toolbar:active { cursor: grabbing; }
+    .toolbar-surface {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid rgb(126 126 126 / 20%);
+      border-radius: 20px;
+      background: #fcfcfa;
+      box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%);
+      transition: opacity 260ms ease;
+    }
+    .toolbar-header { position: relative; height: 103px; padding: 29px 26px 0; border-bottom: 1px solid #d1d1d1; background: #eaeaea; cursor: grab; touch-action: none; }
+    .toolbar-header:active { cursor: grabbing; }
+    .drag-handle { position: absolute; top: 8px; left: 50%; width: 53px; height: 9px; cursor: grab; transform: translateX(-50%); background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; touch-action: none; }
+    .drag-handle:active { cursor: grabbing; }
+    .toolbar-kicker { margin: 0; font-size: 10px; font-weight: 300; letter-spacing: .11em; line-height: 14px; text-transform: uppercase; }
+    .toolbar-title { width: max-content; margin: 2px 0 0; background: linear-gradient(105deg, #111 0%, #111 40%, #a3a3a3 50%, #111 60%, #111 100%); background-size: 250% 100%; background-clip: text; -webkit-background-clip: text; color: transparent; font-size: 18px; font-weight: 500; line-height: 25px; animation: note-shimmer 5.8s ease-in-out infinite; }
+    .toolbar-time { position: absolute; top: 29px; right: 26px; font-size: 14px; font-weight: 300; line-height: 14px; }
+    .manual-notes { position: absolute; right: 26px; bottom: 30px; border: 0; padding: 0; background: transparent; color: #000; cursor: pointer; font: 300 13px/18px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+    .question-progress { display: flex; gap: 7px; position: absolute; right: 26px; bottom: 14px; left: 26px; }
+    .question-progress span { height: 5px; flex: 1; border-radius: 19px; background: #d9d9d9; }
+    .question-progress span:first-child { background: linear-gradient(90deg, #8e8e8e 49%, #d9d9d9 49%); }
+    .questions { position: relative; height: 260px; padding: 30px 24px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+    .questions::-webkit-scrollbar { display: none; }
+    /* Measured in JS to span first number → last number, so it tracks the real
+       content height instead of the fixed viewport height. */
+    .questions-line { position: absolute; left: 38px; width: 2px; background: #efefed; pointer-events: none; }
+    .question { position: relative; display: flex; flex-wrap: wrap; column-gap: 9px; row-gap: 0; margin-bottom: 42px; transform-origin: left top; transition: margin-bottom 280ms ease, opacity 240ms ease; }
+    .question.answered { opacity: .7; }
+    /* Rae's reworded version of a question — reads as the next line of the same block,
+       directly under the struck-through original. */
+    .question .question-rewrite { flex-basis: 100%; max-width: none; margin: 0; padding-left: 39px; max-height: 0; opacity: 0; overflow: hidden; transform: translateY(-4px); transition: max-height 300ms ease, opacity 220ms ease, transform 260ms ease; }
+    .question.rewriting .question-text:not(.question-rewrite) { text-decoration: line-through; opacity: .55; }
+    .question.rewritten .question-rewrite { max-height: 120px; opacity: 1; transform: translateY(0); }
+    .question:not(.active) { cursor: pointer; }
+    .question-number { z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 40px; background: #e1e1e1; color: #585858; font-size: 18px; font-weight: 700; line-height: 1; transition: background-color 240ms ease, color 240ms ease; }
+    .question-text { margin: 4px 0 0; max-width: 349px; font-size: 18px; font-weight: 500; line-height: 1.4; transition: color 240ms ease; }
+    .question:not(.active) .question-number { background: #efefed; color: #aaaaa9; }
+    .question:not(.active) .question-text { color: #7e7e7d; }
+    .questions-spacer { height: 249px; flex: none; }
+    .probe-card { max-height: 0; margin-left: 39px; overflow: hidden; border: 1px solid transparent; border-radius: 14px; background: #f6f6f6; opacity: 0; transform: translateY(-6px); transition: max-height 280ms ease, margin 280ms ease, padding 280ms ease, opacity 180ms ease, transform 240ms ease; }
+    .probe-title { margin: 0; color: #676767; font: 15px/21px 'Geist Pixel', Inter, sans-serif; }
+    .probe-row { display: flex; gap: 9px; align-items: flex-start; margin-top: 10px; cursor: pointer; }
+    .probe-number { display: grid; place-items: center; width: 30px; height: 25px; flex: none; border-radius: 40px; background: #e1e1e1; color: #585858; font-size: 14px; font-weight: 600; }
+    .probe-question { margin: 1px 0 0; font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .question.probeable { cursor: pointer; }
+    .question.expanded { margin-bottom: 15px; }
+    .question.checked .question-number,
+    .question.answered .question-number { position: relative; color: transparent; background: #3e3e3e; }
+    .question.checked .question-number::after,
+    .question.answered .question-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 17px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+    @keyframes tick-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+    .probe-row.checked .probe-number { position: relative; color: transparent; background: #3e3e3e; }
+    .probe-row.checked .probe-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 15px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+    .probe-card.revealed { max-height: 136px; margin: 0 11px 28px 39px; padding: 10px 14px 10px; border-color: rgb(0 0 0 / 3%); opacity: 1; transform: translateY(0); }
+
+    .finish-session { position: absolute; z-index: 2; left: 14px; bottom: 11px; display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 14px; border: 0; border-radius: 12px; background: #161414; color: #fff; font: 600 13px/1 Inter, sans-serif; cursor: pointer; opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity 240ms ease, transform 260ms cubic-bezier(0.34, 1.4, 0.64, 1); }
+    .finish-session.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .finish-session kbd { min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 3px; border: 1px solid rgb(255 255 255 / 50%); border-radius: 4px; color: #fff; font: 500 11px/1 'Roboto Condensed', Inter, sans-serif; }
+
+    /* Session complete — swaps in over the toolbar once the session is finished. */
+    .complete-surface { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; gap: 32px; padding: 10px 14px 16px; border: 1px solid rgb(126 126 126 / 20%); border-radius: 20px; background: #fcfcfa; box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%); opacity: 0; pointer-events: none; transition: opacity 300ms ease; }
+    .research-toolbar.session-complete { height: 417px; }
+    .research-toolbar.session-complete .toolbar-surface { opacity: 0; pointer-events: none; }
+    .research-toolbar.session-complete .complete-surface { opacity: 1; pointer-events: auto; }
+    .complete-handle { width: 53px; height: 9px; flex: none; background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; }
+    .complete-head { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .complete-check { display: grid; place-items: center; width: 86.66px; height: 86.66px; flex: none; border-radius: 50%; background: #e0e0e0; outline: 5.42px solid #fcfcfa; }
+    .complete-check svg { width: 44.13px; height: 29.83px; }
+    .complete-copy { display: flex; flex-direction: column; align-items: center; }
+    .complete-title { margin: 0; color: #000; font: 500 24px/140% Inter, sans-serif; text-align: center; }
+    .complete-metrics { display: flex; align-items: center; justify-content: center; gap: 24px; }
+    .metric { position: relative; display: flex; flex-direction: column; align-items: center; width: 83px; flex: none; }
+    .metric-value { color: #2e2e2e; font: 400 32px/120% 'Mona Sans', Inter, sans-serif; text-align: center; }
+    .metric-label { color: #000; font: 400 14.73px/140% Inter, sans-serif; text-align: center; }
+    .metric-sparkle { position: absolute; left: 6px; top: -1px; width: 18.42px; height: 18.42px; color: #2e2e2e; }
+    .view-doc { align-self: stretch; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px 18px 16px 20px; border: 0; border-radius: 16px; background: #161414; color: #fff; font: 600 18px/22px Inter, sans-serif; cursor: pointer; }
+
+    .sparkle-icon { width: 14px; height: 14px; flex: none; }
+    /* Sits behind the card and slides down out from under it, then tucks back up. */
+    .insight-toast {
+      position: absolute;
+      z-index: 0;
+      right: 0;
+      bottom: -34px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      /* The tall top padding runs up behind the card, so the squared top corners meet its
+         rounded bottom edge with no gap. Only the bottom 34px is ever on screen. */
+      padding: 34px 16px 10px;
+      border-radius: 0 0 16px 16px;
+      background: #d9d9d9;
+      color: #525252;
+      font: 600 14px/1.2 Inter, sans-serif;
+      white-space: nowrap;
+      /* Keeps the label from spilling past the card's edge mid width-animation. */
+      overflow: hidden;
+      box-shadow: 0 6px 14px rgb(0 0 0 / 10%);
+      transform: translateY(calc(-100% - 20px));
+      transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1), width 300ms cubic-bezier(0.32, 0.72, 0, 1);
+      pointer-events: none;
+    }
+    .insight-toast.visible { transform: translateY(0); }
+    .insight-toast-label { transition: opacity 150ms ease; }
+    .insight-toast.swapping .insight-toast-label { opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { .insight-toast, .insight-toast-label { transition-duration: 1ms; } .question-number::after, .probe-number::after { animation: none; } }
+    .insight-counter {
+      position: absolute;
+      z-index: 1;
+      right: 7px;
+      bottom: 11px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px 3px 6px;
+      border-radius: 11px 8px 11px 8px;
+      background: #e1e1e1;
+      color: #717171;
+      font: 700 14px/1.2 Inter, sans-serif;
+      opacity: 0;
+      transform: translateY(5px);
+      transition: opacity 220ms ease, transform 240ms ease;
+    }
+    .insight-counter.visible { opacity: 1; transform: translateY(0); }
+    .insight-plus {
+      position: absolute;
+      z-index: 1;
+      right: 12px;
+      bottom: 32px;
+      color: #3e3e3e;
+      font: 700 14px/1 Inter, sans-serif;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .insight-plus.floating { animation: insight-plus-float 700ms ease-out; }
+    @keyframes insight-plus-float {
+      0% { opacity: 0; transform: translateY(6px); }
+      20% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-22px); }
+    }
+    @keyframes note-shimmer { 0%, 62%, 100% { background-position: 100% 50%; } 79% { background-position: 0% 50%; } }
+    @media (prefers-reduced-motion: reduce) { .toolbar-title { animation: none; color: #111; background: none; } }
+    .modal-header { height: 85px; position: relative; padding: 22px 24px 0; border-bottom: 1px solid rgb(0 0 0 / 20%); }
+    .search-row { display: flex; align-items: center; justify-content: space-between; }
+    .search-input { width: 570px; border: 0; outline: none; padding: 0; color: #000; background: transparent; font: 400 20px/28px Inter, sans-serif; }
+    .search-input::placeholder { color: rgb(0 0 0 / 60%); }
+    .search-icon { width: 24px; height: 24px; position: relative; }
+    .search-icon::before { content: ''; position: absolute; width: 14px; height: 14px; border: 2.5px solid #1e1e1e; border-radius: 50%; top: 1px; left: 1px; }
+    .search-icon::after { content: ''; position: absolute; width: 9px; height: 2.5px; border-radius: 2px; background: #1e1e1e; transform: rotate(45deg); right: 1px; bottom: 4px; }
+    .sync { display: flex; align-items: center; gap: 8px; margin-top: 9px; color: #6c6c6c; font-size: 10px; font-weight: 500; letter-spacing: .11em; text-transform: uppercase; }
+    .sync-icons { display: flex; gap: 5px; align-items: center; }
+    .sync-icon { display: block; background-position: center; background-repeat: no-repeat; background-size: contain; filter: grayscale(1); }
+    .drive { width: 20px; height: 20px; background-image: url('assets/sync-drive.png'); }
+    .cloud { width: 24px; height: 20px; background-image: url('assets/sync-onedrive.png'); }
+    .modal-body { height: 415px; display: grid; grid-template-columns: 253px 1fr; }
+    .recent { padding-top: 16px; border-right: 1px solid rgb(0 0 0 / 20%); }
+    .recent-label { margin: 0 22px 11px; color: #6c6c6c; font-size: 10px; font-weight: 500; letter-spacing: .11em; text-transform: uppercase; }
+    .document { width: 225px; height: 47px; display: flex; align-items: center; gap: 9px; margin-left: 12px; padding: 12px; overflow: hidden; border: 0; border-radius: 10px; background: transparent; color: #000; text-align: left; font: 400 16px/22px Inter, sans-serif; white-space: nowrap; }
+    .document:hover, .document:focus-visible, .document.selected { background: #efefef; outline: none; }
+    .doc-icon { width: 19px; height: 20px; flex: none; background: center / contain no-repeat url('assets/doc-thumbnail-word.png'); filter: grayscale(1); }
+    .doc-name { overflow: hidden; text-overflow: ellipsis; }
+    .preview { position: relative; overflow: hidden; background: #f4f4f4; }
+    .preview-content { display: none; height: 100%; padding: 14px 36px 0; }
+    .preview.active .preview-content { display: block; }
+    .document-title { margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; letter-spacing: -.01em; }
+    .document-meta { display: flex; align-items: center; gap: 6px; margin-top: 1px; color: #444; font-size: 12px; line-height: 17px; }
+    .pdf-tag { padding: 2px 4px; border-radius: 5px; background: #e4e4e4; color: #686868; font-weight: 700; }
+    .page-wrap { width: 360px; height: 510px; margin: 14px 0 0; overflow: hidden; border: 1px solid #c3c3c3; background: #fff; }
+    .page { width: 361px; height: 473px; background: center top / cover no-repeat url('assets/doc-preview.png'); }
+    .preview-fade { position: absolute; right: 0; bottom: 0; left: 0; height: 55px; background: linear-gradient(transparent, #f4f4f4); }
+    .pagination { position: absolute; bottom: 11px; left: 5px; z-index: 1; padding: 3px 8px 5px; border: 1px solid rgb(0 0 0 / 5%); border-radius: 30px; background: #e0e0e0; color: #494949; font-size: 10px; font-weight: 600; }
+    .load-script { position: absolute; right: 9px; bottom: 10px; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid rgb(0 0 0 / 5%); border-radius: 30px; background: #2d2d2d; color: #fff; font: 600 12px/17px Inter, sans-serif; }
+    .load-script kbd { display: grid; place-items: center; width: 15px; height: 15px; padding: 0; border: 1px solid rgb(255 255 255 / 50%); border-radius: 3px; font: 500 10px/1 Inter, sans-serif; }
+    .preview-fade, .pagination, .load-script { display: none; }
+    .preview.active .preview-fade, .preview.active .pagination, .preview.active .load-script { display: flex; }
+    .preview.active .preview-fade { display: block; }
+
+    .taskbar {
+      position: fixed;
+      z-index: 1;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      height: 80px;
+      padding: 0 35px;
+      background: #373737;
+    }
+    .taskbar-tools { display: flex; align-items: center; gap: 28px; }
+    .start-and-search { display: flex; align-items: center; gap: 24px; }
+    .windows-icon { display: grid; grid-template-columns: repeat(2, 20px); gap: 3px; width: 43px; }
+    .windows-icon span, .task-icon { width: 20px; height: 20px; background: #5a5a5a; }
+    .search { width: 239px; height: 43px; border-radius: 39px; background: #5a5a5a; }
+    .task-icons { display: flex; gap: 28px; }
+    .task-icon { width: 40px; height: 40px; border-radius: 8px; }
+    .task-icon.active { background: #747474; box-shadow: 0 0 0 2px rgb(255 255 255 / 13%); }
+
+
+    @media (max-height: 740px) {
+      .folders { transform: scale(.8); transform-origin: top left; }
+      .notification { bottom: 96px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="desktop" aria-label="Windows desktop">
+    <aside class="folders" aria-label="Desktop folders">
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+      <div class="folder"><div class="folder-icon"></div><div class="folder-label"></div></div>
+    </aside>
+
+    <section class="notification" id="notification" aria-labelledby="meeting-title">
+      <div class="notification-head">
+        <p class="eyebrow">Upcoming Meeting in 15 mins</p>
+        <h1 id="meeting-title">User Interview with Sarah Chen</h1>
+      </div>
+      <div class="actions">
+        <button class="prepare" id="prepare" type="button">Prepare session <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+        <button class="dismiss" id="dismiss" type="button">Dismiss</button>
+      </div>
+    </section>
+
+    <div class="modal-backdrop" id="modal-backdrop">
+      <section class="script-modal" role="dialog" aria-modal="true" aria-label="Search your script">
+        <header class="modal-header">
+          <div class="search-row">
+            <input class="search-input" id="script-search" type="search" placeholder="|Search your script" autocomplete="off">
+            <span class="search-icon" aria-hidden="true"></span>
+          </div>
+          <div class="sync"><span class="sync-icons" aria-hidden="true"><span class="sync-icon drive"></span><span class="sync-icon cloud"></span></span>Synced</div>
+        </header>
+        <div class="modal-body">
+          <div class="recent">
+            <p class="recent-label" id="list-label">Recent</p>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">Blockchain UX research</span></button>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">BOI UX AI interaction design study</span></button>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">DT - UT script</span></button>
+            <button class="document" type="button"><span class="doc-icon"></span><span class="doc-name">IoT device user satisfaction survey</span></button>
+            <button class="document search-result" id="et-result" type="button" hidden><span class="doc-icon"></span><span class="doc-name">ET - interview script</span></button>
+          </div>
+          <div class="preview" id="preview">
+            <div class="preview-content">
+              <p class="document-title">Emerging tech - User Interview script.pdf</p>
+              <div class="document-meta"><span class="pdf-tag">PDF</span><span>Edited 30 minutes ago</span></div>
+              <div class="page-wrap"><div class="page"></div></div>
+            </div>
+            <div class="preview-fade"></div>
+            <span class="pagination">Page 1 of 8</span>
+            <button class="load-script" type="button">Load this Script <kbd>↵</kbd></button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="script-selected" id="script-selected" aria-live="polite">
+      <div class="script-selected-copy">
+        <p class="script-selected-title">Script selected</p>
+        <p class="script-selected-subtitle">Meeting starts in 10 mins</p>
+      </div>
+      <button class="join-meeting" type="button">Join meeting <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+    </aside>
+
+    <section class="browser-window" id="browser-window" aria-label="Meeting with Sarah Chen">
+      <header class="browser-tabbar">
+        <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="browser-tab"><span class="browser-tab-icon"></span>Meeting with Sarah Chen</div>
+      </header>
+      <div class="address-row"><div class="address">teams.microsoft.com/light-meetings/launch?p=Jj8TXMCKVXNtGXeRPt&amp;anon=true&amp;launchAgent=join_launcher_web&amp;lightExperience=true&amp;correlationId=5b415204-8ede-44d...</div></div>
+      <div class="meeting-toolbar">
+        <div class="teams-app"><span class="teams-logo"></span>MS Teams</div><span class="toolbar-divider"></span><span class="call-time">00:34</span>
+        <div class="participants" aria-hidden="true"><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span></div>
+        <button class="leave-call" id="leave-call" type="button"><span class="hangup"></span>Leave</button>
+      </div>
+      <div class="meeting-body">
+        <aside class="teams-sidebar" aria-hidden="true"><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span></aside>
+        <main class="call-stage"><div class="avatar">SC</div></main>
+      </div>
+      <aside class="research-toolbar" id="research-toolbar" aria-label="Research assistant">
+        <div class="toolbar-surface">
+          <header class="toolbar-header" id="toolbar-header">
+            <span class="drag-handle" id="drag-handle" aria-label="Drag research assistant"></span>
+            <p class="toolbar-kicker">Research Assistant</p><p class="toolbar-title">Rae is taking notes</p><span class="toolbar-time">00:34</span>
+            <button class="manual-notes" type="button">Take notes manually</button>
+            <div class="question-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          </header>
+          <section class="questions"></section>
+          <div class="insight-counter" id="insight-counter" aria-hidden="true">
+            <svg class="sparkle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg>
+            <span id="insight-count">0</span>
+          </div>
+          <span class="insight-plus" id="insight-plus" aria-hidden="true">+1</span>
+          <button class="finish-session" id="finish-session" type="button">Finish Session <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+        </div>
+
+        <section class="complete-surface" aria-label="Session complete">
+          <span class="complete-handle" aria-hidden="true"></span>
+          <div class="complete-head">
+            <span class="complete-check" aria-hidden="true">
+              <svg viewBox="0 0 44.13 29.83" xmlns="http://www.w3.org/2000/svg"><path d="M0 15.389 14.393 29.826 44.133 0" fill="none" stroke="#5B5B5B" stroke-width="5"/></svg>
+            </span>
+            <div class="complete-copy">
+              <p class="complete-title">Session Complete</p>
+              <p class="complete-title">Nice work!</p>
+            </div>
+          </div>
+          <div class="complete-metrics">
+            <div class="metric">
+              <svg class="metric-sparkle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg>
+              <span class="metric-value" id="complete-insights">0</span>
+              <span class="metric-label">Insights</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="complete-questions">4/4</span>
+              <span class="metric-label">Questions</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="complete-duration">00:34</span>
+              <span class="metric-label">Duration</span>
+            </div>
+          </div>
+          <button class="view-doc" id="view-doc" type="button">View insight doc <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+        </section>
+        <div class="insight-toast" id="insight-toast" role="status" aria-live="polite">
+          <svg class="sparkle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg>
+          <span class="insight-toast-label">New insight unlocked</span>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="taskbar" aria-label="Windows taskbar">
+    <div class="taskbar-tools">
+      <div class="start-and-search">
+        <div class="windows-icon" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="search" aria-hidden="true"></div>
+      </div>
+      <div class="task-icons" aria-hidden="true"><span class="task-icon" id="browser-task"></span><span class="task-icon"></span><span class="task-icon"></span></div>
+    </div>
+  </footer>
+
+  <script src="research-toolbar.js"></script>
+  <script>
+    const notification = document.getElementById('notification');
+    const modal = document.getElementById('modal-backdrop');
+    const search = document.getElementById('script-search');
+    const listLabel = document.getElementById('list-label');
+    const etResult = document.getElementById('et-result');
+    const preview = document.getElementById('preview');
+    const loadScript = document.querySelector('.load-script');
+    const selectedToast = document.getElementById('script-selected');
+    const joinMeeting = document.querySelector('.join-meeting');
+    const browserWindow = document.getElementById('browser-window');
+    const browserTask = document.getElementById('browser-task');
+    const researchToolbar = document.getElementById('research-toolbar');
+    const toolbar = ResearchToolbar.init(researchToolbar);
+    let toolbarTimer;
+    const recentDocuments = [...document.querySelectorAll('.document:not(.search-result)')];
+
+    function showSearchResult() {
+      const hasQuery = search.value.trim().length > 0;
+      listLabel.textContent = hasQuery ? 'Results' : 'Recent';
+      recentDocuments.forEach((document) => { document.hidden = hasQuery; });
+      etResult.hidden = !hasQuery;
+      etResult.classList.toggle('selected', hasQuery);
+      preview.classList.toggle('active', hasQuery);
+    }
+
+    function selectScript() {
+      modal.classList.remove('visible');
+      selectedToast.classList.add('visible');
+    }
+    document.getElementById('dismiss').addEventListener('click', () => notification.classList.add('hidden'));
+    document.getElementById('prepare').addEventListener('click', () => {
+      notification.classList.add('hidden');
+      window.setTimeout(() => {
+        modal.classList.add('visible');
+        search.focus();
+      }, 220);
+    });
+    search.addEventListener('input', showSearchResult);
+    etResult.addEventListener('click', () => preview.classList.add('active'));
+    loadScript.addEventListener('click', selectScript);
+    joinMeeting.addEventListener('click', () => {
+      selectedToast.classList.remove('visible');
+      browserTask.classList.add('active');
+      browserWindow.classList.add('open');
+      window.clearTimeout(toolbarTimer);
+      toolbarTimer = window.setTimeout(() => researchToolbar.classList.add('visible'), 500);
+    });
+    document.getElementById('leave-call').addEventListener('click', () => {
+      browserWindow.classList.remove('open');
+      browserTask.classList.remove('active');
+      researchToolbar.classList.remove('visible');
+      window.clearTimeout(toolbarTimer);
+      toolbar.reset();
+    });
+
+    const toolbarHeader = document.getElementById('toolbar-header');
+    toolbarHeader.addEventListener('pointerdown', (event) => {
+      if (event.target.closest('button')) return;
+      const toolbarRect = researchToolbar.getBoundingClientRect();
+      const browserRect = browserWindow.getBoundingClientRect();
+      const offsetX = event.clientX - toolbarRect.left;
+      const offsetY = event.clientY - toolbarRect.top;
+      let moved = false;
+      toolbarHeader.setPointerCapture(event.pointerId);
+
+      const move = (moveEvent) => {
+        if (Math.abs(moveEvent.clientX - event.clientX) > 4 || Math.abs(moveEvent.clientY - event.clientY) > 4) moved = true;
+        const maxX = browserRect.width - toolbarRect.width;
+        const maxY = browserRect.height - toolbarRect.height;
+        const x = Math.max(0, Math.min(maxX, moveEvent.clientX - browserRect.left - offsetX));
+        const y = Math.max(0, Math.min(maxY, moveEvent.clientY - browserRect.top - offsetY));
+        researchToolbar.style.left = `${x}px`;
+        researchToolbar.style.top = `${y}px`;
+      };
+      const stop = () => {
+        toolbar.dragState.suppressClick = moved;
+        toolbarHeader.removeEventListener('pointermove', move);
+        toolbarHeader.removeEventListener('pointerup', stop);
+        toolbarHeader.removeEventListener('pointercancel', stop);
+      };
+      toolbarHeader.addEventListener('pointermove', move);
+      toolbarHeader.addEventListener('pointerup', stop);
+      toolbarHeader.addEventListener('pointercancel', stop);
+    });
+    // Hand off to the insight doc. The session state lives only in this page, so
+    // the doc screen renders its own (simulated) analysis of the same interview.
+    document.getElementById('view-doc').addEventListener('click', () => {
+      // Carry a pinned variant through so the doc analyses the script that was
+      // actually run. The default is left off the URL, since pinning it would
+      // also switch on the dev variant chip.
+      const pinned = new URLSearchParams(window.location.search).get('variant');
+      window.location.href = pinned === '1' ? 'insight-doc.html?variant=1' : 'insight-doc.html';
+    });
+    document.addEventListener('keydown', (event) => {
+      const finishSession = document.getElementById('finish-session');
+      if (event.ctrlKey && event.key === 'Enter' && finishSession.classList.contains('visible')) { finishSession.click(); return; }
+      if (event.ctrlKey && event.key === 'Enter' && researchToolbar.classList.contains('session-complete')) { document.getElementById('view-doc').click(); return; }
+      if (event.ctrlKey && event.key === 'Enter' && selectedToast.classList.contains('visible')) joinMeeting.click();
+      else if (event.ctrlKey && event.key === 'Enter' && !modal.classList.contains('visible')) document.getElementById('prepare').click();
+      if (event.key === 'Enter' && modal.classList.contains('visible') && search.value.trim()) selectScript();
+      if (event.key === 'Escape') modal.classList.remove('visible');
+    });
+
+    if (new URLSearchParams(window.location.search).get('skip') === 'call') {
+      notification.classList.add('hidden');
+      browserTask.classList.add('active');
+      browserWindow.classList.add('open');
+      researchToolbar.classList.add('visible');
+    }
+  </script>
+</body>
+</html>

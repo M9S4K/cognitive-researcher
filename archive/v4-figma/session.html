@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rae — Session</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; min-height: 100%; background: #000; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow-x: hidden; }
+
+  #stage {
+    position: relative; min-height: 100vh;
+    background: #c0c0c0; display: flex; flex-direction: column;
+    transform-origin: 50% 100%;
+    transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.35s ease;
+  }
+  /* Launch animation: window grows from where it was opened — taskbar (Windows) or Dock (macOS) */
+  body[data-os="windows"] #stage.launching { transform: scale(0.7, 0.4) translateY(30px); opacity: 0; }
+  body[data-os="mac"] #stage.launching { transform: scale(0.12); opacity: 0; }
+
+  /* browser chrome */
+  .chrome-top { position: relative; width: 100%; background: #4b4b4b; display: flex; align-items: center; padding: 0 clamp(12px, 2vw, 22px); height: clamp(40px, 5vw, 53px); gap: 12px; flex-wrap: wrap; }
+  .chrome-dots { display: flex; gap: 8px; }
+  .chrome-dots span { width: 14px; height: 14px; border-radius: 50%; background: #f5f5f5; opacity: 0.4; }
+  .chrome-tab { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .chrome-tab-icon { width: 22px; height: 22px; min-width: 22px; border-radius: 5px; background: #8d8b8b; }
+  .chrome-tab-title { font-size: clamp(13px, 1.4vw, 16px); font-weight: 500; color: #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .chrome-urlbar-row { display: flex; align-items: center; gap: 10px; padding: 10px clamp(10px, 2vw, 15px); }
+  .chrome-urlbar { flex: 1; background: #b0b0b0; border-radius: 14px; padding: 9px 16px; font-size: clamp(11px, 1.3vw, 15px); color: #3e3e3e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .leave-btn {
+    background: #555; border: none; border-radius: 11px; flex-shrink: 0;
+    padding: 8px 16px; display: flex; align-items: center; gap: 8px;
+    color: #fff; font-family: inherit; font-size: clamp(13px, 1.4vw, 18px); font-weight: 600; cursor: pointer;
+  }
+  .leave-icon { width: 16px; height: 16px; border-radius: 50%; background: #fff; opacity: 0.9; }
+
+  /* toolbar row (rail apps + right icon strip) — decorative chrome, collapses on narrow viewports */
+  .toolbar-row { display: flex; align-items: center; justify-content: space-between; padding: 8px clamp(10px, 2vw, 15px); gap: 12px; flex-wrap: wrap; }
+  .rail-app, .toolbar-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .rail-app-icon, .toolbar-item-icon { width: 24px; height: 24px; border-radius: 5px; background: #b1b1b1; }
+  .rail-app-icon { background: #8d8b8b; }
+  .rail-app-label, .toolbar-item-label { font-size: 10px; font-weight: 500; color: #000; }
+  .toolbar-icons { display: flex; gap: 16px; }
+  .rail-timer { font-size: 13px; font-weight: 500; color: #000; }
+  .rail-left { display: flex; align-items: center; gap: 10px; }
+
+  @media (max-width: 720px) {
+    .toolbar-icons { display: none; }
+  }
+
+  /* call area */
+  .call-area { position: relative; flex: 1; min-height: min(60vh, 560px); background: #a6a6a6; display: flex; align-items: center; justify-content: center; }
+  .avatar-circle {
+    width: clamp(90px, 16vw, 200px); height: clamp(90px, 16vw, 200px); border-radius: 50%; background: #656565;
+    display: flex; align-items: center; justify-content: center;
+    color: #e2e2e2; font-size: clamp(36px, 7vw, 82px); font-weight: 500;
+  }
+
+  .call-end-view { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 11px; opacity: 0; transition: opacity 0.4s ease; text-align: center; padding: 16px; }
+  .call-end-view.visible { display: flex; opacity: 1; }
+  .call-end-btn { width: clamp(90px, 16vw, 200px); height: clamp(90px, 16vw, 200px); border-radius: 50%; background: #656565; display: flex; align-items: center; justify-content: center; }
+  .call-end-btn::before { content: ''; width: 20%; height: 20%; border-radius: 50%; background: #ff4d4d; }
+  .call-end-title, .call-end-duration { font-size: clamp(20px, 3vw, 30px); font-weight: 600; color: #424242; }
+
+  /* Rae panel — floating card, overlays the call area, centers responsively */
+  .rae-panel {
+    position: fixed; left: 50%; bottom: clamp(12px, 4vh, 60px); transform: translateX(-50%);
+    width: min(429px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px); overflow-y: auto;
+    background: #fcfcfa; border: 1px solid rgba(126,126,126,0.2); border-radius: 24px;
+    box-shadow: 0 4px 70px 20px rgba(0,0,0,0.08); color: #000;
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.34, 1.1, 0.64, 1);
+    z-index: 5;
+  }
+  .rae-panel.hidden { opacity: 0; transform: translateX(-50%) scale(0.96) translateY(8px); pointer-events: none; }
+
+  .rae-header { position: relative; width: 100%; padding: 22px 27px 14px; background: #eaeaea; border-bottom: 1px solid #d1d1d1; border-radius: 24px 24px 0 0; }
+  .rae-logo { width: 40px; height: 7px; background: repeating-linear-gradient(90deg, #999 0 3px, transparent 3px 6px); opacity: 0.5; margin: 0 auto 8px; }
+  .rae-header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .rae-eyebrow { font-size: 10px; font-weight: 200; letter-spacing: 1.1px; text-transform: uppercase; }
+  .rae-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .rae-title { font-size: clamp(16px, 2vw, 18px); font-weight: 500; }
+  .rae-timer { font-size: 13px; font-weight: 300; }
+  .rae-manual-link { font-size: 12px; font-weight: 300; text-decoration: underline; white-space: nowrap; }
+
+  .rae-progress { display: flex; align-items: center; gap: 7px; padding: 14px 27px 0; }
+  .rae-progress-seg { flex: 1; height: 5px; border-radius: 19px; background: #d9d9d9; }
+  .rae-progress-seg.active { position: relative; overflow: hidden; }
+  .rae-progress-seg.active::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 48.8%; background: #8e8e8e; border-radius: 19px; }
+  .rae-progress-seg.done { background: #8e8e8e; }
+
+  .questions { position: relative; padding: 20px 27px 24px; }
+  .q-row { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 12px; transition: opacity 0.3s ease; }
+  .q-row.upcoming { opacity: 0.5; }
+  .q-num { width: 28px; height: 28px; min-width: 28px; border-radius: 40px; background: #e1e1e1; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #585858; }
+  .q-row.sub .q-num { width: 22px; height: 22px; min-width: 22px; font-size: 13px; font-weight: 700; color: #aaa9a9; background: #efefed; }
+  .q-row.upcoming .q-num { font-size: 13px; width: 22px; height: 22px; min-width: 22px; }
+  .q-text { font-size: 16px; font-weight: 500; padding-top: 3px; }
+  .q-row.upcoming .q-text { font-size: 13.5px; color: #7e7e7d; }
+  .q-row.sub .q-text { font-size: 13px; font-weight: 500; color: #000; }
+
+  .probing-wrap { display: none; margin: 6px 0 10px 48px; }
+  .probing-wrap.visible { display: block; }
+  .probing-label { font-size: 14px; color: #676767; margin-bottom: 8px; }
+
+  .insight-badge {
+    position: absolute; right: 20px; bottom: 20px; display: flex; align-items: center; gap: 4px;
+    background: #e1e1e1; border-radius: 11px 8px 8px 11px; padding: 3px 8px 3px 6px;
+    font-size: 14px; font-weight: 700; color: #717171; opacity: 0; transition: opacity 0.3s ease;
+  }
+  .insight-badge.visible { opacity: 1; }
+  .sparkle-sm { width: 16px; height: 16px; display: inline-block; }
+  .sparkle-sm::before { content: '✦'; font-size: 13px; color: #717171; }
+
+  .insight-toast {
+    position: fixed; right: clamp(12px, 3vw, 32px); bottom: clamp(160px, 30vh, 360px);
+    width: min(215px, 60vw); padding: 14px 0;
+    background: #d9d9d9; border-radius: 19px; opacity: 0; pointer-events: none;
+    transform: translateY(8px); transition: opacity 0.35s ease, transform 0.35s ease;
+    display: flex; align-items: center; justify-content: center; gap: 8px; color: #525252;
+    z-index: 6;
+  }
+  .insight-toast.visible { opacity: 1; transform: translateY(0); }
+  .insight-toast .sparkle-sm::before { font-size: 16px; color: #525252; }
+  .insight-toast span.label { font-size: 13px; font-weight: 600; text-align: center; }
+
+  /* session complete card */
+  .complete-card {
+    position: fixed; left: 50%; bottom: clamp(12px, 4vh, 60px); transform: translateX(-50%) scale(0.96) translateY(8px);
+    width: min(429px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow-y: auto;
+    background: #fcfcfa; border: 1px solid rgba(126,126,126,0.2); border-radius: 24px;
+    box-shadow: 0 4px 70px 20px rgba(0,0,0,0.08); color: #000; text-align: center;
+    padding: 32px 24px 24px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.1, 0.64, 1);
+    z-index: 5;
+  }
+  .complete-card.visible { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1) translateY(0); }
+  .complete-sparkle { font-size: 44px; color: #d9d9d9; margin-bottom: 12px; }
+  .complete-title { font-size: clamp(20px, 3vw, 24px); font-weight: 500; margin-bottom: 28px; }
+  .complete-stats { display: flex; justify-content: center; gap: clamp(16px, 4vw, 24px); margin-bottom: 28px; flex-wrap: wrap; }
+  .stat { display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+  .stat-num { font-size: 28px; color: #2e2e2e; }
+  .stat-label { font-size: 13px; color: #000; }
+  .stat .sparkle-sm { position: absolute; left: -20px; top: -2px; }
+  .stat .sparkle-sm::before { color: #2e2e2e; font-size: 16px; }
+  .view-doc-btn {
+    width: 100%; background: #161414; border: none; border-radius: 14px;
+    padding: 14px 18px; display: flex; align-items: center; justify-content: center; gap: 10px;
+    color: #fff; font-family: inherit; font-size: clamp(15px, 2vw, 18px); font-weight: 600; cursor: pointer;
+  }
+  .view-doc-btn .key {
+    border: 0.9px solid rgba(255,255,255,0.5); border-radius: 4.5px;
+    width: 19px; height: 19px; display: flex; align-items: center; justify-content: center; font-size: 13px;
+  }
+
+  #hint { position: fixed; left: 16px; bottom: 16px; color: rgba(0,0,0,0.4); font-size: 12px; font-family: 'Inter', sans-serif; z-index: 50; }
+</style>
+</head>
+<body>
+  <div id="stage" class="launching">
+    <div class="chrome-top">
+      <div class="chrome-dots"><span></span><span></span><span></span></div>
+      <div class="chrome-tab"><div class="chrome-tab-icon"></div><div class="chrome-tab-title">Meeting with Sarah Chen</div></div>
+    </div>
+
+    <div class="chrome-urlbar-row">
+      <div class="chrome-urlbar">teams.microsoft.com/light-meetings/launch?p=Jj8TXMCKVXNtGXeRPt&amp;anon=true&amp;launchAgent=join_launcher_web&amp;lightExperience=true&amp;correlationId=5b415204-8ede-44d...</div>
+    </div>
+
+    <div class="toolbar-row">
+      <div class="rail-left">
+        <div class="rail-app"><div class="rail-app-icon"></div><div class="rail-app-label">MS Teams</div></div>
+        <div class="rail-timer" id="railTimer">00:34</div>
+      </div>
+      <div class="toolbar-icons">
+        <div class="toolbar-item"><div class="toolbar-item-icon"></div><div class="toolbar-item-label"></div></div>
+        <div class="toolbar-item"><div class="toolbar-item-icon"></div><div class="toolbar-item-label"></div></div>
+        <div class="toolbar-item"><div class="toolbar-item-icon"></div><div class="toolbar-item-label"></div></div>
+        <div class="toolbar-item"><div class="toolbar-item-icon"></div><div class="toolbar-item-label"></div></div>
+        <div class="toolbar-item"><div class="toolbar-item-icon"></div><div class="toolbar-item-label"></div></div>
+        <div class="toolbar-item"><div class="toolbar-item-icon"></div><div class="toolbar-item-label"></div></div>
+        <div class="toolbar-item"><div class="toolbar-item-icon"></div><div class="toolbar-item-label"></div></div>
+      </div>
+      <button class="leave-btn" id="btnLeave"><span class="leave-icon"></span>Leave</button>
+    </div>
+
+    <div class="call-area">
+      <div class="avatar-circle" id="avatarCircle">AN</div>
+      <div class="call-end-view" id="callEndView">
+        <div class="call-end-btn"></div>
+        <div class="call-end-title">Meeting finished</div>
+        <div class="call-end-duration" id="callEndDuration">00:00</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rae-panel" id="raePanel">
+    <div class="rae-header">
+      <div class="rae-logo"></div>
+      <div class="rae-eyebrow">Research Assistant</div>
+      <div class="rae-title-row">
+        <div class="rae-title">Rae is taking notes</div>
+        <div class="rae-timer" id="raeTimer">00:34</div>
+      </div>
+      <div class="rae-manual-link">Take notes manually</div>
+    </div>
+
+    <div class="rae-progress" id="raeProgress">
+      <div class="rae-progress-seg active" data-seg="0"></div>
+      <div class="rae-progress-seg" data-seg="1"></div>
+      <div class="rae-progress-seg" data-seg="2"></div>
+      <div class="rae-progress-seg" data-seg="3"></div>
+    </div>
+
+    <div class="questions" id="questions"></div>
+  </div>
+
+  <div class="insight-toast" id="insightToast">
+    <span class="sparkle-sm"></span><span class="label">New insight unlocked</span>
+  </div>
+
+  <div class="complete-card" id="completeCard">
+    <div class="complete-sparkle">✦</div>
+    <div class="complete-title">Session Complete<br>Nice work!</div>
+    <div class="complete-stats">
+      <div class="stat"><span class="sparkle-sm"></span><div class="stat-num" id="statInsights">0</div><div class="stat-label">Insights</div></div>
+      <div class="stat"><div class="stat-num" id="statQuestions">0/5</div><div class="stat-label">Questions</div></div>
+      <div class="stat"><div class="stat-num" id="statDuration">00:00</div><div class="stat-label">Duration</div></div>
+    </div>
+    <button class="view-doc-btn" id="btnViewDoc">View insight doc <span class="key">⌘</span><span class="key">↵</span></button>
+  </div>
+
+<div id="hint">Rae is running the session…</div>
+
+<script>
+  let storedOsPref = '';
+  try { storedOsPref = localStorage.getItem('rae-os') || ''; } catch (e) {}
+  const currentOs = new URLSearchParams(window.location.search).get('os') || storedOsPref || 'windows';
+  document.body.setAttribute('data-os', currentOs === 'mac' ? 'mac' : 'windows');
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => document.getElementById('stage').classList.remove('launching'));
+  });
+
+  const QUESTIONS = [
+    { text: 'As a masters student, what does your day typically look like?', probes: ['How do you usually commute?', 'How many credit hours do you have per term?'] },
+    { text: 'What kind of project are you currently working on?', probes: [] },
+    { text: 'What tools or software are you using for your project?', probes: [] },
+    { text: 'What challenges have you faced during this project?', probes: [] },
+    { text: 'What features do you plan to implement next?', probes: [] },
+  ];
+
+  const questionsEl = document.getElementById('questions');
+  const progressEl = document.getElementById('raeProgress');
+  const insightToast = document.getElementById('insightToast');
+  const raePanel = document.getElementById('raePanel');
+  const hint = document.getElementById('hint');
+
+  let current = 0;
+  let insightCount = 0;
+  let elapsed = 34;
+  let running = true;
+
+  function fmt(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = Math.floor(sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  setInterval(() => {
+    if (!running) return;
+    elapsed++;
+    document.getElementById('raeTimer').textContent = fmt(elapsed);
+    document.getElementById('railTimer').textContent = fmt(elapsed);
+  }, 1000);
+
+  function renderQuestions(showProbes) {
+    questionsEl.innerHTML = '';
+    QUESTIONS.forEach((q, i) => {
+      if (i < current) return;
+      const row = document.createElement('div');
+      row.className = 'q-row' + (i === current ? '' : ' upcoming');
+      row.innerHTML = `<div class="q-num">${i + 1}</div><div class="q-text">${q.text}</div>`;
+      questionsEl.appendChild(row);
+
+      if (i === current && q.probes.length && showProbes) {
+        const wrap = document.createElement('div');
+        wrap.className = 'probing-wrap visible';
+        wrap.innerHTML = `<div class="probing-label">Consider probing</div>` +
+          q.probes.map((p, pi) => `
+            <div class="q-row sub" style="margin-bottom:14px;">
+              <div class="q-num">${i + 1}.${pi + 1}</div><div class="q-text">${p}</div>
+            </div>`).join('');
+        questionsEl.appendChild(wrap);
+      }
+    });
+
+    let badge = document.getElementById('insightBadge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'insightBadge';
+      badge.className = 'insight-badge';
+      badge.innerHTML = `<span class="sparkle-sm"></span><span id="insightBadgeCount"></span>`;
+      questionsEl.appendChild(badge);
+    } else {
+      questionsEl.appendChild(badge);
+    }
+    badge.classList.toggle('visible', insightCount > 0);
+    document.getElementById('insightBadgeCount').textContent = insightCount;
+
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const segs = progressEl.querySelectorAll('.rae-progress-seg');
+    segs.forEach((seg, i) => {
+      seg.classList.remove('active', 'done');
+      if (i < current) seg.classList.add('done');
+      else if (i === current) seg.classList.add('active');
+    });
+  }
+
+  function showToast() {
+    insightToast.classList.add('visible');
+    setTimeout(() => insightToast.classList.remove('visible'), 3200);
+  }
+
+  function advance() {
+    if (current >= QUESTIONS.length) {
+      endSession();
+      return;
+    }
+    renderQuestions(false);
+    hint.textContent = `Question ${current + 1} of ${QUESTIONS.length}`;
+
+    const q = QUESTIONS[current];
+    if (q.probes.length) {
+      setTimeout(() => {
+        renderQuestions(true);
+        setTimeout(() => {
+          insightCount++;
+          showToast();
+          setTimeout(() => renderQuestions(true), 300);
+          setTimeout(nextQuestion, 3000);
+        }, 2600);
+      }, 2600);
+    } else {
+      setTimeout(nextQuestion, 3400);
+    }
+  }
+
+  function nextQuestion() {
+    current++;
+    advance();
+  }
+
+  function endSession() {
+    running = false;
+    hint.textContent = 'Session complete';
+    raePanel.classList.add('hidden');
+    document.getElementById('callEndDuration').textContent = fmt(elapsed);
+    setTimeout(() => {
+      document.getElementById('callEndView').classList.add('visible');
+    }, 400);
+    setTimeout(showComplete, 1800);
+  }
+
+  function showComplete() {
+    document.getElementById('statInsights').textContent = insightCount;
+    document.getElementById('statQuestions').textContent = `${QUESTIONS.length}/${QUESTIONS.length}`;
+    document.getElementById('statDuration').textContent = fmt(elapsed);
+    document.getElementById('completeCard').classList.add('visible');
+  }
+
+  document.getElementById('btnLeave').addEventListener('click', endSession);
+  document.getElementById('btnViewDoc').addEventListener('click', () => {
+    alert('Insight Doc screen is outside this Figma flow — not built yet.');
+  });
+
+  advance();
+</script>
+</body>
+</html>

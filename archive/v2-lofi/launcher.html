@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lo-fi — Launcher</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+
+  .wrap { width: 560px; max-width: 92vw; }
+
+  .tag {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999;
+    margin-bottom: 0.5rem;
+  }
+
+  h1 { font-size: 1.15rem; font-weight: 500; color: #333; margin-bottom: 1.75rem; }
+
+  /* ── Ctrl+K hint ── */
+  .hint-row {
+    display: flex; align-items: center; gap: 0.6rem;
+    margin-bottom: 2rem;
+  }
+
+  .kbd {
+    display: inline-flex; align-items: center; gap: 3px;
+    border: 1px dashed #999;
+    background: #fff;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+    color: #555;
+  }
+
+  .hint-text { font-size: 0.82rem; color: #999; }
+
+  /* ── Palette ── */
+  .palette {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .palette-input {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px dashed #ccc;
+    font-size: 0.85rem;
+    color: #333;
+  }
+
+  .palette-input input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #333;
+  }
+
+  .palette-input input::placeholder { color: #aaa; }
+
+  .source-row {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px dashed #e2e2e2;
+    cursor: pointer;
+    background: #fff;
+    transition: background 0.12s ease;
+  }
+
+  .source-row:last-child { border-bottom: none; }
+  .source-row:hover { background: #f7f7f7; }
+
+  .source-logo {
+    width: 26px; height: 26px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: #eee;
+    flex-shrink: 0;
+  }
+
+  .source-label { font-size: 0.85rem; color: #444; }
+  .source-sub { font-size: 0.72rem; color: #aaa; margin-left: auto; }
+
+  /* ── All set state ── */
+  .allset {
+    display: none;
+    border: 1px dashed #999;
+    border-radius: 10px;
+    background: #fff;
+    padding: 1.25rem 1.4rem;
+    margin-top: 1.25rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .allset.visible { display: flex; }
+
+  .allset-left { display: flex; flex-direction: column; gap: 0.3rem; }
+  .allset-status { font-size: 0.82rem; color: #333; font-weight: 500; }
+  .allset-timer { font-size: 0.72rem; color: #999; font-variant-numeric: tabular-nums; }
+
+  .btn-join {
+    border: 1px solid #333;
+    background: #333;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 0.6rem 1.1rem;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+
+  .btn-join:hover { background: #111; }
+
+  /* ── Participant badge ── */
+  .p-badge {
+    display: none;
+    align-items: center; gap: 0.6rem;
+    margin-top: 0.9rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px dashed #ccc;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+
+  .p-badge.visible { display: flex; }
+
+  .p-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 1px solid #999;
+    background: #e5e5e5;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #666; font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .p-lines { display: flex; flex-direction: column; gap: 4px; }
+  .p-bar { height: 8px; background: #ddd; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="tag">v2 — lo-fi</div>
+    <h1>Start a session</h1>
+
+    <div class="hint-row">
+      <span class="kbd">Ctrl</span><span class="kbd">K</span>
+      <span class="hint-text">to open the launcher</span>
+    </div>
+
+    <div class="palette" id="palette">
+      <div class="palette-input"><input type="text" id="paletteInput" placeholder="Paste a script or prototype link…" readonly></div>
+      <div class="source-row" data-label="Discussion Guide.docx">
+        <div class="source-logo"></div>
+        <span class="source-label">Google Drive</span>
+        <span class="source-sub">Discussion Guide.docx</span>
+      </div>
+      <div class="source-row" data-label="figma.com/proto/usability-v3">
+        <div class="source-logo"></div>
+        <span class="source-label">Figma URL</span>
+        <span class="source-sub">figma.com/proto/usability-v3</span>
+      </div>
+    </div>
+
+    <div class="allset" id="allset">
+      <div class="allset-left">
+        <div class="allset-status">All set</div>
+        <div class="allset-timer" id="allsetTimer">2:01</div>
+      </div>
+      <button class="btn-join" id="joinBtn">Join →</button>
+    </div>
+
+    <div class="p-badge" id="pBadge">
+      <div class="p-avatar">P1</div>
+      <div class="p-lines">
+        <div class="p-bar" style="width: 90px;"></div>
+        <div class="p-bar" style="width: 60px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const paletteInput = document.getElementById('paletteInput');
+    const allset = document.getElementById('allset');
+    const pBadge = document.getElementById('pBadge');
+    const joinBtn = document.getElementById('joinBtn');
+    const rows = document.querySelectorAll('.source-row');
+
+    rows.forEach(row => {
+      row.addEventListener('click', () => {
+        paletteInput.value = row.dataset.label;
+        allset.classList.add('visible');
+        setTimeout(() => pBadge.classList.add('visible'), 250);
+      });
+    });
+
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        document.getElementById('palette').scrollIntoView({ block: 'center' });
+        paletteInput.focus();
+      }
+    });
+
+    joinBtn.addEventListener('click', () => {
+      window.location.href = 'session.html';
+    });
+  </script>
+
+</body>
+</html>

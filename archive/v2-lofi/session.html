@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lo-fi — Floating Interface</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #e8e8e8;
+    color: #333;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Backdrop placeholder — stands in for the call/prototype behind the floating card */
+  .backdrop {
+    position: fixed; inset: 0;
+    background:
+      repeating-linear-gradient(45deg, #ddd 0, #ddd 1px, transparent 1px, transparent 14px);
+    background-color: #ececec;
+  }
+
+  .backdrop-label {
+    position: fixed;
+    bottom: 16px; left: 16px;
+    font-size: 0.7rem;
+    color: #aaa;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Floating card ── */
+  .float-card {
+    position: fixed;
+    top: 60px; left: 50%;
+    transform: translateX(-50%);
+    width: 360px;
+    background: #fff;
+    border: 1px solid #bbb;
+    border-radius: 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+
+  /* Top strip: face indicator + segmented pill */
+  .float-top {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px dashed #ccc;
+  }
+
+  .face-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 1px solid #999;
+    background: #eee;
+    flex-shrink: 0;
+  }
+
+  .segment-bar {
+    flex: 1;
+    height: 14px;
+    border: 1px solid #ccc;
+    border-radius: 999px;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .segment-bar span {
+    flex: 1;
+    border-right: 1px solid #ddd;
+    background: #f2f2f2;
+  }
+
+  .segment-bar span:last-child { border-right: none; }
+  .segment-bar span.done { background: #ccc; }
+
+  /* Content viewport with top/bottom fade — teleprompter style */
+  .float-body {
+    position: relative;
+    height: 190px;
+    overflow: hidden;
+  }
+
+  .float-body::before,
+  .float-body::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0;
+    height: 34px;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .float-body::before {
+    top: 0;
+    background: linear-gradient(to bottom, #fff 0%, rgba(255,255,255,0) 100%);
+  }
+
+  .float-body::after {
+    bottom: 0;
+    background: linear-gradient(to top, #fff 0%, rgba(255,255,255,0) 100%);
+  }
+
+  .float-scroll {
+    padding: 20px 16px;
+    transition: opacity 0.4s ease;
+  }
+
+  .float-scroll.fading { opacity: 0; }
+
+  /* Intro block */
+  .intro-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #999;
+    margin-bottom: 10px;
+  }
+
+  .greek-bar {
+    height: 9px;
+    background: #ddd;
+    border-radius: 3px;
+    margin-bottom: 8px;
+  }
+
+  /* Question block */
+  .q-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #777;
+    margin-bottom: 8px;
+  }
+
+  .q-greek { height: 11px; background: #d4d4d4; border-radius: 3px; margin-bottom: 7px; }
+
+  .probe-wrap {
+    margin-top: 14px;
+    padding-left: 14px;
+    border-left: 2px dashed #ccc;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .probe-wrap.visible { opacity: 1; }
+
+  .probe-label {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #aaa;
+    margin-bottom: 5px;
+  }
+
+  .probe-greek { height: 8px; background: #e2e2e2; border-radius: 3px; }
+
+  /* Footer: star / insight counter */
+  .float-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px;
+    border-top: 1px dashed #ccc;
+  }
+
+  .star-badge {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.75rem;
+    color: #999;
+    border: 1px dashed #ccc;
+    border-radius: 999px;
+    padding: 3px 10px;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .star-badge.bump { color: #333; border-color: #999; }
+
+  .float-time { font-size: 0.7rem; color: #bbb; font-variant-numeric: tabular-nums; }
+
+  .end-hint {
+    position: fixed;
+    top: 16px; right: 16px;
+    font-size: 0.72rem;
+    color: #999;
+    border: 1px dashed #ccc;
+    border-radius: 999px;
+    padding: 5px 12px;
+    background: #fff;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+  <div class="backdrop"></div>
+  <div class="backdrop-label">wireframe — call surface placeholder</div>
+  <div class="end-hint" id="endHint">End session</div>
+
+  <div class="float-card">
+    <div class="float-top">
+      <div class="face-dot"></div>
+      <div class="segment-bar" id="segmentBar"></div>
+    </div>
+
+    <div class="float-body">
+      <div class="float-scroll" id="floatScroll">
+        <!-- content injected by JS -->
+      </div>
+    </div>
+
+    <div class="float-foot">
+      <div class="star-badge" id="starBadge">★ +0</div>
+      <div class="float-time" id="floatTimer">00:00</div>
+    </div>
+  </div>
+
+  <script>
+    const QUESTIONS = [
+      { q: 3, probe: true },
+      { q: 4, probe: true },
+      { q: 2, probe: false },
+      { q: 3, probe: true },
+      { q: 4, probe: false },
+    ];
+
+    const scrollEl = document.getElementById('floatScroll');
+    const segmentBar = document.getElementById('segmentBar');
+    const starBadge = document.getElementById('starBadge');
+    const timerEl = document.getElementById('floatTimer');
+
+    let idx = -1, stars = 0, secs = 0;
+    let advanceTimer, probeTimer;
+
+    // segmented progress pill — one segment per question
+    QUESTIONS.forEach(() => {
+      const s = document.createElement('span');
+      segmentBar.appendChild(s);
+    });
+    const segments = segmentBar.querySelectorAll('span');
+
+    setInterval(() => {
+      secs++;
+      const m = String(Math.floor(secs / 60)).padStart(2, '0');
+      const s = String(secs % 60).padStart(2, '0');
+      timerEl.textContent = m + ':' + s;
+    }, 1000);
+
+    function greekBars(count, cls) {
+      let html = '';
+      const widths = [92, 78, 88, 65, 96, 70];
+      for (let i = 0; i < count; i++) {
+        html += `<div class="${cls}" style="width:${widths[i % widths.length]}%;"></div>`;
+      }
+      return html;
+    }
+
+    function showIntro() {
+      scrollEl.innerHTML = `
+        <div class="intro-label">Intro</div>
+        ${greekBars(4, 'greek-bar')}
+      `;
+      advanceTimer = setTimeout(next, 4000);
+    }
+
+    function next() {
+      idx++;
+      if (idx >= QUESTIONS.length) return endSession();
+
+      segments.forEach((s, i) => s.classList.toggle('done', i < idx));
+
+      scrollEl.classList.add('fading');
+      setTimeout(() => {
+        const item = QUESTIONS[idx];
+        scrollEl.innerHTML = `
+          <div class="q-label">Q${idx + 1}.</div>
+          ${greekBars(item.q, 'q-greek')}
+          <div class="probe-wrap" id="probeWrap">
+            <div class="probe-label">Probe · why is that?</div>
+            ${greekBars(1, 'probe-greek')}
+          </div>
+        `;
+        scrollEl.classList.remove('fading');
+
+        if (item.probe) {
+          clearTimeout(probeTimer);
+          probeTimer = setTimeout(() => {
+            document.getElementById('probeWrap').classList.add('visible');
+            bumpStar();
+          }, 2200);
+        }
+      }, 400);
+
+      advanceTimer = setTimeout(next, 6500);
+    }
+
+    function bumpStar() {
+      stars++;
+      starBadge.textContent = `★ +${stars}`;
+      starBadge.classList.add('bump');
+      setTimeout(() => starBadge.classList.remove('bump'), 600);
+    }
+
+    function endSession() {
+      clearTimeout(advanceTimer);
+      clearTimeout(probeTimer);
+      scrollEl.innerHTML = `
+        <div class="intro-label">Session complete</div>
+        ${greekBars(2, 'greek-bar')}
+      `;
+      segments.forEach(s => s.classList.add('done'));
+    }
+
+    document.getElementById('endHint').addEventListener('click', endSession);
+
+    showIntro();
+  </script>
+
+</body>
+</html>

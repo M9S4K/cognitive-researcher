@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Research Assistant — Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: #282828;
+      color: #fff;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Loading state, shown for the split second before the redirect lands. */
+    .loading { font-size: 0.9rem; color: rgb(255 255 255 / 45%); }
+    .archive { display: none; }
+    body.show-archive .loading { display: none; }
+    body.show-archive .archive { display: block; }
+
+    .wrap { width: 640px; max-width: 100%; }
+
+    h1 { font-size: 1.3rem; font-weight: 500; margin-bottom: 0.4rem; }
+    .sub { font-size: 0.9rem; color: rgb(255 255 255 / 45%); margin-bottom: 2rem; line-height: 1.5; }
+    .sub a { color: rgb(255 255 255 / 75%); }
+
+    .cards { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .card {
+      display: block;
+      border: 1px solid rgb(255 255 255 / 10%);
+      border-radius: 12px;
+      background: rgb(255 255 255 / 3%);
+      padding: 1.25rem 1.5rem;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+    }
+    .card:hover { border-color: rgb(255 255 255 / 28%); background: rgb(255 255 255 / 6%); transform: translateY(-1px); }
+    .card.current { border-color: rgb(255 255 255 / 30%); background: rgb(255 255 255 / 8%); }
+
+    .card-tag {
+      display: inline-block;
+      margin-bottom: 0.6rem;
+      border-radius: 4px;
+      padding: 2px 8px;
+      background: rgb(255 255 255 / 8%);
+      color: rgb(255 255 255 / 60%);
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .card.current .card-tag { background: #fff; color: #161414; }
+
+    .card-title { font-size: 1.02rem; font-weight: 500; margin-bottom: 0.3rem; }
+    .card-desc { font-size: 0.84rem; color: rgb(255 255 255 / 45%); line-height: 1.5; }
+
+    .section-label {
+      margin: 2.25rem 0 0.9rem;
+      color: rgb(255 255 255 / 35%);
+      font-size: 0.68rem;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <p class="loading">Opening the demo…</p>
+
+  <div class="wrap archive">
+    <h1>AI Research Assistant — Demo</h1>
+    <p class="sub">
+      Archived versions. The default experience is
+      <a href="v5.1-paper/windows.html">v5.1 — Windows</a>; everything below is kept for reference.
+    </p>
+
+    <div class="cards">
+      <a class="card current" href="v5.1-paper/windows.html">
+        <span class="card-tag">v5.1 — windows · default</span>
+        <div class="card-title">The P21–P25 build</div>
+        <div class="card-desc">v5 with the findings from the five sessions acted on: presence modes and a recording light, a status vocabulary that says answered / skipped / reworded, a script with real sections and progress, notes that actually appear, quieter probes, and a prep step with a visible commit point. Windows only.</div>
+      </a>
+    </div>
+
+    <p class="section-label">Archived</p>
+
+    <div class="cards">
+      <a class="card" href="v5-paper/os-choice.html">
+        <span class="card-tag">v5 — paper</span>
+        <div class="card-title">OS-aware desktop flow, scripted session</div>
+        <div class="card-desc">The build the P21–P25 sessions were run on, frozen for comparison. Choose your OS → desktop → meeting notification → script search → live Teams call with a draggable research assistant that skips answered questions, rewrites others, surfaces probes, and counts insights up to a session summary.</div>
+      </a>
+
+      <a class="card" href="v5-paper/windows.html?variant=1">
+        <span class="card-tag">v5 — variant 1</span>
+        <div class="card-title">Free-form question list</div>
+        <div class="card-desc">The same v5 screens with the earlier question set, where the researcher clicks through questions and probes themselves instead of following the scripted story.</div>
+      </a>
+
+      <a class="card" href="archive/v4-figma/os-choice.html">
+        <span class="card-tag">v4 — figma</span>
+        <div class="card-title">OS-aware desktop flow</div>
+        <div class="card-desc">Choose your OS → simulated desktop/setup flow → live session, rebuilt from Figma with script search, document previews, and sync icons.</div>
+      </a>
+
+      <a class="card" href="archive/v3-wireframe/desktop.html">
+        <span class="card-tag">v3 — wireframe</span>
+        <div class="card-title">Full build (wireframe)</div>
+        <div class="card-desc">The desktop → call flow from v1 — Mac notification → upload script → Google Meet-style call with a floating AI widget — restyled as a grayscale wireframe.</div>
+      </a>
+
+      <a class="card" href="archive/v2-lofi/launcher.html">
+        <span class="card-tag">v2 — lo-fi</span>
+        <div class="card-title">Floating interface (wireframe)</div>
+        <div class="card-desc">Ctrl+K launcher to attach a script/prototype → join → a teleprompter-style overlay that auto-scrolls through questions with probes underneath and an insight star counter.</div>
+      </a>
+
+      <a class="card" href="archive/v1-current/setup.html">
+        <span class="card-tag">v1 — current</span>
+        <div class="card-title">Full build</div>
+        <div class="card-desc">Desktop notification → upload script → live call with an AI strip surfacing questions, probes, and insights → insight doc.</div>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Default: go straight into v5.1. The version picker above is only for when it is
+    // asked for explicitly — `index.html?archive`.
+    if (new URLSearchParams(window.location.search).has('archive')) {
+      document.body.classList.add('show-archive');
+    } else {
+      window.location.replace('v5.1-paper/windows.html');
+    }
+  </script>
+
+</body>
+</html>
