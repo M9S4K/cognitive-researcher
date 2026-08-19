@@ -18,8 +18,8 @@ window.ResearchToolbar = (function () {
               note: 'The real work happens in the evening block; taught hours are the small part of the week.',
               quote: 'The timetable says twelve hours. The actual work is every evening after that.',
               probes: [
-                { number: '1.1', text: 'How do you usually commute?' },
-                { number: '1.2', text: 'How many credit hours do you have per term?' },
+                { number: '1.1', keyword: 'commute', text: 'How do you usually commute?' },
+                { number: '1.2', keyword: 'credit hours', text: 'How many credit hours do you have per term?' },
               ],
             },
             {
@@ -91,8 +91,8 @@ window.ResearchToolbar = (function () {
               note: 'MSc in HCI. Reads it as formalising practice she already has rather than learning something new.',
               quote: 'HCI, the MSc. I’m not really learning to design — I’ve been doing that for years. I’m learning to prove I can.',
               probes: [
-                { number: '2.1', text: 'oh whereabouts in London?' },
-                { number: '2.2', text: 'and how long is your course?' },
+                { number: '2.1', keyword: 'whereabouts', text: 'oh whereabouts in London?' },
+                { number: '2.2', keyword: 'course length', text: 'and how long is your course?' },
               ],
             },
             {
@@ -155,6 +155,7 @@ window.ResearchToolbar = (function () {
   // sessions split three ways on this, so it is a setting rather than a default.
   const PRESENCE_MODES = ['focus', 'compact', 'dock'];
   const PRESENCE_KEY = 'rae-presence';
+  const SUGGESTIONS_KEY = 'rae-suggestions';
   const SIZE_KEY = 'rae-size';
   const SIZE_LIMITS = { minW: 340, maxW: 620, minH: 300, maxH: 620 };
 
@@ -221,6 +222,7 @@ window.ResearchToolbar = (function () {
     const snackbar = toolbarEl.querySelector('#snackbar');
     const snackbarLabel = toolbarEl.querySelector('#snackbar-label');
     const manualNotes = toolbarEl.querySelector('.manual-notes');
+    const suggestToggle = toolbarEl.querySelector('#suggest-toggle');
     const progressEl = toolbarEl.querySelector('.question-progress');
     const legendButton = toolbarEl.querySelector('#legend-btn');
     const legend = toolbarEl.querySelector('#legend');
@@ -260,6 +262,8 @@ window.ResearchToolbar = (function () {
 
     const handle = { dragState: { suppressClick: false } };
     let presence = 'focus';
+    // P24 wants the probes dismissible so they cannot break her question order.
+    let suggestionsOn = readStored(SUGGESTIONS_KEY) !== 'off';
     // Where the card was floating before it docked, so leaving the dock puts it back.
     let floatPosition = null;
 
@@ -446,9 +450,11 @@ window.ResearchToolbar = (function () {
       const next = questionEls[SCRIPT_NEXT_INDEX];
       const probeCard = next && next.nextElementSibling;
       if (!probeCard || !probeCard.classList.contains('probe-card')) return;
-      const row = probeCard.querySelectorAll('.probe-row')[index];
-      if (!row || row.classList.contains('checked')) return;
-      row.classList.add('checked');
+      const chip = probeCard.querySelector(`.probe-chip[data-probe="${index}"]`);
+      if (!chip || chip.classList.contains('used')) return;
+      chip.classList.add('used');
+      // The insight comes from what the participant said, not from the card being on
+      // screen — so it still counts when the suggestions are hidden.
       bumpInsight();
     }
 
@@ -498,8 +504,10 @@ window.ResearchToolbar = (function () {
       markAnswered(next);
       bumpInsight();
       window.setTimeout(() => {
-        next.classList.add('expanded');
-        probeCard.classList.add('revealed');
+        if (suggestionsOn) {
+          next.classList.add('expanded');
+          probeCard.classList.add('revealed');
+        }
         scriptBusy = false;
       }, SCRIPT_PROBE_DELAY);
     }
@@ -819,6 +827,28 @@ window.ResearchToolbar = (function () {
         });
       });
 
+      questionsEl.querySelectorAll('.probe-chip').forEach((chip) => {
+        chip.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (handle.dragState.suppressClick) { handle.dragState.suppressClick = false; return; }
+          const card = chip.closest('.probe-card');
+          const full = card.querySelector(`.probe-full[data-probe="${chip.dataset.probe}"]`);
+          const opening = full && !full.classList.contains('open');
+          card.querySelectorAll('.probe-full').forEach((p) => p.classList.remove('open'));
+          if (opening) full.classList.add('open');
+          updateQuestionsLine();
+        });
+      });
+
+      questionsEl.querySelectorAll('.probe-dismiss').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          button.closest('.probe-card').classList.add('dismissed');
+          showSnack('Suggestions hidden for this question');
+          updateQuestionsLine();
+        });
+      });
+
       questionsEl.querySelectorAll('.note-toggle').forEach((button) => {
         button.addEventListener('click', (event) => {
           event.stopPropagation();
@@ -917,6 +947,26 @@ window.ResearchToolbar = (function () {
       openComposer();
     });
 
+    // --------------------------------------------------------------- suggestions
+    function applySuggestions() {
+      toolbarEl.classList.toggle('suggestions-off', !suggestionsOn);
+      if (suggestToggle) {
+        suggestToggle.classList.toggle('is-off', !suggestionsOn);
+        suggestToggle.setAttribute('aria-pressed', String(suggestionsOn));
+      }
+      updateQuestionsLine();
+    }
+
+    if (suggestToggle) {
+      suggestToggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        suggestionsOn = !suggestionsOn;
+        writeStored(SUGGESTIONS_KEY, suggestionsOn ? 'on' : 'off');
+        applySuggestions();
+        showSnack(suggestionsOn ? 'Probe suggestions on' : 'Probe suggestions off');
+      });
+    }
+
     // ------------------------------------------------------------------ legend
     // Four marks, four meanings. Every one of them was queried by a different
     // participant, so the key is one click away rather than assumed.
@@ -973,14 +1023,12 @@ window.ResearchToolbar = (function () {
         });
       });
 
-      questionsEl.querySelectorAll('.probe-row').forEach((row) => {
-        row.addEventListener('click', (event) => {
-          event.stopPropagation();
-          if (handle.dragState.suppressClick) { handle.dragState.suppressClick = false; return; }
-          row.classList.toggle('checked');
-          if (!row.classList.contains('checked')) return;
+      questionsEl.querySelectorAll('.probe-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          if (chip.classList.contains('used')) return;
+          chip.classList.add('used');
 
-          const probeCard = row.closest('.probe-card');
+          const probeCard = chip.closest('.probe-card');
           const parentQuestion = probeCard && probeCard.previousElementSibling && probeCard.previousElementSibling.classList.contains('question')
             ? probeCard.previousElementSibling
             : null;
@@ -1051,11 +1099,22 @@ window.ResearchToolbar = (function () {
         if (q.probes && q.probes.length) {
           const probeCard = document.createElement('section');
           probeCard.className = 'probe-card';
-          probeCard.setAttribute('aria-label', 'Consider probing');
-          const probeRows = q.probes
-            .map((p) => `<div class="probe-row"><span class="probe-number">${p.number}</span><p class="probe-question">${p.text}</p></div>`)
+          probeCard.setAttribute('aria-label', 'Suggested probes');
+          // A keyword is what arrives while the participant is still talking; the
+          // sentence is there for whoever wants to read it.
+          const chips = q.probes
+            .map((p, i) => `<button class="probe-chip" type="button" data-probe="${i}">`
+              + `<svg class="chip-tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 6.2 4.6 9.3 10.5 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+              + `${p.keyword || p.number}</button>`)
             .join('');
-          probeCard.innerHTML = `<p class="probe-title">Consider probing</p>${probeRows}`;
+          const fulls = q.probes
+            .map((p, i) => `<p class="probe-full" data-probe="${i}"><span class="probe-number">${p.number}</span>${p.text}</p>`)
+            .join('');
+          probeCard.innerHTML = '<div class="probe-head"><p class="probe-title">Probes</p>'
+            + '<button class="probe-dismiss" type="button" aria-label="Dismiss these suggestions">'
+            + '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'
+            + '</button></div>'
+            + `<div class="probe-chips">${chips}</div><div class="probe-detail">${fulls}</div>`;
           questionsEl.appendChild(probeCard);
         }
       });
@@ -1192,6 +1251,7 @@ window.ResearchToolbar = (function () {
       } catch (error) { /* ignore a corrupt entry */ }
     }
     setPresence(readStored(PRESENCE_KEY) || 'focus', { immediate: true, remember: false });
+    applySuggestions();
 
     let toggleButton = null;
     if (showVariantToggle) {

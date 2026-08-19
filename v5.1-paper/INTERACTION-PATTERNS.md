@@ -126,9 +126,9 @@ Every step is a simulation. There is no backend, no parsing, no AI. Fake data is
   cards and rewrites change the content height.
 - **Answered:** `.answered` → number turns dark with a `✓` that pops
   (`340ms cubic-bezier(0.34, 1.56, 0.64, 1)`), whole row drops to `opacity: .7`.
-- **Probe card:** `.probe-card` titled "Consider probing", animates open via `max-height` when
-  `.revealed`; its parent question gets `.expanded` to tighten the gap. Each `.probe-row` ticks
-  independently with the same `✓` pop.
+- **Probe card:** `.probe-card` titled "Probes", animates open via `max-height` when `.revealed`;
+  its parent question gets `.expanded` to tighten the gap. Its contents are keyword chips — see
+  §13, batch 5.
 - **Rewrite:** a question can carry a `rewrite` string. `.rewriting` strikes the original through;
   `.rewritten` then reveals the reworded line beneath it. Reads as Rae restating the question in
   light of what the participant already said.
@@ -459,8 +459,8 @@ with her.
 sit on the surface that advances the scripted story. `bindStatusControls()` re-binds them on each
 render, alongside `bindQuestionInteractions()`.
 
-**Probes keep their tick.** Deliberate: "I used this suggestion" is a different act from "this
-question is dealt with", and the two should not claim the same mark.
+**Probes do not use the question marks.** Deliberate: "I used this suggestion" is a different act
+from "this question is dealt with". Batch 5 gives them their own — a chip that fills dark.
 
 ### Batch 3 — A script with a real shape
 *P22, P24, P25 · HMW05*
@@ -577,3 +577,34 @@ timestamp, and a dark rule, so it can never be mistaken for Rae's.
 - Notes change the content height, which moves the connector line; the existing `ResizeObserver`
   path handles it, and `updateQuestionsLine()` is called directly when the composer or a quote
   opens.
+
+### Batch 5 — Probes that don't compete with listening
+*P23, P24, P25 · HMW02*
+
+All three valued the intelligence and objected to its timing and volume: full sentences arriving
+while the participant is still talking.
+
+**Keywords, not sentences.** Every probe carries a `keyword` alongside its `text`. The card renders
+`.probe-chip` buttons — `whereabouts`, `course length` — and the full wording lives in a
+`.probe-full` that opens when its chip is tapped, one at a time. What arrives mid-answer is a word;
+the sentence is there for whoever wants to read it (P25 asked for keyword-only to avoid overload).
+
+**Used chips fill dark** with a tick inside them. Probes deliberately do not borrow the question
+states from batch 2 — using a suggestion is not the same act as dealing with a question.
+
+**Optional, at two scales.**
+- `.probe-dismiss` (the `×`) drops one card: `.dismissed` collapses it and takes its space with it.
+- `#suggest-toggle` in the header is global, persisted to `rae-suggestions`, and puts
+  `.suggestions-off` on the toolbar so no card ever reveals.
+
+**The count survives the setting.** `tickProbe()` still calls `bumpInsight()` when the card is
+hidden — the insight comes from what the participant said, not from the card being on screen. A
+full run with suggestions off still reaches **6 insights** and Finish Session, which is what keeps
+the setting a preference rather than a different demo.
+
+**Quiet arrival.** The `translateY(-6px)` entrance is gone; the card fades and grows only. The
+title drops from 15px "Consider probing" to a 10px letterspaced `PROBES` eyebrow, matching every
+other label in the panel.
+
+**Variant 1** (`?variant=1`, free-form) binds its click handler to the chips instead of the retired
+`.probe-row`.
