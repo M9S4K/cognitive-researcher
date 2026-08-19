@@ -8,6 +8,10 @@ window.ResearchToolbar = (function () {
   const SCRIPTS = {
     1: {
       title: 'DT — UT script',
+      briefing: {
+        title: 'Before you start',
+        text: 'Thanks for making the time today. This is about half an hour on how you actually work — there are no right answers, and you can skip anything or stop whenever you like. We are a small team building research tooling, and nothing you say goes further than us. I would like to record it so I can listen properly instead of writing everything down — is that alright?',
+      },
       sections: [
         {
           name: 'A typical day',
@@ -76,6 +80,10 @@ window.ResearchToolbar = (function () {
     },
     2: {
       title: 'ET — interview script',
+      briefing: {
+        title: 'Before you start',
+        text: 'Thanks for joining, Sarah. This is about half an hour on your work and the course — there are no right answers, and you can skip anything or stop whenever you like. We are a small team building research tooling, and nothing you say goes further than us. I would like to record it so I can listen properly instead of writing everything down — is that alright?',
+      },
       sections: [
         {
           name: 'Introduction',
@@ -159,8 +167,6 @@ window.ResearchToolbar = (function () {
   const SIZE_KEY = 'rae-size';
   const SIZE_LIMITS = { minW: 340, maxW: 620, minH: 300, maxH: 620 };
 
-  const QUESTION_MIN_SCALE = 0.833;
-  const QUESTION_SCALE_FALLOFF = 90;
   const QUESTION_SNAP_DURATION = 450;
 
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -230,6 +236,10 @@ window.ResearchToolbar = (function () {
     const insightCountEl = toolbarEl.querySelector('#insight-count');
     const insightPlus = toolbarEl.querySelector('.insight-plus');
     const finishButton = toolbarEl.querySelector('.finish-session');
+    const startButton = toolbarEl.querySelector('#start-rec');
+    const nextButton = toolbarEl.querySelector('#next-beat');
+    const nextLabel = toolbarEl.querySelector('#next-beat-label');
+    const toolbarTitle = toolbarEl.querySelector('.toolbar-title');
     const completeInsights = toolbarEl.querySelector('#complete-insights');
     const completeQuestions = toolbarEl.querySelector('#complete-questions');
     const completeDuration = toolbarEl.querySelector('#complete-duration');
@@ -268,16 +278,16 @@ window.ResearchToolbar = (function () {
     let floatPosition = null;
 
     let questionEls = [];
-    let questionsLine;
-    let contentObserver;
     let insightTimer;
     let answeredTimer;
     let labelSwapTimer;
     let labelFadeTimer;
     let insightCount = 0;
-    let scaleRafId;
     let scrollActiveTimer;
     let snapAnimationId;
+    // The assistant arrives before the recording does — P's briefing happens first.
+    let recording = false;
+    let briefingEl = null;
 
     const ANSWERED_PILL_HOLD = 200;
     const ANSWERED_LABEL_HOLD = 1100;
@@ -392,14 +402,63 @@ window.ResearchToolbar = (function () {
       labelSwapTimer = window.setTimeout(() => unlockInsight(1), ANSWERED_LABEL_HOLD);
     }
 
-    // Each click on the white body advances the story one beat.
+    // Each press of Next — or click on the white body — advances the story one beat.
     function advanceScript() {
-      if (scriptBusy) return;
+      if (!recording || scriptBusy) return;
       const beat = scriptBeats[scriptStep];
       if (!beat) return;
       scriptStep += 1;
-      beat();
+      beat.run();
+      updateNextLabel();
     }
+
+    // ------------------------------------------------------------- recording
+    // Nothing is being recorded until the researcher says so — the briefing and the
+    // participant's consent come first, which is the order the conversation happens in.
+    function setRecording(on) {
+      recording = on;
+      toolbarEl.classList.toggle('is-recording', on);
+      toolbarEl.classList.toggle('is-idle', !on);
+      if (toolbarTitle) toolbarTitle.textContent = on ? 'Rae is taking notes' : 'Rae is ready to listen';
+      if (briefingEl && on) briefingEl.classList.remove('open');
+      updateNextLabel();
+      updateCompactBar();
+    }
+
+    function startRecording() {
+      if (recording) return;
+      setRecording(true);
+      showSnack('Recording — Rae is listening');
+      // Rae goes to work the moment the recording does: Q1 logged, Q4 recognised as
+      // already answered, a rewording offered for Q3.
+      playScriptedSequence();
+      updateNextLabel();
+    }
+
+    if (startButton) {
+      startButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        startRecording();
+      });
+    }
+
+    if (nextButton) {
+      nextButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        advanceScript();
+      });
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowRight') return;
+      if (!toolbarEl.classList.contains('visible')) return;
+      if (currentVariant !== SCRIPTED_VARIANT) return;
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      event.preventDefault();
+      if (!recording) startRecording();
+      else advanceScript();
+    });
 
     // A question takes the highlight by snapping up into the top slot.
     function focusQuestion(index) {
@@ -538,16 +597,24 @@ window.ResearchToolbar = (function () {
       }, SCRIPT_STRIKE_HOLD);
     }
 
-    // One click on the white body per beat.
+    // One beat per press of Next (or per click on the white body). Each beat names
+    // itself, so the control says what it is about to do rather than just "next" —
+    // there was no visible way to move the session on at all before.
     const scriptBeats = [
-      playScriptedSequence,                         // Q1 answered, Q4 skipped, +2, Q3 rewording offered
-      () => focusQuestion(SCRIPT_NEXT_INDEX),       // Q2 snaps into the top slot
-      answerNextQuestion,                           // Q2 ticked (+1), probes open
-      () => tickProbe(0),                           // 2.1 ticked (+1)
-      () => tickProbe(1),                           // 2.2 ticked (+1)
-      () => focusQuestion(SCRIPT_REWRITE_INDEX),    // Q3 snaps into the top slot
-      answerFinalQuestion,                          // Q3 ticked (+1), Finish Session appears
+      { label: 'Next question', run: () => focusQuestion(SCRIPT_NEXT_INDEX) },   // Q2 takes the top slot
+      { label: 'Log the answer', run: answerNextQuestion },                      // Q2 ticked (+1), probes open
+      { label: 'Mark probe 2.1', run: () => tickProbe(0) },                      // 2.1 ticked (+1)
+      { label: 'Mark probe 2.2', run: () => tickProbe(1) },                      // 2.2 ticked (+1)
+      { label: 'Next question', run: () => focusQuestion(SCRIPT_REWRITE_INDEX) },// Q3 takes the top slot
+      { label: 'Log the answer', run: answerFinalQuestion },                     // Q3 ticked (+1), Finish appears
     ];
+
+    function updateNextLabel() {
+      if (!nextButton) return;
+      const beat = scriptBeats[scriptStep];
+      nextButton.hidden = !beat || !recording;
+      if (beat && nextLabel) nextLabel.textContent = beat.label;
+    }
 
     if (finishButton) {
       finishButton.addEventListener('click', (event) => {
@@ -642,6 +709,7 @@ window.ResearchToolbar = (function () {
         }
       }
       if (compactInsights) compactInsights.textContent = insightCount;
+      if (compactMeta && !recording) compactMeta.textContent = 'Not recording yet';
     }
 
     function applyPresence(mode) {
@@ -668,7 +736,6 @@ window.ResearchToolbar = (function () {
       }
 
       updateCompactBar();
-      requestAnimationFrame(updateQuestionScales);
     }
 
     function setPresence(mode, options) {
@@ -708,7 +775,6 @@ window.ResearchToolbar = (function () {
             h: Math.round(clamp(rect.height + (moveEvent.clientY - event.clientY), SIZE_LIMITS.minH, SIZE_LIMITS.maxH)),
           };
           applySize(size.w, size.h);
-          updateQuestionScales();
         };
         const stop = () => {
           // Store what was asked for, not what the box happens to measure — mid
@@ -746,6 +812,8 @@ window.ResearchToolbar = (function () {
         event.stopPropagation();
         if (handle.dragState.suppressClick) { handle.dragState.suppressClick = false; return; }
         if (currentVariant !== SCRIPTED_VARIANT) { setPresence('focus'); return; }
+        // Minimised before the recording started, the strip is still how you start it.
+        if (!recording) { startRecording(); return; }
         advanceScript();
       });
     }
@@ -779,41 +847,6 @@ window.ResearchToolbar = (function () {
       snapAnimationId = requestAnimationFrame(step);
     }
 
-    function updateQuestionScales() {
-      const containerTop = questionsEl.getBoundingClientRect().top + listOffset();
-      questionEls.forEach((question) => {
-        const distance = Math.abs(question.getBoundingClientRect().top - containerTop);
-        const t = Math.min(1, distance / QUESTION_SCALE_FALLOFF);
-        const scale = 1 - t * (1 - QUESTION_MIN_SCALE);
-        question.style.transform = `scale(${scale})`;
-      });
-      updateQuestionsLine();
-    }
-
-    // The connector runs from the first question number to the last. Both ends move as
-    // questions scale on scroll and as cards expand, so it is remeasured rather than
-    // pinned to the container's (fixed) height.
-    function updateQuestionsLine() {
-      if (!questionsLine || !questionEls.length) return;
-      const first = questionEls[0].querySelector('.question-number');
-      const last = questionEls[questionEls.length - 1].querySelector('.question-number');
-      if (!first || !last) return;
-
-      const originY = questionsEl.getBoundingClientRect().top - questionsEl.scrollTop;
-      const top = first.getBoundingClientRect().top - originY;
-      const bottom = last.getBoundingClientRect().bottom - originY;
-      questionsLine.style.top = `${top}px`;
-      questionsLine.style.height = `${Math.max(0, bottom - top)}px`;
-    }
-
-    // Probe cards and rewrites animate their height open, which moves the last number.
-    function observeContentSize() {
-      if (typeof ResizeObserver === 'undefined') return;
-      if (contentObserver) contentObserver.disconnect();
-      contentObserver = new ResizeObserver(() => updateQuestionsLine());
-      [...questionsEl.children].forEach((child) => contentObserver.observe(child));
-    }
-
     // Undo, Use this and Keep original all live inside the question list, which is
     // also the surface that advances the scripted story — so every one of them has
     // to stop its click there.
@@ -836,7 +869,6 @@ window.ResearchToolbar = (function () {
           const opening = full && !full.classList.contains('open');
           card.querySelectorAll('.probe-full').forEach((p) => p.classList.remove('open'));
           if (opening) full.classList.add('open');
-          updateQuestionsLine();
         });
       });
 
@@ -845,7 +877,6 @@ window.ResearchToolbar = (function () {
           event.stopPropagation();
           button.closest('.probe-card').classList.add('dismissed');
           showSnack('Suggestions hidden for this question');
-          updateQuestionsLine();
         });
       });
 
@@ -855,7 +886,6 @@ window.ResearchToolbar = (function () {
           const note = button.closest('.rae-note');
           const showing = note.classList.toggle('showing-quote');
           button.textContent = showing ? 'Hide' : 'Her words';
-          updateQuestionsLine();
         });
       });
 
@@ -881,7 +911,6 @@ window.ResearchToolbar = (function () {
     function closeComposer() {
       const open = questionsEl.querySelector('.you-composer');
       if (open) open.remove();
-      updateQuestionsLine();
     }
 
     function saveOwnNote(question, text) {
@@ -919,7 +948,6 @@ window.ResearchToolbar = (function () {
       });
       input.focus();
       scrollQuestionToTop(question);
-      updateQuestionsLine();
     }
 
     if (manualNotes) {
@@ -954,7 +982,6 @@ window.ResearchToolbar = (function () {
         suggestToggle.classList.toggle('is-off', !suggestionsOn);
         suggestToggle.setAttribute('aria-pressed', String(suggestionsOn));
       }
-      updateQuestionsLine();
     }
 
     if (suggestToggle) {
@@ -1048,6 +1075,24 @@ window.ResearchToolbar = (function () {
       const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
       questionsEl.innerHTML = '';
       sectionAnnounced = false;
+      briefingEl = null;
+
+      // What you say before the first question. It opens the session, and it is where
+      // the consent to record actually happens.
+      if (script.briefing) {
+        const briefing = document.createElement('section');
+        briefing.className = 'briefing open';
+        briefing.innerHTML = `<button class="briefing-head" type="button">`
+          + `<span class="briefing-title">${script.briefing.title}</span>`
+          + `<span class="briefing-toggle" aria-hidden="true"></span></button>`
+          + `<p class="briefing-text">${script.briefing.text}</p>`;
+        briefing.querySelector('.briefing-head').addEventListener('click', (event) => {
+          event.stopPropagation();
+          briefing.classList.toggle('open');
+        });
+        questionsEl.appendChild(briefing);
+        briefingEl = briefing;
+      }
 
       // The section the researcher is in, pinned above the questions it governs.
       const head = document.createElement('div');
@@ -1144,19 +1189,12 @@ window.ResearchToolbar = (function () {
       spacer.setAttribute('aria-hidden', 'true');
       questionsEl.appendChild(spacer);
 
-      questionsLine = document.createElement('span');
-      questionsLine.className = 'questions-line';
-      questionsLine.setAttribute('aria-hidden', 'true');
-      questionsEl.prepend(questionsLine);
-
       questionEls = [...questionsEl.querySelectorAll('.question')];
       questionEls[0].classList.add('active');
       bindStatusControls();
       bindQuestionInteractions(variant);
-      observeContentSize();
       renderProgressSegments(sections.length);
       updateProgress();
-      updateQuestionScales();
     }
 
     // The bar has one segment per section, so it is rebuilt with the script.
@@ -1173,12 +1211,6 @@ window.ResearchToolbar = (function () {
     });
 
     questionsEl.addEventListener('scroll', () => {
-      if (!scaleRafId) {
-        scaleRafId = requestAnimationFrame(() => {
-          updateQuestionScales();
-          scaleRafId = null;
-        });
-      }
       if (currentVariant === SCRIPTED_VARIANT) return;
       window.clearTimeout(scrollActiveTimer);
       scrollActiveTimer = window.setTimeout(() => {
@@ -1215,20 +1247,21 @@ window.ResearchToolbar = (function () {
     function reset() {
       scriptStep = 0;
       scriptBusy = false;
+      setRecording(false);
       toolbarEl.classList.remove('session-complete', 'has-finish');
       if (finishButton) finishButton.classList.remove('visible');
       renderQuestions(currentVariant);
       questionsEl.scrollTop = 0;
-      updateQuestionScales();
       resetInsights();
       setPresence(readStored(PRESENCE_KEY) || 'focus', { immediate: true, remember: false });
     }
 
     function setVariant(variant) {
-      if (!QUESTION_SETS[variant] || variant === currentVariant) return;
+      if (!SCRIPTS[variant] || variant === currentVariant) return;
       currentVariant = variant;
       scriptStep = 0;
       scriptBusy = false;
+      setRecording(false);
       toolbarEl.classList.remove('session-complete', 'has-finish');
       if (finishButton) finishButton.classList.remove('visible');
       renderQuestions(currentVariant);
@@ -1252,6 +1285,7 @@ window.ResearchToolbar = (function () {
     }
     setPresence(readStored(PRESENCE_KEY) || 'focus', { immediate: true, remember: false });
     applySuggestions();
+    setRecording(false);
 
     let toggleButton = null;
     if (showVariantToggle) {

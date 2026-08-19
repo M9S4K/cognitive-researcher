@@ -110,21 +110,21 @@ Every step is a simulation. There is no backend, no parsing, no AI. Fake data is
 | Legend | `.legend` | Popover key for the four question states, opened by `.legend-btn` beside the kicker. |
 | Insight counter | `.insight-counter` | Sparkle + running count, bottom-right. |
 | `+1` float | `.insight-plus` | One-shot rise-and-fade when an already-visible counter increments. |
-| Finish button | `.finish-session` | Hidden until the last question is answered. |
+| Footer | `.toolbar-foot` | `--rae-foot`, 54px. Insight counter on the left; **Start recording** → **Next** → **Finish Session** on the right, one at a time. |
+| Finish button | `.finish-session` | Hidden until the last question is answered, then takes the footer's action slot. |
 | Complete surface | `.complete-surface` | Swaps in over everything on finish. |
 
 ### Question list mechanics
-- **Focus scaling:** every `.question` is scaled by its distance from the top of the list —
-  `1` at the top falling to `0.833` over `90px` (`QUESTION_MIN_SCALE`, `QUESTION_SCALE_FALLOFF`).
-  Recomputed on scroll inside a `requestAnimationFrame`.
+- **Every question is the same size.** The old focus scaling (`QUESTION_MIN_SCALE`,
+  `QUESTION_SCALE_FALLOFF`, `updateQuestionScales`) is gone — it made the top row shout, and the
+  active row already reads as active from its colour alone.
+- **There is no connector line.** `.questions-line`, `updateQuestionsLine()` and the
+  `ResizeObserver` that kept it measured are all gone with it.
 - **Active question:** exactly one `.question.active`. Inactive questions dim (number
   `#efefed`/`#aaaaa9`, text `#7e7e7d`).
 - **Snap-to-top:** focusing a question animates `scrollTop` over `450ms` with a hand-rolled
   cubic-bézier `(0.74, 0.02, 0.33, 1)` — implemented in JS (`cubicBezierEasing`) because it
   drives scroll position, not a CSS property. Reuse that helper rather than adding a library.
-- **Connector line:** `.questions-line` is measured in JS to span the first question number to
-  the last, and remeasured on scroll and on any content resize (`ResizeObserver`), because probe
-  cards and rewrites change the content height.
 - **Answered:** `.answered` → number turns dark with a `✓` that pops
   (`340ms cubic-bezier(0.34, 1.56, 0.64, 1)`), whole row drops to `opacity: .7`.
 - **Probe card:** `.probe-card` titled "Probes", animates open via `max-height` when `.revealed`;
@@ -202,9 +202,14 @@ about yourself → What are you studying? (+2 probes) → Do you have any work e
 
 ## 6. Variant 2 — the scripted sequence (default behaviour)
 
-Variant 2 does **not** respond to per-question clicking. It plays a fixed story: **one click
-anywhere on the white question area advances one beat.** Arrow keys and scroll-to-activate are
-disabled; the list gets `.script-mode`.
+Variant 2 does **not** respond to per-question clicking. It plays a fixed story, advanced by the
+footer's **Next** button, `→`, or a click anywhere on the white question area. Scroll-to-activate
+is disabled; the list gets `.script-mode`.
+
+**Beat 1 is not a beat any more** — `playScriptedSequence()` fires from `startRecording()`, so Rae
+goes to work the moment the recording does. `scriptBeats` holds the six that follow, and each one
+**names itself** so the button says what it is about to do (`Next question`, `Log the answer`,
+`Mark probe 2.1`). `updateNextLabel()` keeps the label and the button's visibility in step.
 
 | # | Beat | What happens |
 |---|---|---|
@@ -680,3 +685,31 @@ explained — P25 could not read the icons, and it did nothing.
 **Caching:** the script is versioned (`insight-doc.js?v=5.1.2`). The HTML itself still caches under
 `python3 -m http.server`; append a query string when checking changes in a browser that has
 already loaded it.
+
+### Batch 8 — Starting, advancing, and what comes before the questions
+
+**There was no visible way to move the session on.** Clicking the white space advanced a beat, and
+nothing said so. `.toolbar-foot` is now a real footer holding one action at a time — **Start
+recording**, then **Next**, then **Finish Session** — with the insight counter on the left. The
+Next button carries the beat's own label, and `→` does the same thing. Clicking the list still
+works as a shortcut.
+
+**Nothing records until the researcher says so.** The assistant arrives `.is-idle`: hollow dot,
+`NOT RECORDING`, no clock, title *"Rae is ready to listen"*. `startRecording()` flips it to
+`.is-recording`, plays the opening sequence, and collapses the briefing. `advanceScript()` refuses
+to run while idle, so the story cannot start behind the researcher's back. `reset()` and
+`setVariant()` both return to idle. Minimised, the strip reads *"Not recording yet"* and clicking
+it starts the recording rather than doing nothing.
+
+**The briefing comes first.** `SCRIPTS[n].briefing` renders as `.briefing` at the top of the list —
+thanks, scope, the right to skip or stop, who sees it, and the request to record. It is open on
+arrival, folds itself away when recording starts, and reopens from its own header. It is where the
+consent that the Start button represents actually happens.
+
+**Every question is the same size and there is no connector line** — see §4.
+
+**Fixed in passing:** `setVariant()` still referenced `QUESTION_SETS`, renamed to `SCRIPTS` in
+batch 3. Only the `?dev=1` variant chip reaches it, which is why it never surfaced.
+
+**CSS note:** `.next-beat` sets `display: flex`, which beats the `hidden` attribute — hence the
+explicit `.next-beat[hidden] { display: none; }`. Any new footer control needs the same.
