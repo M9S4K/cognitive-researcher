@@ -1,0 +1,70 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 476,
+      "h": 445
+    },
+    {
+      "file": "FloatingSession.dc.html",
+      "x": 0,
+      "y": 560,
+      "w": 476,
+      "h": 445
+    },
+    {
+      "file": "FloatingComplete.dc.html",
+      "x": 0,
+      "y": 1240,
+      "w": 476,
+      "h": 499
+    },
+    {
+      "file": "Mini.dc.html",
+      "x": 560,
+      "y": 0,
+      "w": 387,
+      "h": 132
+    },
+    {
+      "file": "MiniSession.dc.html",
+      "x": 560,
+      "y": 560,
+      "w": 387,
+      "h": 132
+    },
+    {
+      "file": "MiniComplete.dc.html",
+      "x": 560,
+      "y": 1240,
+      "w": 387,
+      "h": 90
+    },
+    {
+      "file": "Sidebar.dc.html",
+      "x": 1010,
+      "y": 0,
+      "w": 392,
+      "h": 640
+    },
+    {
+      "file": "SidebarSession.dc.html",
+      "x": 1010,
+      "y": 560,
+      "w": 392,
+      "h": 640
+    },
+    {
+      "file": "SidebarComplete.dc.html",
+      "x": 1010,
+      "y": 1240,
+      "w": 392,
+      "h": 640
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

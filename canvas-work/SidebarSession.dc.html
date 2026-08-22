@@ -1,0 +1,897 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ancizar+Serif:wght@400;600&family=Averia+Serif+Libre&family=Inter:wght@100;400;500;600;700&family=Mona+Sans:wdth,wght@100,400;100,500;100,600&display=swap">
+  <style>
+    body { margin: 0; background: transparent; font-family: Inter, system-ui, sans-serif; }
+    a { color: #161414; } a:hover { color: #000; }
+@import url('https://fonts.googleapis.com/css2?family=Ancizar+Serif:wght@400;600&family=Averia+Serif+Libre&family=Inter:wght@400;500;600;700&family=Mona+Sans:wdth,wght@100,500&display=swap');
+
+    * { box-sizing: border-box; }
+:root { --ease-out: cubic-bezier(.23, 1, .32, 1); }
+/* The 6px inset is the card's, not the pill's — the pill runs the full content width. */
+    .notification-head { display: flex; flex-direction: column; gap: 6px; padding-left: 6px; }
+/* v5.2: the X is a snooze. It stays a bare glyph until hover, then widens to say so. */
+    .dismiss {
+      display: flex;
+      flex: none;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0;
+      height: 31px;
+      padding: 0 9px;
+      border: 1.5px solid rgb(0 0 0 / 5%);
+      border-radius: 23px;
+      background: #e7e7e7;
+      color: #1e1e1e;
+      font: 500 14px/normal Inter, system-ui, sans-serif;
+      white-space: nowrap;
+      transition: gap 160ms ease, padding 160ms ease, background-color 150ms ease;
+    }
+/* Widens from zero so the label slides out of the glyph rather than popping in beside it. */
+    .dismiss-label { display: block; overflow: hidden; max-width: 0; transition: max-width 180ms ease; }
+/* The pill is one target; the doc row is the exception that sits above it. */
+    .prepare-main { position: absolute; inset: 0; padding: 0; border-radius: 50px; background: none; }
+/* The highlight fades in from the left so it reads as reaching toward the chevron. */
+    .prepare-doc::before {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      top: -1.13px;
+      right: -3.23px;
+      left: 0;
+      height: 19.24px;
+      border-radius: 0 8px 8px 0;
+      background: linear-gradient(90deg, rgb(45 45 45 / 0%), #2d2d2d);
+      opacity: 0;
+      transition: opacity 150ms ease;
+    }
+.prepare-doc-icon { display: block; flex: none; width: 20.23px; height: 17px; object-fit: contain; }
+.prepare-doc-name { overflow: hidden; color: #969696; font: 400 12px/normal Inter, system-ui, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.prepare-doc-chevron { display: block; flex: none; width: 16px; height: 16px; }
+.prepare-doc-chevron path { transition: stroke-width 150ms ease; }
+.prepare-doc:hover .prepare-doc-chevron path, .prepare-doc:focus-visible .prepare-doc-chevron path { stroke-width: 1.5; stroke-linecap: round; }
+.doc-tip {
+      position: absolute;
+      z-index: 2;
+      top: calc(100% + 7.8px);
+      right: 8px;
+      padding: 3px 8px;
+      border: 1.5px solid rgb(0 0 0 / 10%);
+      border-radius: 8px;
+      background: #fff;
+      color: #000;
+      font: 500 14px/1.4 Inter, system-ui, sans-serif;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      filter: drop-shadow(0 0 14.65px rgb(0 0 0 / 45%));
+      transform: translate(50%, -2px);
+      transition: opacity 140ms ease, transform 160ms ease;
+    }
+.prepare-doc:hover .doc-tip, .prepare-doc:focus-visible .doc-tip { opacity: 1; transform: translate(50%, 0); }
+.doc-tip::before {
+      content: '';
+      position: absolute;
+      top: -4.6px;
+      left: 50%;
+      width: 9px;
+      height: 9px;
+      margin-left: -4.5px;
+      border-top: 1.5px solid rgb(0 0 0 / 10%);
+      border-left: 1.5px solid rgb(0 0 0 / 10%);
+      border-radius: 2px 0 0;
+      background: #fff;
+      transform: rotate(45deg);
+    }
+/* Keys sit on the dark pill now, so they get their own fill rather than the toolbar's outline. */
+    .notification .shortcut, .previewer-cta .shortcut { flex: none; }
+.notification .shortcut kbd, .previewer-cta .shortcut kbd {
+      height: 19px;
+      border: 1px solid #2d2d2d;
+      background: #222121;
+      box-shadow: 0 2px 0 #2d2d2d;
+      color: #ababab;
+      font: 500 12px/12px Inter, system-ui, sans-serif;
+    }
+.shortcut { display: flex; align-items: center; gap: 5px; }
+.shortcut kbd { min-width: 19px; height: 19px; display: grid; place-items: center; padding: 0 4px; border: 1px solid rgb(255 255 255 / 50%); border-radius: 4px; color: #fff; font: 500 12px/1 'Roboto Condensed', Inter, sans-serif; }
+/* Review script opens the document itself — 648x927 in the design, capped to the viewport. */
+    .previewer-backdrop { padding-bottom: 0; }
+.doc-previewer {
+      position: relative;
+      width: 648px;
+      height: min(927px, calc(100vh - 72px));
+      overflow: hidden;
+      border: 1px solid rgb(255 255 255 / 10%);
+      border-radius: 20.571px;
+      background: #242424;
+      opacity: 0;
+      transform: translateY(12px) scale(.985);
+      transition: transform 220ms ease, opacity 180ms ease;
+    }
+.modal-backdrop.visible .doc-previewer { opacity: 1; transform: translateY(0) scale(1); }
+/* The design floats the bar inside the page, which a native scrollbar cannot do. */
+    .previewer-bar { position: absolute; z-index: 1; top: 198.28px; right: 20.32px; bottom: 118.28px; width: 10px; border-radius: 13px; background: #e0e0e0; box-shadow: inset 0 4px 4px rgb(0 0 0 / 25%); }
+.previewer-doc-title { margin: 0; font: 700 17.521px/1.2 Inter, system-ui, sans-serif; text-align: center; }
+/* Onboarding: the card's top-left is erased, not shaded — the desktop shows through. */
+    .ria-backdrop { padding-bottom: 0; }
+/* 4px checkerboard fading out along the design's 122deg diagonal. Stops are the
+       design's ramp re-projected onto the card box, matched against the Figma render. */
+    .ria-graphic {
+      position: absolute;
+      inset: 0;
+      background-image: conic-gradient(#000 25%, rgb(0 0 0 / 0%) 0 50%, #000 0 75%, rgb(0 0 0 / 0%) 0);
+      background-size: 8px 8px;
+      mask-image: linear-gradient(122deg, #000 -16.44%, rgb(0 0 0 / 0%) 9.38%);
+    }
+/* Steps 1-2 show a lede; step 3 swaps in the heading + feature list at its own offsets. */
+    .ria-lede { position: absolute; top: 251.05px; left: 64.086px; }
+/* Two icons export at their own bounds rather than the 33.6px frame. */
+    .ria-feature-icon.suggest img { top: 3.302px; left: 3.302px; width: 27.021px; height: 27.496px; }
+/* Persistent chrome introduces itself once, on open; steps never re-run it. */
+    .ria-stagger { opacity: 0; transform: translateY(10px); transition: opacity 340ms var(--ease-out), transform 340ms var(--ease-out); }
+/* Step bodies: quick out, graceful in. Children carry the travel so the
+       lists assemble rather than sliding as one slab. */
+    .ria-features, .ria-outro { position: absolute; inset: 0; pointer-events: none; }
+/* Controls that come and go between steps. */
+    .ria-dots, .ria-back { transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out), visibility 0s; }
+@media (prefers-reduced-motion: reduce) {
+      .ria-onboarding,
+      .ria-stagger,
+      .ria-body,
+      .ria-dots,
+      .ria-back,
+      .ria-features-heading,
+      .ria-feature-list li,
+      .ria-outro p { transform: none !important; transition-duration: 160ms; }
+    }
+.ria-nav .shortcut { flex: none; gap: 3.821px; }
+.ria-nav kbd { min-width: 14.52px; height: 14.515px; padding: 0 3.057px; border-radius: 3.057px; font: 500 9.171px/9.171px Inter, system-ui, sans-serif; }
+.ria-back kbd { border: .764px solid #a4a4a4; background: #f7f7f7; box-shadow: 0 1.528px 0 #a4a4a4; color: #8d8d8d; }
+.ria-next kbd { border: .764px solid #454545; background: #222121; box-shadow: 0 1.528px 0 #454545; color: #ababab; }
+/* P21 wanted to know what happens next before the call starts, not after. */
+    .preflight-steps { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 20px; padding: 0; list-style: none; }
+.join-meeting .shortcut { gap: 5px; }
+/* Windows chrome: controls sit top-right and square off into the window corner. */
+    .window-controls { position: absolute; top: 5px; right: 4px; display: flex; gap: 4.424px; width: 167px; height: 43px; }
+/* The shoulders where the tab's base flares into the toolbar below it. */
+    .browser-tab::before, .browser-tab::after { content: ''; position: absolute; bottom: 0; height: 6px; background: #c0c0c0; }
+.toolbar-divider { position: absolute; top: 16px; left: 81px; width: 1px; height: 49px; background: rgb(0 0 0 / 10%); }
+.research-toolbar {
+      position: absolute;
+      z-index: 2;
+      top: 124px;
+      left: calc(50% - 214px);
+      --rae-head: 93px;
+      --rae-foot: 84.499px;
+      width: var(--rae-w, 476px);
+      height: var(--rae-h, 445px);
+      color: #000;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-10px);
+      transition: opacity 220ms ease, transform 240ms ease, width 360ms cubic-bezier(0.32, 0.72, 0, 1), height 360ms cubic-bezier(0.32, 0.72, 0, 1);
+      cursor: grab;
+    }
+.research-toolbar.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.research-toolbar:active { cursor: grabbing; }
+.toolbar-surface {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border: 1px solid rgb(126 126 126 / 20%);
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 4px 70.2px 20px rgb(0 0 0 / 12%);
+      transition: opacity 260ms ease;
+    }
+.toolbar-header { position: relative; height: var(--rae-head); padding: 0; border-bottom: 1px solid #dcdcdc; background: #fff; cursor: grab; touch-action: none; }
+.toolbar-header:active { cursor: grabbing; }
+.drag-handle { position: absolute; top: 10.098px; left: 50%; width: 52.5px; height: 8.398px; cursor: grab; transform: translateX(-50%); background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; touch-action: none; }
+.drag-handle:active { cursor: grabbing; }
+.toolbar-id { display: flex; align-items: center; gap: 5px; }
+.legend-btn { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: none; color: #8f8f8d; cursor: pointer; }
+.legend-btn:hover { transform: none; color: #161414; }
+.legend-btn svg { width: 13px; height: 13px; }
+.legend { position: absolute; z-index: 6; top: 46px; left: 24px; width: 312px; padding: 14px 16px 15px; border: 1px solid rgb(0 0 0 / 7%); border-radius: 14px; background: #fff; box-shadow: 0 10px 34px rgb(0 0 0 / 12%); }
+.legend-title { margin: 0 0 10px; color: #000; font: 600 12px/16px Inter, sans-serif; }
+.legend-row { display: flex; align-items: baseline; gap: 11px; margin-top: 9px; }
+.legend-mark { flex: none; width: 104px; color: #3e3e3e; font: 500 12px/16px Inter, sans-serif; }
+.legend-answered { color: #9e9e9c; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #c4c4c2; }
+.legend-mark .question-tag { margin: 0; vertical-align: 0; }
+.legend-mark .status-chip { padding: 2px 7px; font-size: 11px; }
+.legend-copy { color: #7e7e7d; font: 400 12px/16px Inter, sans-serif; }
+.toolbar-kicker { margin: 0; font-size: 10px; font-weight: 300; letter-spacing: .11em; line-height: 14px; text-transform: uppercase; }
+.toolbar-title { width: max-content; margin: 2px 0 0; background: linear-gradient(105deg, #111 0%, #111 40%, #a3a3a3 50%, #111 60%, #111 100%); background-size: 250% 100%; background-clip: text; -webkit-background-clip: text; color: transparent; font-size: 18px; font-weight: 500; line-height: 25px; animation: note-shimmer 5.8s ease-in-out infinite; }
+/* The recording chip is the one piece of chrome that survives every presence
+       mode: P21 asked for proof the assistant is still listening when it is out of
+       the way. Monochrome, per the palette — the pulse carries the "live", not a colour. */
+    .rec-chip { position: absolute; top: 24px; right: 24px; display: flex; align-items: center; gap: 7px; padding: 4px 9px 4px 8px; border: 1px solid #dcdcda; border-radius: 20px; background: #fff; color: #3e3e3e; font: 500 10px/14px Inter, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+.rec-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #161414; animation: rec-pulse 2.4s cubic-bezier(0.32, 0.72, 0, 1) infinite; }
+/* Idle: hollow dot, no pulse, and the chip says so rather than implying a
+       recording that has not started. */
+    .research-toolbar.is-idle .rec-dot { background: transparent; border: 1.5px solid #b6b6b4; animation: none; }
+.research-toolbar.is-idle .rec-chip { color: #a4a4a2; border-color: #e7e7e4; }
+.research-toolbar.is-idle .rec-label::after { content: 'Not recording'; }
+.research-toolbar.is-recording .rec-label::after { content: 'Rec'; }
+.research-toolbar.is-idle .toolbar-time { display: none; }
+@keyframes rec-pulse {
+      0% { box-shadow: 0 0 0 0 rgb(22 20 20 / 30%); }
+      55% { box-shadow: 0 0 0 6px rgb(22 20 20 / 0%); }
+      100% { box-shadow: 0 0 0 0 rgb(22 20 20 / 0%); }
+    }
+.toolbar-time { font: 500 11px/14px Inter, sans-serif; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+/* Presence: the three shapes the assistant can take. P23 wants it out of the
+       way, P25 wants it big and resizable, P21 wants it minimised but visibly
+       recording — so it is a setting, not a default. */
+    .presence-switch { position: absolute; right: 24px; top: 48px; display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: #dedede; }
+.presence-btn { display: grid; place-items: center; width: 27px; height: 22px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #77776f; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+.presence-btn:hover { transform: none; color: #161414; }
+.presence-btn.is-on { background: #fcfcfa; color: #161414; box-shadow: 0 1px 2px rgb(0 0 0 / 12%); }
+.presence-btn svg { width: 15px; height: 15px; }
+/* ---- v5.2 focus card (Figma 641:8964). The card shows the script document
+       itself; the gutter marks sections, not questions. ---- */
+    .doc-info { position: absolute; top: 26.117px; left: 25.453px; width: 302.367px; }
+.doc-note { display: flex; align-items: center; gap: 4px; margin: 0; height: 12px; padding-left: 1px; color: #888; font: 400 12px/1 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; }
+.doc-note-sep { width: 2.571px; height: 2.571px; border-radius: 7.714px; background: #888; }
+.doc-title { margin: 2px 0 0; color: #000; font: 500 20px/24px 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; }
+.doc-path { margin: 4px 0 0; padding-left: 1px; color: #000; font: 100 10px/12px Inter, system-ui, sans-serif; letter-spacing: .4px; text-transform: uppercase; }
+.rec-status { position: absolute; top: 62.117px; left: 392px; display: flex; align-items: center; gap: 4px; color: #888; font: 400 12px/1 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; }
+.rec-rings { position: relative; width: 10px; height: 18px; }
+.rec-rings i { position: absolute; top: 50%; left: 50%; border-radius: 16px; background: #00a138; transform: translate(-50%, -50%); }
+.rec-rings i:nth-child(1) { width: 14px; height: 14px; opacity: .1; }
+.rec-rings i:nth-child(2) { width: 11px; height: 11px; opacity: .2; }
+.rec-rings i:nth-child(3) { width: 7px; height: 7px; }
+.research-toolbar.is-idle .rec-rings i { background: #b6b6b4; }
+.presence-switch { top: 23.117px; right: 8px; background: #edebe2; box-shadow: inset 0 0 4px #dad4ba; }
+.presence-switch .presence-btn { color: #96917f; }
+.presence-switch .presence-btn.is-on { background: #fcfcfa; color: #37321e; box-shadow: 0 1px 1px rgb(0 0 0 / 12%); }
+/* Header controls the design drops. Kept in the DOM so their handlers still bind. */
+    .toolbar-id, .toolbar-title, .rec-chip, .manual-notes, .suggest-toggle, .question-progress, .legend { display: none; }
+.script-doc { position: absolute; top: var(--rae-head); right: 0; bottom: 0; left: 0; }
+.doc-lines { position: absolute; top: 61.5px; left: 14.453px; display: flex; flex-direction: column; gap: 10px; width: 12px; }
+.doc-line { height: 25px; color: #d2d2d2; font: 500 18px/25px Inter, system-ui, sans-serif; text-align: center; transition: color 220ms var(--ease-out); }
+.doc-line.is-on { color: #5d5d5d; font-feature-settings: 'ss02' 1; }
+.doc-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+.doc-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.doc-page { padding: 57.424px 51px 210px 68.711px; }
+/* Every passage carries the padding so text never shifts; only the fill moves. */
+    .doc-passage { margin: 0 -18.821px 0 -18.063px; padding: 21.076px 18.821px 21.076px 18.063px; border-radius: 19px; color: #767676; font: 400 18px/1.4 Inter, system-ui, sans-serif; transition: background-color 260ms var(--ease-out), color 260ms var(--ease-out); }
+.doc-passage.is-on { background: #f6f5ef; color: #010101; }
+.doc-passage h3 { margin: 0 0 11px; color: inherit; font: 600 18px/1.4 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; }
+.doc-passage p { margin: 0 0 14px; }
+.doc-passage p:last-child, .doc-passage ol { margin-bottom: 0; }
+.doc-passage ol { margin: 0; padding-left: 24.4px; }
+.doc-passage li { margin-bottom: 8px; }
+.doc-passage li:last-child { margin-bottom: 0; }
+.doc-scrollbar { position: absolute; top: 73.5px; left: 466px; width: 6.035px; height: 28.844px; border-radius: 19px; background: #d1d0cd; }
+.toolbar-foot { position: absolute; right: 0; bottom: 0; left: -.168px; width: 476.168px; height: var(--rae-foot); padding: 0; border-top: 0; background: url('assets/focus-scrim.png') bottom / 100% 100% no-repeat; }
+.doc-edit { position: absolute; bottom: 12px; left: 12px; display: flex; padding: 2px; border-radius: 9px; background: #edebe2; box-shadow: inset 0 0 4px #dad4ba; }
+.doc-edit button { display: grid; place-items: center; width: 27px; height: 22px; padding: 0; border: 0; border-radius: 7px; background: #fcfcfa; filter: drop-shadow(0 1px 1px rgb(0 0 0 / 12%)); cursor: pointer; }
+.doc-edit button:hover { transform: none; }
+.doc-edit img { display: block; width: 16.404px; height: 16.404px; }
+.doc-keys { position: absolute; right: 15px; bottom: 15px; display: flex; align-items: center; gap: 3.821px; }
+.doc-keys kbd { display: grid; place-items: center; min-width: 14.52px; width: 16.121px; height: 14.515px; padding: 0 3.057px; border: .764px solid #a4a4a4; border-radius: 3.057px; background: #f7f7f7; box-shadow: 0 1.528px 0 #a4a4a4; color: #8d8d8d; font: 500 9.171px/1 Inter, system-ui, sans-serif; }
+.start-rec { position: absolute; bottom: 6.632px; left: 50%; display: flex; align-items: center; justify-content: center; gap: 8px; height: 40.571px; padding: 0 16px 0 20px; border: 1.286px solid rgb(0 0 0 / 5%); border-radius: 54px; background: #1e1e1e; color: #fff; font: 600 16px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.16px; transform: translateX(-50%); }
+.start-rec:hover { transform: translateX(-50%); background: #000; }
+.start-rec .shortcut { flex: none; gap: 5px; }
+.start-rec kbd { height: 18.993px; min-width: 19px; padding: 0 4px; border: 1px solid #2d2d2d; background: #222121; box-shadow: 0 2px 0 #2d2d2d; color: #ababab; font: 500 12px/12px Inter, system-ui, sans-serif; }
+.research-toolbar:not(.is-idle) .start-rec { display: none; }
+.manual-notes { position: absolute; left: 26px; bottom: 29px; border: 0; padding: 0; background: transparent; color: #55554f; cursor: pointer; font: 300 12px/16px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+.manual-notes { display: flex; align-items: center; gap: 6px; text-decoration: none; }
+.manual-notes:hover { transform: none; color: #161414; }
+.manual-notes kbd { display: grid; place-items: center; min-width: 15px; height: 15px; padding: 0 3px; border: 1px solid #c9c9c6; border-radius: 4px; color: #8a8a88; font: 500 10px/1 Inter, sans-serif; }
+/* Suggestions are optional, and saying so is part of the point. */
+    .suggest-toggle { position: absolute; right: 24px; bottom: 29px; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: transparent; color: #55554f; cursor: pointer; font: 300 12px/16px Inter, sans-serif; }
+.suggest-toggle:hover { transform: none; color: #161414; }
+.suggest-dot { width: 7px; height: 7px; flex: none; border: 1.5px solid #161414; border-radius: 50%; background: #161414; transition: background-color 180ms ease, border-color 180ms ease; }
+.suggest-toggle.is-off { color: #aaaaa9; }
+.suggest-toggle.is-off .suggest-dot { border-color: #c2c2c0; background: transparent; }
+.question-progress { display: flex; gap: 7px; position: absolute; right: 26px; bottom: 13px; left: 26px; }
+.question-progress span { height: 5px; flex: 1; border-radius: 19px; background: #d9d9d9; transition: background 300ms ease; }
+.questions { position: relative; height: calc(100% - var(--rae-head) - var(--rae-foot)); padding: 0 24px 24px; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.questions::-webkit-scrollbar { display: none; }
+/* What you say before the first question — and where consent to record actually
+       happens. It folds away once recording starts, and can be reopened. */
+    .briefing { margin: 18px 0 20px; border: 1px solid #ecebe6; border-radius: 14px; background: #f8f8f5; overflow: hidden; }
+.briefing-head { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 11px 14px; border: 0; background: none; cursor: pointer; }
+.briefing-head:hover { transform: none; }
+.briefing-title { color: #6f6f6d; font: 500 10px/14px Inter, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+.briefing-toggle { width: 9px; height: 9px; flex: none; border-right: 1.6px solid #a4a4a2; border-bottom: 1.6px solid #a4a4a2; transform: translateY(-2px) rotate(45deg); transition: transform 240ms ease; }
+.briefing.open .briefing-toggle { transform: translateY(1px) rotate(225deg); }
+.briefing-text { max-height: 0; margin: 0; padding: 0 14px; overflow: hidden; color: #55554f; font: 400 13.5px/1.55 Inter, sans-serif; opacity: 0; transition: max-height 340ms ease, opacity 240ms ease, padding 300ms ease; }
+.briefing.open .briefing-text { max-height: 220px; padding: 0 14px 14px; opacity: 1; }
+/* Where in the script you are, pinned above the questions it governs. The
+       questions scroll under it, so the answer to "how far through?" never leaves. */
+    .section-head { position: sticky; z-index: 3; top: 0; display: flex; align-items: baseline; gap: 10px; margin: 0 -24px; padding: 18px 24px 14px; background: #fcfcfa; }
+.section-counter { flex: none; color: #8a8a88; font: 500 11px/15px Inter, sans-serif; font-variant-numeric: tabular-nums; transition: color 220ms ease; }
+.section-counter.is-done { color: #161414; }
+/* The rest of the script: named and counted, not unpacked. */
+    .upcoming { margin: 4px 0 0 39px; padding-top: 16px; border-top: 1px solid #ececea; }
+.question { position: relative; display: flex; flex-wrap: wrap; column-gap: 9px; row-gap: 0; margin-bottom: 34px; transition: margin-bottom 280ms ease, opacity 240ms ease; }
+.question.answered { opacity: .7; }
+/* Rae's reworded version of a question — reads as the next line of the same block,
+       directly under the struck-through original. */
+    .question .question-rewrite { flex-basis: 100%; max-width: none; margin: 0; padding-left: 39px; max-height: 0; opacity: 0; overflow: hidden; transform: translateY(-4px); transition: max-height 300ms ease, opacity 220ms ease, transform 260ms ease; }
+.question.rewriting .question-text:not(.question-rewrite) { text-decoration: line-through; opacity: .55; }
+.question.rewritten .question-rewrite { max-height: 120px; opacity: 1; transform: translateY(0); }
+.question:not(.active) { cursor: pointer; }
+.question-number { z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 40px; background: #e1e1e1; color: #585858; font-size: 18px; font-weight: 700; line-height: 1; transition: background-color 240ms ease, color 240ms ease; }
+.question-text { margin: 4px 0 0; flex: 1 1 0%; min-width: 0; font-size: 18px; font-weight: 500; line-height: 1.4; transition: color 240ms ease, text-decoration-color 240ms ease; }
+/* The lane is reserved whether or not there is a stamp in it, so a question does
+       not reflow the moment it gets one. */
+    .question-stamp { flex: none; width: 42px; margin-top: 8px; color: #aaaaa9; font: 400 12px/1 Inter, sans-serif; font-variant-numeric: tabular-nums; text-align: right; opacity: 0; transition: opacity 260ms ease; }
+.question.answered .question-stamp, .question.skipped .question-stamp { opacity: 1; }
+.question:not(.active) .question-number { background: #efefed; color: #aaaaa9; }
+.question:not(.active) .question-text { color: #7e7e7d; }
+.questions-spacer { height: 200px; flex: none; }
+/* A probe arrives while the participant is still talking, so it arrives as a
+       word. No jump, no pill, no sentence to read — the wording is one tap away. */
+    .probe-card { max-height: 0; margin-left: 39px; overflow: hidden; border: 1px solid transparent; border-radius: 14px; background: #f6f6f6; opacity: 0; transition: max-height 340ms ease, margin 320ms ease, padding 320ms ease, opacity 300ms ease; }
+.probe-head { display: flex; align-items: center; justify-content: space-between; }
+.probe-title { margin: 0; color: #8a8a88; font: 500 10px/14px Inter, sans-serif; letter-spacing: .11em; text-transform: uppercase; }
+.probe-dismiss { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 6px; background: none; color: #aaaaa9; cursor: pointer; }
+.probe-dismiss:hover { transform: none; background: rgb(0 0 0 / 6%); color: #161414; }
+.probe-dismiss svg { width: 10px; height: 10px; }
+.probe-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.probe-chip { display: flex; align-items: center; gap: 5px; padding: 6px 11px; border: 1px solid #e1e1e1; border-radius: 20px; background: #fff; color: #3e3e3e; cursor: pointer; font: 500 12.5px/16px Inter, sans-serif; transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease; }
+.probe-chip:hover { transform: none; border-color: #b6b6b4; }
+.probe-chip.used { border-color: #161414; background: #161414; color: #fff; }
+.probe-chip.used .chip-tick { display: block; }
+.probe-full { display: none; margin: 11px 0 1px; color: #3e3e3e; font: 400 13.5px/1.45 Inter, sans-serif; }
+.probe-full.open { display: block; }
+.probe-number { display: inline-block; margin-right: 8px; padding: 1px 6px; border-radius: 5px; background: #e7e7e4; color: #6f6f6d; font: 500 11px/16px Inter, sans-serif; }
+.question.probeable { cursor: pointer; }
+.question.expanded { margin-bottom: 15px; }
+/* P24 asked for strike-through over a check mark: it says "this is dealt with"
+       without claiming the same mark as a probe you chose to use. */
+    .question.answered .question-text,
+    .question.skipped .question-text { color: #9e9e9c; text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #c4c4c2; }
+.question.answered .question-number,
+    .question.skipped .question-number { background: #efefed; color: #b9b9b7; }
+.question.rewritten .question-rewrite { text-decoration: none; }
+.question.rewritten.answered .question-rewrite { text-decoration: line-through; text-decoration-thickness: 1px; text-decoration-color: #c4c4c2; }
+.question.skipped { opacity: .82; }
+/* Skipped is not the same as answered, so it says which moment it is standing on. */
+    .skip-note { display: flex; align-items: center; gap: 10px; flex-basis: 100%; max-height: 0; margin-left: 39px; overflow: hidden; opacity: 0; transition: max-height 260ms ease, opacity 200ms ease, margin 260ms ease; }
+.question.skipped .skip-note { max-height: 30px; margin-top: 9px; opacity: 1; }
+.status-chip { padding: 3px 9px; border-radius: 20px; background: #efefed; color: #6f6f6d; font: 500 12px/16px Inter, sans-serif; }
+.status-undo { padding: 0; border: 0; background: none; color: #55554f; cursor: pointer; font: 500 12px/16px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+.status-undo:hover { transform: none; color: #161414; }
+/* The reworded line is labelled as reworded — P22 wanted the change visible as
+       a change rather than a silent substitution. */
+    .question-tag { display: inline-block; margin-right: 8px; padding: 2px 7px; border-radius: 5px; background: #e7e7e4; color: #6f6f6d; font: 500 10px/14px Inter, sans-serif; letter-spacing: .06em; text-transform: uppercase; vertical-align: 2px; }
+/* The panel promises notes; these are the notes. Set apart from the script —
+       smaller, grey, behind their own rule — so "taking notes" and "the script" are
+       not the same thing on screen. */
+    .rae-note { flex-basis: 100%; max-height: 0; margin-left: 39px; overflow: hidden; opacity: 0; transition: max-height 340ms ease, opacity 240ms ease, margin 300ms ease; }
+.question.answered .rae-note, .question.skipped .rae-note { max-height: 260px; margin-top: 11px; opacity: 1; }
+.note-body { border-left: 2px solid #e1e1e1; padding: 1px 0 1px 13px; }
+.note-text { margin: 0; color: #6f6f6d; font: 400 13.5px/1.5 Inter, sans-serif; }
+/* Her actual words, one tap away — the check P25 currently makes by replaying audio. */
+    .note-quote { max-height: 0; margin: 0; overflow: hidden; opacity: 0; color: #3e3e3e; font: 400 13px/1.55 Inter, sans-serif; transition: max-height 300ms ease, opacity 220ms ease, margin 280ms ease; }
+.rae-note.showing-quote .note-quote { max-height: 160px; margin-top: 9px; opacity: 1; }
+.note-toggle { margin: 7px 0 0 15px; padding: 0; border: 0; background: none; color: #8a8a88; cursor: pointer; font: 500 11.5px/16px Inter, sans-serif; text-decoration: underline; text-underline-offset: 2px; }
+.note-toggle:hover { transform: none; color: #161414; }
+/* Your lane. Dark rule and a "You" tag, so at a glance it is never Rae's. */
+    .you-note, .you-composer { display: flex; align-items: baseline; gap: 9px; flex-basis: 100%; margin: 11px 0 0 39px; }
+/* Rae proposes; the researcher decides. The original is never edited underneath
+       her — P23's condition for letting the assistant touch the script at all. */
+    .rewrite-proposal { flex-basis: 100%; max-height: 0; margin-left: 39px; overflow: hidden; border: 1px solid transparent; border-radius: 14px; background: #f6f6f6; opacity: 0; transform: translateY(-6px); transition: max-height 300ms ease, margin 280ms ease, padding 280ms ease, opacity 200ms ease, transform 260ms ease; }
+.question.proposing .rewrite-proposal { max-height: 190px; margin: 11px 11px 0 39px; padding: 11px 14px 12px; border-color: rgb(0 0 0 / 4%); opacity: 1; transform: translateY(0); }
+.question.checked .question-number { position: relative; color: transparent; background: #3e3e3e; }
+.question.checked .question-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 17px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes tick-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+.probe-card.revealed { max-height: 260px; margin: 0 11px 28px 39px; padding: 10px 13px 12px; border-color: rgb(0 0 0 / 3%); opacity: 1; }
+/* Dismissed here, or switched off in the header — either way the card leaves and
+       takes its space with it. */
+    .probe-card.dismissed,
+    .research-toolbar.suggestions-off .probe-card { max-height: 0; margin: 0 0 0 39px; padding: 0; border-color: transparent; opacity: 0; pointer-events: none; }
+.research-toolbar.suggestions-off .question.expanded { margin-bottom: 34px; }
+/* Compact — the whole assistant folded down to a draggable strip. Keeps the
+       recording dot, where you are, and the insight count; everything else waits. */
+    .compact-bar { display: none; flex-direction: column; align-items: stretch; }
+.compact-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 8px 9px 16px; }
+.compact-where { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.compact-section { flex: none; color: #000; font: 500 13px/1.4 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; white-space: nowrap; }
+/* Live status sits ahead of the title and breathes while recording. */
+    .compact-rec { position: relative; flex: none; width: 10px; height: 10px; }
+.compact-rec i { position: absolute; top: 50%; left: 50%; border-radius: 16px; background: #00a138; transform: translate(-50%, -50%); }
+.compact-rec i:nth-child(1) { width: 10px; height: 10px; opacity: .1; }
+.compact-rec i:nth-child(2) { width: 8px; height: 8px; opacity: .2; }
+.compact-rec i:nth-child(3) { width: 6px; height: 6px; animation: compact-rec-pulse 2.4s cubic-bezier(.32, .72, 0, 1) infinite; }
+.research-toolbar.is-idle .compact-rec i { background: #b6b6b4; }
+.research-toolbar.is-idle .compact-rec i:nth-child(3) { animation: none; }
+@keyframes compact-rec-pulse {
+      0% { box-shadow: 0 0 0 0 rgb(0 161 56 / 45%); }
+      55% { box-shadow: 0 0 0 6px rgb(0 161 56 / 0%); }
+      100% { box-shadow: 0 0 0 0 rgb(0 161 56 / 0%); }
+    }
+.compact-sep { flex: none; width: 2.571px; height: 2.571px; border-radius: 7.714px; background: #888; }
+.compact-part { flex: none; color: #777; font: 500 10px/1.4 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; white-space: nowrap; }
+.compact-part-n { color: #000; font-size: 13px; }
+/* The compact card sits on #fcfcfa, so the switch takes the warmer ground. */
+    .compact-presence { position: static; background: #edebe2; box-shadow: inset 0 0 4px #dad4ba; }
+.compact-presence .presence-btn { color: #96917f; }
+.compact-presence .presence-btn.is-on { background: #fcfcfa; color: #37321e; box-shadow: 0 1px 1px rgb(0 0 0 / 12%); }
+/* Advancing is a click on the copy, dragging is a grab on the strip — the same
+       split the full card makes between its question list and its header. */
+    .compact-body { display: flex; align-items: flex-start; gap: 8px; padding: 12px 10px 8px 15px; cursor: pointer; }
+.compact-number { flex: none; min-width: 22px; color: #161414; font: 500 13px/18px 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; font-variant-numeric: tabular-nums; }
+.compact-text { margin: 0; flex: 1 1 auto; min-width: 0; color: #3e3e3e; font: 500 13px/1.5 Inter, system-ui, sans-serif; }
+.compact-foot { display: flex; justify-content: flex-end; padding: 6px 11px 11px; background: url('assets/compact-scrim.png') bottom / 100% auto no-repeat; }
+.compact-keys { display: flex; align-items: center; gap: 3.821px; }
+.compact-keys kbd { display: grid; place-items: center; min-width: 14.52px; width: 16.121px; height: 14.515px; padding: 0 3.057px; border: .764px solid #a4a4a4; border-radius: 3.057px; background: #f7f7f7; box-shadow: 0 1.528px 0 #a4a4a4; color: #8d8d8d; font: 500 9.171px/1 Inter, system-ui, sans-serif; }
+.research-toolbar.presence-compact { width: var(--compact-w, 322.402px); height: auto; }
+.research-toolbar.presence-compact .toolbar-header,
+    .research-toolbar.presence-compact .toolbar-foot,
+    .research-toolbar.presence-compact .questions,
+    .research-toolbar.presence-compact .insight-counter,
+    .research-toolbar.presence-compact .insight-plus,
+    .research-toolbar.presence-compact .finish-session,
+    .research-toolbar.presence-compact .snackbar,
+    .research-toolbar.presence-compact .resize-grip { display: none; }
+.research-toolbar.presence-compact .compact-bar { display: flex; }
+.research-toolbar.presence-compact .toolbar-surface { cursor: grab; }
+.research-toolbar.presence-compact .toolbar-surface:active { cursor: grabbing; }
+/* Dock — pinned to the edge of the meeting instead of floating over it, and the
+       call stage gives up the width rather than being covered (P23's overlap). */
+    .research-toolbar.presence-dock { top: 189px; right: 0; bottom: 0; left: auto; width: 392px; height: auto; }
+.research-toolbar.presence-dock .toolbar-surface { border-width: 0 0 0 1px; border-radius: 0; box-shadow: -10px 0 44px rgb(0 0 0 / 7%); }
+.research-toolbar.presence-dock .drag-handle,
+    .research-toolbar.presence-dock .resize-grip { display: none; }
+.research-toolbar.presence-dock,
+    .research-toolbar.presence-dock .toolbar-header { cursor: default; }
+.research-toolbar.presence-dock .complete-surface { border-radius: 0; }
+body[data-rae-presence="dock"] .call-stage { margin-right: 392px; }
+/* The three modes are different shapes; crossfading reads as a deliberate
+       switch where tweening the geometry reads as a glitch. */
+    .research-toolbar.presence-switching { opacity: 0; transition: opacity 130ms ease; }
+.research-toolbar.resizing { transition: none; }
+.research-toolbar:hover .resize-grip { opacity: 1; }
+.research-toolbar.session-complete .resize-grip { display: none; }
+/* The card's own footer. Before, the only way to move the session on was to know
+       that clicking the white space did something — there was no visible control. */
+
+    .start-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #fff; }
+.research-toolbar.is-recording .start-rec { display: none; }
+.next-beat { display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 10px 12px 10px 15px; border: 0; border-radius: 11px; background: #161414; color: #fff; font: 600 13px/1 Inter, sans-serif; cursor: pointer; }
+.next-beat:hover { transform: none; background: #000; }
+.next-beat[hidden] { display: none; }
+.next-beat kbd, .finish-session kbd { min-width: 17px; height: 17px; display: grid; place-items: center; padding: 0 3px; border: 1px solid rgb(255 255 255 / 45%); border-radius: 4px; color: #fff; font: 500 11px/1 'Roboto Condensed', Inter, sans-serif; }
+/* ---------------------------------------------------------------- flags
+       Each v5.1 change can be switched off from the URL so it can be judged on its
+       own. `.flag-x` is present when x is ON, so the "off" rules read as :not(). */
+
+    /* status: back to v5's single check mark, with no stamp, chip or tag. */
+    .research-toolbar:not(.flag-status) .question-stamp,
+    .research-toolbar:not(.flag-status) .skip-note,
+    .research-toolbar:not(.flag-status) .question-tag,
+    .research-toolbar:not(.flag-status) .legend-btn { display: none; }
+.research-toolbar:not(.flag-status) .question.answered .question-text,
+    .research-toolbar:not(.flag-status) .question.skipped .question-text { color: inherit; text-decoration: none; }
+.research-toolbar:not(.flag-status) .question.answered .question-number,
+    .research-toolbar:not(.flag-status) .question.skipped .question-number { position: relative; color: transparent; background: #3e3e3e; }
+.research-toolbar:not(.flag-status) .question.answered .question-number::after,
+    .research-toolbar:not(.flag-status) .question.skipped .question-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 17px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.research-toolbar:not(.flag-status) .question.answered,
+    .research-toolbar:not(.flag-status) .question.skipped { opacity: .7; }
+/* notes: no note under the question, and no lane of your own. */
+    .research-toolbar:not(.flag-notes) .manual-notes { display: none; }
+/* recording: no idle state, so the chip is just the clock again. */
+    .research-toolbar:not(.flag-recording) .rec-dot,
+    .research-toolbar:not(.flag-recording) .rec-label,
+    .research-toolbar:not(.flag-recording) .start-rec { display: none; }
+.research-toolbar:not(.flag-recording) .rec-chip { border-color: transparent; background: transparent; }
+/* presence: one fixed card, no modes and no resizing. */
+    /* the suggestions switch belongs to the probes change */
+    .research-toolbar:not(.flag-probes) .suggest-toggle { display: none; }
+.research-toolbar:not(.flag-presence) .presence-switch,
+    .research-toolbar:not(.flag-presence) .resize-grip { display: none; }
+/* advance: no footer control — clicking the list is the only way on, as in v5. */
+    .research-toolbar:not(.flag-advance) .toolbar-foot { justify-content: flex-end; }
+/* scaling + line: the two things v5.1 removed, restored for comparison. */
+    .research-toolbar.flag-scaling .question { transform-origin: left top; }
+.questions-line { position: absolute; left: 38px; width: 2px; background: #efefed; pointer-events: none; }
+/* probes as full sentences, the way v5 showed them. */
+    .probe-title-legacy { color: #676767; font: 15px/21px 'Geist Pixel', Inter, sans-serif; letter-spacing: 0; text-transform: none; }
+.probe-row { display: flex; gap: 9px; align-items: flex-start; margin-top: 10px; cursor: pointer; }
+.probe-row-number { display: grid; place-items: center; width: 30px; height: 25px; flex: none; border-radius: 40px; background: #e1e1e1; color: #585858; font-size: 14px; font-weight: 600; }
+.probe-question { margin: 1px 0 0; font-size: 14px; font-weight: 500; line-height: 1.4; }
+.probe-row.used .probe-row-number { position: relative; color: transparent; background: #3e3e3e; }
+.probe-row.used .probe-row-number::after { content: '✓'; position: absolute; color: #f7f7f7; font-size: 15px; line-height: 1; animation: tick-pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.finish-session { display: none; align-items: center; gap: 8px; margin-left: auto; padding: 10px 12px 10px 15px; border: 0; border-radius: 11px; background: #161414; color: #fff; font: 600 13px/1 Inter, sans-serif; cursor: pointer; }
+.finish-session:hover { transform: none; background: #000; }
+.finish-session.visible { display: flex; }
+.research-toolbar.has-finish .next-beat { display: none; }
+/* Session complete — swaps in over the toolbar once the session is finished. */
+    .complete-surface { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 34px 14px 16px; border: 1px solid rgb(126 126 126 / 20%); border-radius: 20px; background: #fcfcfa; box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%); opacity: 0; pointer-events: none; transition: opacity 300ms ease; }
+/* The summary is not a fixed card any more — it takes the shape the assistant is
+       already in, because that is where the researcher is looking. */
+    .research-toolbar.presence-focus.session-complete { height: calc(var(--rae-h, 363px) + 54px); }
+.research-toolbar.session-complete .toolbar-surface { opacity: 0; pointer-events: none; }
+.research-toolbar.session-complete .complete-surface { opacity: 1; pointer-events: auto; }
+/* Docked, the summary fills the column and keeps the column's square edge. */
+    .research-toolbar.presence-dock.session-complete .complete-surface { border-radius: 0; border-width: 0 0 0 1px; }
+.research-toolbar.presence-dock.session-complete .complete-handle { display: none; }
+/* Minimised, the summary stays a strip: the same three numbers and the way in. */
+    .compact-complete { display: none; align-items: center; gap: 12px; height: 100%; padding: 0 9px 0 14px; }
+.research-toolbar.presence-compact.session-complete .compact-complete { display: flex; }
+.research-toolbar.presence-compact.session-complete .compact-bar { display: none; }
+.research-toolbar.presence-compact.session-complete .complete-surface { display: none; }
+.research-toolbar.presence-compact.session-complete .toolbar-surface { opacity: 1; pointer-events: auto; }
+.compact-check { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%; background: #e0e0e0; }
+.compact-check svg { width: 15px; height: 11px; }
+.compact-summary { margin: 2px 0 0; color: #3e3e3e; font: 500 13px/17px Inter, sans-serif; font-variant-numeric: tabular-nums; }
+.compact-doc { flex: none; padding: 9px 13px; border-radius: 9px; background: #161414; color: #fff; font: 600 12px/1 Inter, sans-serif; }
+.compact-doc:hover { transform: none; }
+.complete-handle { position: absolute; top: 10px; left: 50%; width: 53px; height: 9px; flex: none; transform: translateX(-50%); background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; }
+.complete-head { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.complete-check { display: grid; place-items: center; width: 86.66px; height: 86.66px; flex: none; border-radius: 50%; background: #e0e0e0; outline: 5.42px solid #fcfcfa; }
+.complete-check svg { width: 44.13px; height: 29.83px; }
+.complete-copy { display: flex; flex-direction: column; align-items: center; }
+.complete-title { margin: 0; color: #000; font: 500 24px/140% Inter, sans-serif; text-align: center; }
+.complete-metrics { display: flex; align-items: center; justify-content: center; gap: 24px; }
+.metric-sparkle { position: absolute; left: 6px; top: -1px; width: 18.42px; height: 18.42px; color: #2e2e2e; }
+.sparkle-icon { width: 14px; height: 14px; flex: none; }
+/* A timed snackbar, not a pill that slides out from under the card and morphs
+       its own width. P23 found the old format too prominent for what it says. */
+    .snackbar {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      max-width: calc(100% - 40px);
+      padding: 8px 14px;
+      border: 1px solid rgb(0 0 0 / 6%);
+      border-radius: 11px;
+      background: #f2f2f0;
+      color: #3e3e3e;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font: 500 13px/17px Inter, sans-serif;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgb(0 0 0 / 8%);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 8px);
+      transition: opacity 200ms ease, transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+.snackbar.visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+#snackbar-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* A message about something reversible carries the reverse — the snackbar is where
+       attention already is at that moment, not the row it happened on. */
+    .snack-action { flex: none; padding: 4px 10px; border: 0; border-radius: 8px; background: #161414; color: #fff; font: 600 12px/16px Inter, sans-serif; cursor: pointer; }
+.snack-action:hover { transform: none; background: #000; }
+.snack-action[hidden] { display: none; }
+.snackbar { bottom: calc(var(--rae-foot) + 12px); }
+@media (prefers-reduced-motion: reduce) {
+      .snackbar { transition-duration: 1ms; }
+      .question-number::after { animation: none; }
+    }
+.insight-counter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px 3px 6px;
+      border-radius: 11px 8px 11px 8px;
+      background: #e1e1e1;
+      color: #717171;
+      font: 700 14px/1.2 Inter, sans-serif;
+      opacity: 0;
+      transform: translateY(5px);
+      transition: opacity 220ms ease, transform 240ms ease;
+    }
+.insight-counter.visible { opacity: 1; transform: translateY(0); }
+.insight-plus {
+      position: absolute;
+      z-index: 1;
+      left: 22px;
+      bottom: 46px;
+      color: #3e3e3e;
+      font: 700 14px/1 Inter, sans-serif;
+      opacity: 0;
+      pointer-events: none;
+    }
+.insight-plus.floating { animation: insight-plus-float 700ms ease-out; }
+@keyframes insight-plus-float {
+      0% { opacity: 0; transform: translateY(6px); }
+      20% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-22px); }
+    }
+@keyframes note-shimmer { 0%, 62%, 100% { background-position: 100% 50%; } 79% { background-position: 0% 50%; } }
+@media (prefers-reduced-motion: reduce) {
+      .toolbar-title { animation: none; color: #111; background: none; }
+      .rec-dot { animation: none; }
+      .research-toolbar, .call-stage, .research-toolbar.presence-switching { transition-duration: 1ms; }
+    }
+/* The script belongs to a meeting, and the modal says which — P21 expected it to
+       be attached already, and had no idea what "search your script" was for. */
+    .modal-meta { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 11px; }
+.doc-list { padding: 14px 0 8px; overflow-y: auto; scrollbar-width: none; border-right: 1px solid rgb(0 0 0 / 12%); }
+.doc-list::-webkit-scrollbar { display: none; }
+.doc-group + .doc-group { margin-top: 14px; }
+/* Selection has to be unmistakable — P23 could not tell whether the row was a
+       button or a state, and three participants stalled on the same screen. */
+    .document.selected { background: #161414; color: #fff; }
+.document.selected .doc-icon { filter: grayscale(1) invert(1) brightness(1.6); }
+.doc-icon { width: 19px; height: 20px; flex: none; background: center / contain no-repeat url('assets/doc-thumbnail-word.png'); filter: grayscale(1); }
+.doc-name { overflow: hidden; text-overflow: ellipsis; }
+.document.selected .doc-name { font-weight: 500; }
+.load-script kbd { display: grid; place-items: center; width: 15px; height: 15px; padding: 0; border: 1px solid rgb(255 255 255 / 50%); border-radius: 3px; font: 500 10px/1 Inter, sans-serif; }
+/* The action that commits lives on the modal's own edge, not tucked into the
+       corner of the preview where nobody looked for it. */
+    .modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 68px; padding: 0 18px 0 24px; border-top: 1px solid rgb(0 0 0 / 12%); background: #fbfbf9; }
+.use-script kbd { display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border: 1px solid rgb(255 255 255 / 45%); border-radius: 4px; font: 500 11px/1 Inter, sans-serif; }
+.use-script:disabled kbd { border-color: #cacac8; }
+/* The insight analysis is its own application sitting on top of everything —
+       it opens from the taskbar the same way the browser does, and it can be closed
+       and reopened, which is how you get back into the document after the session. */
+    .app-window {
+      position: fixed;
+      z-index: 6;
+      top: 26px;
+      right: 26px;
+      bottom: 106px;
+      left: 26px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #f1f1ef;
+      box-shadow: 0 30px 90px rgb(0 0 0 / 38%);
+      opacity: 0;
+      pointer-events: none;
+      transform-origin: 457px calc(100% - 40px);
+      transform: scale(.028, .04);
+      will-change: transform;
+      transition: transform 520ms cubic-bezier(.22, 1, .36, 1), opacity 120ms ease;
+    }
+/* The document is a fixed 1440 composition, so it is scaled to the window rather
+       than being made to scroll sideways inside it. */
+    .app-frame { position: absolute; top: 0; left: 0; width: 1440px; border: 0; transform-origin: top left; }
+.task-icon.doc-task { border: 0; padding: 0; cursor: default; }
+.task-icon.doc-task:hover { transform: none; }
+.task-icon.doc-task.available { background: #6a6a6a; cursor: pointer; }
+.task-icon.doc-task.available:hover { background: #7a7a7a; }
+@media (max-height: 740px) {
+      .folders { transform: scale(.8); transform-origin: top left; }
+      .notification { bottom: 96px; }
+    }
+/* --- v5.2 focus card: the script document owns the body before recording,
+       the question list takes over once the session is running. Placed last so it
+       beats the v5.1 rules it supersedes. --- */
+    .research-toolbar.presence-focus.is-idle .questions,
+    .research-toolbar.presence-dock.is-idle .questions { display: none; }
+.research-toolbar:not(.is-idle) .script-doc,
+    .research-toolbar.presence-compact .script-doc { display: none; }
+.research-toolbar .toolbar-header .toolbar-id,
+    .research-toolbar .toolbar-header .toolbar-title,
+    .research-toolbar .toolbar-header .rec-chip,
+    .research-toolbar .toolbar-header .manual-notes,
+    .research-toolbar .toolbar-header .suggest-toggle,
+    .research-toolbar .toolbar-header .question-progress,
+    .research-toolbar .toolbar-header .legend { display: none; }
+.research-toolbar.presence-compact .toolbar-foot { display: none; }
+/* The edit chip and section arrows belong to the document, not the question list. */
+    .research-toolbar:not(.is-idle) .doc-edit,
+    .research-toolbar:not(.is-idle) .doc-keys { display: none; }
+.research-toolbar:not(.is-idle) .toolbar-foot { background: #fcfcfa; border-top: 1px solid #e7e7e4; height: 54px; }
+.research-toolbar:not(.is-idle) { --rae-foot: 54px; }
+    /* the card normally floats inside the meeting window; here it is the artboard */
+    .research-toolbar { position: relative; top: 0; left: 0; right: auto; bottom: auto; opacity: 1; pointer-events: auto; transform: none; }
+    .research-toolbar.presence-dock { width: 392px; height: 640px; }
+    .research-toolbar.presence-compact { --compact-w: 387px; }
+  </style>
+</helmet>
+<aside class="research-toolbar flag-briefing flag-recording flag-advance flag-presence flag-sections flag-notes flag-probes flag-status flag-proposal flag-snackactions visible is-recording presence-dock" id="research-toolbar" aria-label="Research assistant">
+        <div class="toolbar-surface">
+          <div class="compact-bar" id="compact-bar" aria-hidden="true">
+            <div class="compact-head">
+              <div class="compact-where">
+                <span class="compact-rec" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="compact-section" id="compact-section">Start of the study</span>
+                <span class="compact-part">(<span class="compact-part-n" id="compact-part-n">1</span><span id="compact-part-total">/2</span>)</span>
+              </div>
+              <div class="presence-switch compact-presence" role="group" aria-label="Assistant presence">
+                <button class="presence-btn" type="button" data-presence="focus" aria-pressed="false" title="Focus — floating card">
+                  <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3125" aria-hidden="true"><rect x="2.53" y="3.75" width="9.94" height="7.5" rx="1.875"/></svg>
+                </button>
+                <button class="presence-btn is-on" type="button" data-presence="compact" aria-pressed="true" title="Compact — fold down to a card">
+                  <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3125" aria-hidden="true"><rect x="2.53" y="6.19" width="9.94" height="2.625" rx="1.3125"/></svg>
+                </button>
+                <button class="presence-btn" type="button" data-presence="dock" aria-pressed="false" title="Dock — pin beside the call">
+                  <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3125" aria-hidden="true"><rect x="2.06" y="2.53" width="10.875" height="9.9375" rx="1.875"/><path d="M9 2.53v9.94"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="compact-body" id="compact-copy">
+              <span class="compact-number" id="compact-number">1</span>
+              <p class="compact-text" id="compact-part-text">Start of the study</p>
+            </div>
+            <div class="compact-foot">
+              <span class="compact-keys" aria-label="Arrow down and arrow up to move between questions"><kbd>&#8595;</kbd><kbd>&#8593;</kbd></span>
+            </div>
+          </div>
+          <div class="compact-complete" id="compact-complete" aria-hidden="true">
+            <span class="compact-check" aria-hidden="true">
+              <svg viewBox="0 0 44.13 29.83" aria-hidden="true"><path d="M0 15.389 14.393 29.826 44.133 0" fill="none" stroke="#5B5B5B" stroke-width="6"/></svg>
+            </span>
+            <div class="compact-copy">
+              <p class="compact-meta">Session complete</p>
+              <p class="compact-summary"><span id="compact-complete-insights">0</span> insights · <span id="compact-complete-questions">4/4</span> · <span id="compact-complete-duration">00:34</span></p>
+            </div>
+            <button class="compact-doc" id="compact-doc" type="button">View doc</button>
+          </div>
+          <header class="toolbar-header" id="toolbar-header">
+            <span class="drag-handle" id="drag-handle" aria-label="Drag research assistant"></span>
+            <div class="toolbar-id">
+              <p class="toolbar-kicker">Research Assistant</p>
+              <button class="legend-btn" id="legend-btn" type="button" aria-expanded="false" aria-label="What the marks mean">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="8" cy="8" r="6.1"/><path d="M8 7.2v4" stroke-linecap="round"/><circle cx="8" cy="4.9" r=".75" fill="currentColor" stroke="none"/></svg>
+              </button>
+            </div>
+            <div class="legend" id="legend" hidden>
+              <p class="legend-title">What the marks mean</p>
+              <div class="legend-row"><span class="legend-mark legend-answered">Asked it</span><span class="legend-copy">Answered — Rae logged the answer</span></div>
+              <div class="legend-row"><span class="legend-mark"><span class="status-chip">Skipped · 1:22</span></span><span class="legend-copy">Skipped — she answered it earlier, with the time</span></div>
+              <div class="legend-row"><span class="legend-mark"><span class="question-tag">paraphrased</span></span><span class="legend-copy">Reworded — you accepted Rae's wording</span></div>
+              <div class="legend-row"><span class="legend-mark">Asked it</span><span class="legend-copy">Still to ask</span></div>
+            </div>
+            <p class="toolbar-title">Rae is taking notes</p>
+            <span class="rec-chip" id="rec-chip" role="status"><i class="rec-dot" aria-hidden="true"></i><span class="rec-label"></span><span class="toolbar-time">00:34</span></span>
+            <div class="doc-info">
+              <p class="doc-note">Ria will take notes<span class="doc-note-sep" aria-hidden="true"></span><span id="doc-note-time">00:34</span></p>
+              <p class="doc-title">Research Script</p>
+              <p class="doc-path">ET - Semi-structured interview.doc</p>
+            </div>
+            <div class="rec-status" role="status">Recording<span class="rec-rings" aria-hidden="true"><i></i><i></i><i></i></span></div>
+            <div class="presence-switch" role="group" aria-label="Assistant presence">
+              <button class="presence-btn is-on" type="button" data-presence="focus" aria-pressed="true" title="Focus — floating card">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.7" y="4" width="10.6" height="8" rx="2"/></svg>
+              </button>
+              <button class="presence-btn" type="button" data-presence="compact" aria-pressed="false" title="Compact — fold down to a strip">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.7" y="6.6" width="10.6" height="2.8" rx="1.4"/></svg>
+              </button>
+              <button class="presence-btn" type="button" data-presence="dock" aria-pressed="false" title="Dock — pin beside the call">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.2" y="2.7" width="11.6" height="10.6" rx="2"/><path d="M9.6 2.7v10.6"/></svg>
+              </button>
+            </div>
+            <button class="manual-notes" type="button">Add your own note <kbd>N</kbd></button>
+            <button class="suggest-toggle" id="suggest-toggle" type="button" aria-pressed="true"><span class="suggest-dot" aria-hidden="true"></span>Suggestions</button>
+            <div class="question-progress" aria-hidden="true"></div>
+          </header>
+          <div class="script-doc" id="script-doc">
+            <div class="doc-lines" id="doc-lines" aria-hidden="true"><span class="doc-line is-on">I</span><span class="doc-line">1</span><span class="doc-line">2</span><span class="doc-line">3</span><span class="doc-line">4</span><span class="doc-line">5</span></div>
+            <div class="doc-scroll" id="doc-scroll">
+              <div class="doc-page">
+              <section class="doc-passage is-on" data-section="I">
+                <h3>Start of the study:</h3>
+                <p>Thanks for taking part in this student research project. The purpose of this interview is to understand what life is like as a Master&rsquo;s student at Kingston University, including your studies, daily routine, social life, and any challenges you experience. There are no right or wrong answers. I&rsquo;m interested in your personal experience, so please answer as openly as you feel comfortable. Do you have any questions before we begin?</p>
+                <p>Is it okay if I audio record this interview for research purposes?</p>
+              </section>
+              <section class="doc-passage" data-section="1">
+                <h3>Section 1 - Warm up questions</h3>
+                <ol>
+                  <li>Could you tell me a bit about yourself?</li>
+                  <li>What course are you studying?</li>
+                  <li>Do you have any work experience?</li>
+                  <li>Where are you from?</li>
+                </ol>
+              </section>
+              <section class="doc-passage" data-section="2">
+                <h3>Section 2: Day-to-Day Student Life</h3>
+                <ol>
+                  <li>What does a typical day or week look like for you?</li>
+                  <li>How do you usually balance studying, assignments, and your personal life?</li>
+                  <li>What do you enjoy most about being a student at Kingston?</li>
+                  <li>What has been the most challenging part?</li>
+                </ol>
+              </section>
+              <section class="doc-passage" data-section="3">
+                <h3>Section 3: University &amp; Social Life</h3>
+                <ol>
+                  <li>How would you describe your experience with other students?</li>
+                  <li>Do you feel like you&rsquo;ve been able to make friends or meet people?</li>
+                  <li>How do you usually spend your time outside of classes?</li>
+                  <li>Is there anything about university life that you wish was easier?</li>
+                </ol>
+              </section>
+              <section class="doc-passage" data-section="4">
+                <h3>Section 4: Looking Back</h3>
+                <ol>
+                  <li>If you could give advice to someone starting a Master&rsquo;s at Kingston, what would you tell them?</li>
+                  <li>What is one thing you wish you had known before starting?</li>
+                  <li>Overall, how would you describe your Master&rsquo;s experience so far?</li>
+                </ol>
+              </section>
+              <section class="doc-passage" data-section="5">
+                <h3>Closing</h3>
+                <p>Thank you for taking the time to speak with me. Is there anything else about your experience as a Master&rsquo;s student at Kingston that you think would be useful for me to know?</p>
+              </section>
+              </div>
+            </div>
+            <span class="doc-scrollbar" id="doc-scrollbar" aria-hidden="true"></span>
+          </div>
+          <section class="questions"><section class="briefing"><button class="briefing-head" type="button"><span class="briefing-title">Before you start</span><span class="briefing-toggle" aria-hidden="true"></span></button><p class="briefing-text">Thanks for joining, Sarah. This is about half an hour on your work and the course — there are no right answers, and you can skip anything or stop whenever you like. We are a small team building research tooling, and nothing you say goes further than us. I would like to record it so I can listen properly instead of writing everything down — is that alright?</p></section><div class="section-head"><span class="section-where">Section 1 of 5</span><span class="section-name">Introduction</span><span class="section-counter">2 of 4</span></div><div class="question active answered"><span class="question-number">1</span><p class="question-text">Tell me about yourself</p><span class="question-stamp" aria-hidden="true">1:41</span><div class="rae-note">
+<div class="note-body">
+<p class="note-text">Designer first, student second. Three days at the studio, two on campus — the MSc fits around agency work, not the other way round.</p>
+<p class="note-quote">“I’m a product designer, mostly. I’m doing a masters at the moment but honestly that’s the smaller half of my week — work comes first and the course fits around it.”</p>
+</div>
+<button class="note-toggle" type="button">Her words</button>
+</div></div><div class="question"><span class="question-number">2</span><p class="question-text">What are you studying?</p><span class="question-stamp" aria-hidden="true">7:37</span><div class="rae-note">
+<div class="note-body">
+<p class="note-text">MSc in HCI. Reads it as formalising practice she already has rather than learning something new.</p>
+<p class="note-quote">“HCI, the MSc. I’m not really learning to design — I’ve been doing that for years. I’m learning to prove I can.”</p>
+</div>
+<button class="note-toggle" type="button">Her words</button>
+</div></div><section class="probe-card revealed" aria-label="Suggested probes"><div class="probe-head"><p class="probe-title">Probes</p><button class="probe-dismiss" type="button" aria-label="Dismiss these suggestions"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg></button></div><div class="probe-chips"><button class="probe-chip" type="button" data-probe="0"><svg class="chip-tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 6.2 4.6 9.3 10.5 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>whereabouts</button><button class="probe-chip" type="button" data-probe="1"><svg class="chip-tick" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 6.2 4.6 9.3 10.5 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>course length</button></div><div class="probe-detail"><p class="probe-full" data-probe="0"><span class="probe-number">2.1</span>oh whereabouts in London?</p><p class="probe-full" data-probe="1"><span class="probe-number">2.2</span>and how long is your course?</p></div></section><div class="question proposing"><span class="question-number">3</span><p class="question-text">Do you have any work experience?</p><span class="question-stamp" aria-hidden="true">15:47</span><div class="rewrite-proposal">
+<p class="proposal-eyebrow">Rae suggests rewording this</p>
+<p class="proposal-text">You mentioned you’re an UX designer, how many years of work experience do you have?</p>
+<div class="proposal-actions">
+<button class="proposal-use" type="button">Use this</button>
+<button class="proposal-keep" type="button">Keep original</button>
+</div>
+</div></div><div class="question skipped"><span class="question-number">4</span><p class="question-text">Where are you from?</p><span class="question-stamp" aria-hidden="true">1:22</span><div class="skip-note"><span class="status-chip">Skipped · answered at 1:22</span><button class="status-undo" type="button">Undo</button></div></div><section class="upcoming"><p class="upcoming-title">Later in this script · 18 questions in all</p><div class="upcoming-row" data-section="1"><span class="upcoming-number">2</span><span class="upcoming-name">Current work</span><span class="upcoming-count">4 questions</span></div><div class="upcoming-row" data-section="2"><span class="upcoming-number">3</span><span class="upcoming-name">Tools &amp; workflow</span><span class="upcoming-count">3 questions</span></div><div class="upcoming-row" data-section="3"><span class="upcoming-number">4</span><span class="upcoming-name">Challenges</span><span class="upcoming-count">4 questions</span></div><div class="upcoming-row" data-section="4"><span class="upcoming-number">5</span><span class="upcoming-name">Wrap-up</span><span class="upcoming-count">3 questions</span></div></section><div class="questions-spacer" aria-hidden="true"></div></section>
+          <div class="toolbar-foot">
+            <div class="insight-counter" id="insight-counter" aria-hidden="true">
+              <svg class="sparkle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg>
+              <span id="insight-count">0</span>
+            </div>
+            <span class="insight-plus" id="insight-plus" aria-hidden="true">+1</span>
+            <div class="doc-edit"><button type="button" aria-label="Add your own note"><img src="assets/ria-edit.svg" alt=""></button></div>
+            <span class="doc-keys" aria-label="Arrow keys move between sections"><kbd>&#8592;</kbd><kbd>&#8594;</kbd></span>
+            <button class="start-rec" id="start-rec" type="button">Start Recording <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
+            <button class="next-beat" id="next-beat" type="button" hidden><span id="next-beat-label">Next question</span> <kbd>→</kbd></button>
+            <button class="finish-session" id="finish-session" type="button">Finish Session <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+          </div>
+        </div>
+
+        <section class="complete-surface" aria-label="Session complete">
+          <span class="complete-handle" aria-hidden="true"></span>
+          <div class="complete-head">
+            <span class="complete-check" aria-hidden="true">
+              <svg viewBox="0 0 44.13 29.83" xmlns="http://www.w3.org/2000/svg"><path d="M0 15.389 14.393 29.826 44.133 0" fill="none" stroke="#5B5B5B" stroke-width="5"/></svg>
+            </span>
+            <div class="complete-copy">
+              <p class="complete-title">Session Complete</p>
+              <p class="complete-title">Nice work!</p>
+            </div>
+          </div>
+          <div class="complete-metrics">
+            <div class="metric">
+              <svg class="metric-sparkle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg>
+              <span class="metric-value" id="complete-insights">0</span>
+              <span class="metric-label">Insights</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="complete-questions">4/4</span>
+              <span class="metric-label">Questions</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="complete-duration">00:34</span>
+              <span class="metric-label">Duration</span>
+            </div>
+          </div>
+          <button class="view-doc" id="view-doc" type="button">View insight doc <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+        </section>
+        <span class="resize-grip" id="resize-grip" aria-hidden="true" title="Drag to resize"></span>
+        <div class="snackbar" id="snackbar" role="status" aria-live="polite"><span id="snackbar-label"></span><button class="snack-action" id="snack-action" type="button" hidden></button></div>
+      </aside>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":392,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
