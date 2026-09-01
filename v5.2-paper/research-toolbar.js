@@ -197,6 +197,18 @@ window.ResearchToolbar = (function () {
   const PRESENCE_MODES = ['compact', 'dock'];
   const PRESENCE_KEY = 'rae-presence';
   const SUGGESTIONS_KEY = 'rae-suggestions';
+  const OPTIONS_KEY = 'rae-options';
+
+  // What Rae does in each surface. The two are not the same instrument: the mini bar is
+  // 324px of one question at a time, so it offers follow-ups and a line of your own and
+  // keeps her write-ups out of the way; the sidebar is the whole script laid out, so her
+  // notes belong in it and a note of your own is an interruption. Hence two sets of
+  // defaults rather than one — and a switch to run one set in both.
+  const OPTIONS = ['probes', 'ai', 'jumps', 'manual'];
+  const OPTION_DEFAULTS = {
+    compact: { probes: true, ai: false, jumps: true, manual: true },
+    dock: { probes: true, ai: true, jumps: true, manual: false },
+  };
 
   const QUESTION_SNAP_DURATION = 450;
   // v5's focus scaling, kept only so `?scaling=on` can put it back for comparison.
@@ -295,6 +307,16 @@ window.ResearchToolbar = (function () {
     // the body and any Finish button share one handler.
     const compactFinishButtons = [...toolbarEl.querySelectorAll('#compact-finish, #compact-endrec')];
     const compactExpands = [...toolbarEl.querySelectorAll('.compact-expand')];
+
+    // Both menus are the same list, stamped from one template rather than written twice.
+    // Before anything reaches into them: the pause and stop handlers query by class.
+    const menuTemplate = document.getElementById('rae-menu-template');
+    if (menuTemplate) {
+      toolbarEl.querySelectorAll('.dock-menu').forEach((menu) => {
+        if (menu.children.length) return;
+        menu.appendChild(menuTemplate.content.cloneNode(true));
+      });
+    }
 
     injectStyles();
 
@@ -548,7 +570,12 @@ window.ResearchToolbar = (function () {
       paused = !!on;
       toolbarEl.classList.toggle('is-paused', paused);
       if (paused) pauseClock(); else resumeClock();
-      pauseButtons.forEach((b) => { b.textContent = paused ? 'Resume recording' : 'Pause recording'; });
+      // Into the label, not the button: the button also carries its icon, and writing
+      // textContent over the whole thing takes the icon with it.
+      pauseButtons.forEach((b) => {
+        const label = b.querySelector('.menu-label') || b;
+        label.textContent = paused ? 'Resume recording' : 'Pause recording';
+      });
       const status = toolbarEl.querySelector('.rec-status');
       if (status && status.firstChild) status.firstChild.textContent = paused ? 'Paused' : 'Taking notes';
     }
@@ -828,8 +855,9 @@ window.ResearchToolbar = (function () {
 
     function openDockMenu({ button, menu }) {
       closeDockMenu();
-      // Pausing and stopping are only ever offered against a running session.
-      menu.querySelectorAll('.dock-menu-item').forEach((item) => { item.disabled = !recording; });
+      // Pausing and stopping are only ever offered against a running session. The
+      // settings are not about the recording, so they stay live either way.
+      menu.querySelectorAll('.menu-act').forEach((item) => { item.disabled = !recording; });
       menu.hidden = false;
       button.setAttribute('aria-expanded', 'true');
     }
@@ -840,6 +868,13 @@ window.ResearchToolbar = (function () {
         if (pair.menu.hidden) openDockMenu(pair); else closeDockMenu();
       });
     });
+
+    // A switch stays put when you flip it: the menu is a panel of settings, and closing
+    // it after each one would make setting three of them three trips.
+    toolbarEl.querySelectorAll('.menu-toggle').forEach((item) => item.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setOption(item.dataset.opt, item.getAttribute('aria-checked') !== 'true');
+    }));
 
     pauseButtons.forEach((button) => button.addEventListener('click', (event) => {
       event.stopPropagation();
@@ -959,7 +994,67 @@ window.ResearchToolbar = (function () {
         toolbarEl.style.top = floatPosition.top;
       }
 
+      // Each presence brings its own settings with it, unless they are linked.
+      applyOptions();
       toolbarEl.dispatchEvent(new CustomEvent('rae:shape'));
+    }
+
+    // ------------------------------------------------------------- options
+    // One set per presence plus one flag. `linked` is not a fifth setting: it says the
+    // two sets are the same set, so a change made in either surface is made in both and
+    // switching modes no longer changes what Rae does.
+    // `options` is already the instance's own argument, so the state wears a name of
+    // its own rather than shadowing it.
+    let optionState = readOptions();
+
+    function readOptions() {
+      const fresh = {
+        compact: { ...OPTION_DEFAULTS.compact },
+        dock: { ...OPTION_DEFAULTS.dock },
+        linked: false,
+      };
+      // A usability test starts from the defaults, not from whatever the last participant
+      // left behind: `?defaults=1` ignores what is stored without clearing it.
+      if (/[?&]defaults=1\b/.test(window.location.search)) return fresh;
+      try {
+        const stored = JSON.parse(readStored(OPTIONS_KEY) || 'null');
+        if (!stored) return fresh;
+        PRESENCE_MODES.forEach((mode) => OPTIONS.forEach((name) => {
+          const value = stored[mode] && stored[mode][name];
+          if (typeof value === 'boolean') fresh[mode][name] = value;
+        }));
+        fresh.linked = stored.linked === true;
+      } catch (error) { /* a half-written or older shape falls back to the defaults */ }
+      return fresh;
+    }
+
+    // The classes are the whole interface to the rest of the page: the stylesheet hides
+    // what is switched off, and the two surfaces ask the toolbar rather than keeping
+    // their own copy of the answer.
+    function applyOptions() {
+      const set = optionState[presence] || OPTION_DEFAULTS.compact;
+      OPTIONS.forEach((name) => toolbarEl.classList.toggle(`opt-${name}`, set[name] === true));
+      toolbarEl.querySelectorAll('.menu-toggle').forEach((item) => {
+        const name = item.dataset.opt;
+        const on = name === 'linked' ? optionState.linked : set[name] === true;
+        item.setAttribute('aria-checked', String(on));
+      });
+      writeStored(OPTIONS_KEY, JSON.stringify(optionState));
+      toolbarEl.dispatchEvent(new CustomEvent('rae:options'));
+    }
+
+    function setOption(name, on) {
+      if (name === 'linked') {
+        optionState.linked = on;
+        // Turning it on adopts what is on screen for both — the set you are looking at is
+        // the one you meant, not the one you last had somewhere else.
+        if (on) PRESENCE_MODES.forEach((mode) => { optionState[mode] = { ...optionState[presence] }; });
+        applyOptions();
+        return;
+      }
+      const modes = optionState.linked ? PRESENCE_MODES : [presence];
+      modes.forEach((mode) => { optionState[mode][name] = on; });
+      applyOptions();
     }
 
     // A machine that ran an earlier build still has 'focus' stored, and setPresence
