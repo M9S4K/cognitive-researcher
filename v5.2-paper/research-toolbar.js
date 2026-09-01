@@ -169,7 +169,7 @@ window.ResearchToolbar = (function () {
     briefing: true,      // the preamble above the first question
     recording: true,     // the idle state and the Start recording gate
     advance: true,       // the footer's Next button
-    presence: true,      // focus / compact / dock, and resizing
+    presence: true,      // the mini bar / sidebar switch
     sections: true,      // five-section framing, sticky head, real progress
     notes: true,         // Rae's notes, "her words", and your own lane
     probes: true,        // keyword chips rather than full sentences
@@ -191,11 +191,12 @@ window.ResearchToolbar = (function () {
     return flags;
   }
 
-  const PRESENCE_MODES = ['focus', 'compact', 'dock'];
+  // Two modes: the mini bar you run the session from, and the sidebar you open when
+  // you want the whole script. The floating card it used to default to is gone, and
+  // with it the resizing — the bar hugs its content, the sidebar is a fixed column.
+  const PRESENCE_MODES = ['compact', 'dock'];
   const PRESENCE_KEY = 'rae-presence';
   const SUGGESTIONS_KEY = 'rae-suggestions';
-  const SIZE_KEY = 'rae-size';
-  const SIZE_LIMITS = { minW: 340, maxW: 620, minH: 300, maxH: 620 };
 
   const QUESTION_SNAP_DURATION = 450;
   // v5's focus scaling, kept only so `?scaling=on` can put it back for comparison.
@@ -274,7 +275,8 @@ window.ResearchToolbar = (function () {
     const insightCountEl = toolbarEl.querySelector('#insight-count');
     const insightPlus = toolbarEl.querySelector('.insight-plus');
     const finishButton = toolbarEl.querySelector('.finish-session');
-    const startButton = toolbarEl.querySelector('#start-rec');
+    // The sidebar's footer and the mini bar's each carry their own Start Recording.
+    const startButtons = [...toolbarEl.querySelectorAll('#start-rec, #compact-start-rec')];
     const nextButton = toolbarEl.querySelector('#next-beat');
     const nextLabel = toolbarEl.querySelector('#next-beat-label');
     const toolbarTitle = toolbarEl.querySelector('.toolbar-title');
@@ -283,18 +285,16 @@ window.ResearchToolbar = (function () {
     const completeDuration = toolbarEl.querySelector('#complete-duration');
     const compactCompleteInsights = toolbarEl.querySelector('#compact-complete-insights');
     const compactCompleteQuestions = toolbarEl.querySelector('#compact-complete-questions');
+    const compactCompleteTotal = toolbarEl.querySelector('#compact-complete-total');
     const compactCompleteDuration = toolbarEl.querySelector('#compact-complete-duration');
     const compactComplete = toolbarEl.querySelector('#compact-complete');
     const toolbarTime = toolbarEl.querySelector('.toolbar-time');
     const presenceButtons = [...toolbarEl.querySelectorAll('.presence-btn')];
     const compactBar = toolbarEl.querySelector('.compact-bar');
-    const compactCopy = toolbarEl.querySelector('#compact-copy');
-    const compactMeta = toolbarEl.querySelector('#compact-meta');
-    const compactLabel = toolbarEl.querySelector('#compact-label');
-    const compactFinish = toolbarEl.querySelector('#compact-finish');
-    const compactInsights = toolbarEl.querySelector('#compact-insights');
-    const compactExpand = toolbarEl.querySelector('#compact-expand');
-    const resizeGrip = toolbarEl.querySelector('#resize-grip');
+    // Ending the recording and finishing the session are the same act, so the pill in
+    // the body and any Finish button share one handler.
+    const compactFinishButtons = [...toolbarEl.querySelectorAll('#compact-finish, #compact-endrec')];
+    const compactExpands = [...toolbarEl.querySelectorAll('.compact-expand')];
 
     injectStyles();
 
@@ -314,7 +314,7 @@ window.ResearchToolbar = (function () {
     Object.keys(FLAGS).forEach((name) => toolbarEl.classList.toggle(`flag-${name}`, FLAGS[name]));
 
     const handle = { dragState: { suppressClick: false } };
-    let presence = 'focus';
+    let presence = 'compact';
     // P24 wants the probes dismissible so they cannot break her question order.
     let suggestionsOn = readStored(SUGGESTIONS_KEY) !== 'off';
     // Where the card was floating before it docked, so leaving the dock puts it back.
@@ -377,11 +377,22 @@ window.ResearchToolbar = (function () {
     // Anything the assistant does on its own — skipping, rewording, hiding a card —
     // reports here, so the way to undo it belongs here too rather than only on the
     // row it happened to.
-    function showSnack(text, action) {
+    function showSnack(text, action, options) {
       if (!snackbar) return;
+      const settings = options || {};
+      // Almost every snackbar reports something that happened to the question list —
+      // a question skipped, a wording accepted, an undo offered. Where that list isn't
+      // on screen — minimised, and docked, where the script itself is shown instead —
+      // the report would be about nothing the researcher can see. Only a message
+      // addressed to the surface itself asks to appear there. Asking the list whether
+      // it is visible rather than naming the modes means it comes back with the list.
+      if (!settings.anywhere && !(questionsEl && questionsEl.offsetParent)) return;
       if (!FLAGS.snackactions) action = null;
       window.clearTimeout(snackTimer);
-      snackbarLabel.textContent = text;
+      // A message about which keys to press has to show the keys, so a caller can hand
+      // over markup instead of a string. Nothing else does.
+      if (settings.html) snackbarLabel.innerHTML = settings.html;
+      else snackbarLabel.textContent = text;
 
       if (snackAction) {
         snackAction.hidden = !action;
@@ -402,7 +413,7 @@ window.ResearchToolbar = (function () {
 
       snackbar.classList.add('visible');
       snackTimer = window.setTimeout(() => snackbar.classList.remove('visible'),
-        action ? SNACK_ACTION_HOLD : SNACK_HOLD);
+        settings.hold || (action ? SNACK_ACTION_HOLD : SNACK_HOLD));
     }
 
     function hideSnack() {
@@ -419,28 +430,24 @@ window.ResearchToolbar = (function () {
       if (!question) return;
       question.classList.remove('skipped');
       question.classList.add('answered');
-      updateCompactBar();
       updateProgress();
     }
 
     function markSkipped(question) {
       if (!question) return;
       question.classList.add('skipped');
-      updateCompactBar();
       updateProgress();
     }
 
     function restoreQuestion(question) {
       if (!question) return;
       question.classList.remove('skipped', 'answered');
-      updateCompactBar();
       updateProgress();
     }
 
     function unlockInsight(amount) {
       insightCount += amount || 1;
       insightCountEl.textContent = insightCount;
-      updateCompactBar();
       // The "+1" float is for topping up a counter already on screen, not the first reveal.
       const bumpsExisting = counterRevealed;
       window.clearTimeout(insightTimer);
@@ -459,7 +466,6 @@ window.ResearchToolbar = (function () {
     function bumpInsight() {
       insightCount += 1;
       insightCountEl.textContent = insightCount;
-      updateCompactBar();
       insightCounter.classList.add('visible');
       counterRevealed = true;
       insightPlus.classList.remove('floating');
@@ -485,6 +491,68 @@ window.ResearchToolbar = (function () {
       updateNextLabel();
     }
 
+    // ------------------------------------------------------------- the clock
+    // Every `.toolbar-time` reads the same clock, so the header, the mini bar and the
+    // session summary can never disagree about how long the session ran. It starts when
+    // the recording starts — before that there is nothing to have taken time.
+    const timeEls = [...toolbarEl.querySelectorAll('.toolbar-time')];
+    let clockFrom = 0;
+    let clockTick;
+
+    function paintClock() {
+      const seconds = Math.max(0, Math.round((Date.now() - clockFrom) / 1000));
+      const text = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+      timeEls.forEach((el) => { el.textContent = text; });
+    }
+
+    function startClock() {
+      window.clearInterval(clockTick);
+      clockFrom = Date.now();
+      paintClock();
+      // Tick a little faster than the second it displays, so the number never sticks
+      // for two seconds because the interval drifted past a boundary.
+      clockTick = window.setInterval(paintClock, 250);
+    }
+
+    function stopClock() {
+      window.clearInterval(clockTick);
+      clockTick = undefined;
+    }
+
+    // Pausing holds the number rather than stopping the session: the clock's origin is
+    // pushed forward by however long it was held, so it resumes on the second it left off.
+    let pausedAt = 0;
+
+    function pauseClock() {
+      if (!clockTick) return;
+      window.clearInterval(clockTick);
+      clockTick = undefined;
+      pausedAt = Date.now();
+    }
+
+    function resumeClock() {
+      if (clockTick || !pausedAt) return;
+      clockFrom += Date.now() - pausedAt;
+      pausedAt = 0;
+      paintClock();
+      clockTick = window.setInterval(paintClock, 250);
+    }
+
+    // Paused is a state of the recording, not a third mode: everything else about the
+    // session stays exactly where it was, and only the clock and the green light say so.
+    let paused = false;
+    // The sidebar and the mini bar each carry the same menu, so there are two of each item.
+    const pauseButtons = [...toolbarEl.querySelectorAll('.pause-rec')];
+
+    function setPaused(on) {
+      paused = !!on;
+      toolbarEl.classList.toggle('is-paused', paused);
+      if (paused) pauseClock(); else resumeClock();
+      pauseButtons.forEach((b) => { b.textContent = paused ? 'Resume recording' : 'Pause recording'; });
+      const status = toolbarEl.querySelector('.rec-status');
+      if (status && status.firstChild) status.firstChild.textContent = paused ? 'Paused' : 'Taking notes';
+    }
+
     // ------------------------------------------------------------- recording
     // Nothing is being recorded until the researcher says so — the briefing and the
     // participant's consent come first, which is the order the conversation happens in.
@@ -492,10 +560,15 @@ window.ResearchToolbar = (function () {
       recording = on;
       toolbarEl.classList.toggle('is-recording', on);
       toolbarEl.classList.toggle('is-idle', !on);
+      if (on) startClock(); else { stopClock(); pausedAt = 0; clockFrom = Date.now(); paintClock(); }
+      // A session that ends or restarts is never left paused.
+      setPaused(false);
       if (toolbarTitle) toolbarTitle.textContent = on ? 'Rae is taking notes' : 'Rae is ready to listen';
       if (briefingEl && on) briefingEl.classList.remove('open');
       updateNextLabel();
-      updateCompactBar();
+      // The mini bar draws answers and probes only while recording, and it is rendered
+      // by the page, not from here — so say what changed and let it redraw.
+      toolbarEl.dispatchEvent(new CustomEvent('rae:recording', { detail: { recording: on } }));
     }
 
     function startRecording() {
@@ -508,12 +581,12 @@ window.ResearchToolbar = (function () {
       updateNextLabel();
     }
 
-    if (startButton) {
-      startButton.addEventListener('click', (event) => {
+    startButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
         event.stopPropagation();
         startRecording();
       });
-    }
+    });
 
     if (nextButton) {
       nextButton.addEventListener('click', (event) => {
@@ -567,15 +640,22 @@ window.ResearchToolbar = (function () {
       if (completeQuestions) completeQuestions.textContent = questions;
       if (completeDuration) completeDuration.textContent = duration;
       if (compactCompleteInsights) compactCompleteInsights.textContent = insightCount;
-      if (compactCompleteQuestions) compactCompleteQuestions.textContent = questions;
+      // "4/4" is one number with its total spoken after it, so the total is quieter.
+      if (compactCompleteQuestions) {
+        compactCompleteQuestions.textContent = questionEls.length;
+        if (compactCompleteTotal) compactCompleteTotal.textContent = `/${questionEls.length}`;
+      }
       if (compactCompleteDuration) compactCompleteDuration.textContent = duration;
       if (finishButton) finishButton.classList.remove('visible');
       toolbarEl.classList.remove('has-finish');
+      // The summary quotes the duration, so the clock stops on the number it quoted.
+      stopClock();
       window.clearTimeout(insightTimer);
       hideSnack();
       closeLegend();
       toolbarEl.classList.add('session-complete');
       applyPresence(presence);
+      toolbarEl.dispatchEvent(new CustomEvent('rae:shape'));
     }
 
     function tickProbe(index) {
@@ -617,7 +697,6 @@ window.ResearchToolbar = (function () {
       question.classList.add('rewriting');
       window.setTimeout(() => {
         question.classList.add('rewritten');
-        updateCompactBar();
       }, SCRIPT_REWRITE_REVEAL);
       showSnack('Reworded — the original is kept above', {
         label: 'Undo',
@@ -641,7 +720,6 @@ window.ResearchToolbar = (function () {
       if (question.querySelector('.rewrite-proposal') && !question.classList.contains('answered')) {
         question.classList.add('proposing');
       }
-      updateCompactBar();
       showSnack('Back to the original wording');
     }
 
@@ -719,12 +797,62 @@ window.ResearchToolbar = (function () {
       if (beat && nextLabel) nextLabel.textContent = beat.label;
     }
 
-    if (finishButton) {
-      finishButton.addEventListener('click', (event) => {
+    // The footer's Finish Session and the sidebar menu's Stop recording are the same
+    // door; the sidebar just doesn't have a footer to put it in.
+    toolbarEl.querySelectorAll('.finish-session, .end-rec').forEach((button) => {
+      button.addEventListener('click', (event) => {
         event.stopPropagation();
+        closeDockMenu();
         showSessionComplete();
       });
+    });
+
+    // ---------------------------------------------------- the session menu
+    // The frames take Start and End recording off both headers and give each two round
+    // buttons instead. The second one is where the two ways to interrupt a recording
+    // live now — and they are dead until there is a recording to interrupt.
+    // A button names its menu rather than containing it: the mini bar's card clips, and
+    // on a one-line part it is shorter than the menu is tall, so that menu lives outside
+    // the surface and is anchored to the header's own geometry.
+    const dockMenus = [...toolbarEl.querySelectorAll('.dock-more-btn')]
+      .map((button) => ({ button, menu: toolbarEl.querySelector(`#${button.dataset.menu}`) }))
+      .filter((pair) => pair.menu);
+
+    function closeDockMenu() {
+      dockMenus.forEach(({ button, menu }) => {
+        if (menu.hidden) return;
+        menu.hidden = true;
+        button.setAttribute('aria-expanded', 'false');
+      });
     }
+
+    function openDockMenu({ button, menu }) {
+      closeDockMenu();
+      // Pausing and stopping are only ever offered against a running session.
+      menu.querySelectorAll('.dock-menu-item').forEach((item) => { item.disabled = !recording; });
+      menu.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+    }
+
+    dockMenus.forEach((pair) => {
+      pair.button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (pair.menu.hidden) openDockMenu(pair); else closeDockMenu();
+      });
+    });
+
+    pauseButtons.forEach((button) => button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      setPaused(!paused);
+      closeDockMenu();
+    }));
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.dock-more-btn, .dock-menu')) closeDockMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeDockMenu();
+    });
 
     function resetInsights() {
       window.clearTimeout(insightTimer);
@@ -794,34 +922,15 @@ window.ResearchToolbar = (function () {
       if (current === target) return;
       if (current) current.classList.remove('active');
       target.classList.add('active');
-      updateCompactBar();
     }
 
     // --------------------------------------------------------------- presence
-    // The strip has to say the same three things the card does: still recording,
-    // where we are, how many insights so far.
-    function updateCompactBar() {
-      if (!compactLabel) return;
-      const active = questionsEl.querySelector('.question.active') || questionEls[0];
-      if (active) {
-        const number = active.querySelector('.question-number').textContent;
-        const rewritten = active.classList.contains('rewritten')
-          ? active.querySelector('.question-rewrite')
-          : null;
-        // The rewritten line carries the "paraphrased" tag as a child element; the
-        // strip wants the wording on its own.
-        const line = rewritten || active.querySelector('.question-text');
-        const tag = line.querySelector('.question-tag');
-        compactLabel.textContent = tag ? line.textContent.replace(tag.textContent, '').trim() : line.textContent;
-        compactLabel.title = compactLabel.textContent;
-        if (compactMeta) {
-          const sections = activeScript().sections;
-          compactMeta.textContent = `Q${number} · Section ${ACTIVE_SECTION_INDEX + 1} of ${sections.length}`
-            + ` · ${answeredCount()} of ${questionEls.length}`;
-        }
-      }
-      if (compactInsights) compactInsights.textContent = insightCount;
-      if (compactMeta && !recording) compactMeta.textContent = 'Not recording yet';
+    function setPanelHidden(panel, hidden) {
+      if (!panel) return;
+      // inert first: it moves focus out, so aria-hidden is never applied over a focused
+      // descendant — which is the state the browser warns about.
+      panel.inert = hidden;
+      panel.setAttribute('aria-hidden', String(hidden));
     }
 
     function applyPresence(mode) {
@@ -833,8 +942,11 @@ window.ResearchToolbar = (function () {
         button.setAttribute('aria-pressed', String(on));
       });
       const complete = toolbarEl.classList.contains('session-complete');
-      if (compactBar) compactBar.setAttribute('aria-hidden', String(mode !== 'compact' || complete));
-      if (compactComplete) compactComplete.setAttribute('aria-hidden', String(mode !== 'compact' || !complete));
+      // `inert` rather than aria-hidden alone: the panel being hidden can still hold
+      // focus — the expand button lives in both — and aria-hiding a focused element is
+      // a defect the browser will tell you about.
+      setPanelHidden(compactBar, mode !== 'compact' || complete);
+      setPanelHidden(compactComplete, mode !== 'compact' || !complete);
 
       // Docking is a layout, not a position: park whatever the drag left behind
       // and let the stylesheet place the card, then hand the coordinates back.
@@ -847,7 +959,15 @@ window.ResearchToolbar = (function () {
         toolbarEl.style.top = floatPosition.top;
       }
 
-      updateCompactBar();
+      toolbarEl.dispatchEvent(new CustomEvent('rae:shape'));
+    }
+
+    // A machine that ran an earlier build still has 'focus' stored, and setPresence
+    // refuses a mode it doesn't know — which would leave the card with no presence
+    // class at all rather than falling back.
+    function storedPresence() {
+      const stored = readStored(PRESENCE_KEY);
+      return PRESENCE_MODES.includes(stored) ? stored : 'compact';
     }
 
     function setPresence(mode, options) {
@@ -865,44 +985,6 @@ window.ResearchToolbar = (function () {
       }, 140);
     }
 
-    function applySize(width, height) {
-      toolbarEl.style.setProperty('--rae-w', `${Math.round(width)}px`);
-      toolbarEl.style.setProperty('--rae-h', `${Math.round(height)}px`);
-    }
-
-    if (resizeGrip) {
-      resizeGrip.addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const rect = toolbarEl.getBoundingClientRect();
-        // The card eases its width and height when a mode changes; under the pointer
-        // that reads as lag, so the transition is off for the duration of the drag.
-        toolbarEl.classList.add('resizing');
-        resizeGrip.setPointerCapture(event.pointerId);
-        let size = { w: Math.round(rect.width), h: Math.round(rect.height) };
-
-        const move = (moveEvent) => {
-          size = {
-            w: Math.round(clamp(rect.width + (moveEvent.clientX - event.clientX), SIZE_LIMITS.minW, SIZE_LIMITS.maxW)),
-            h: Math.round(clamp(rect.height + (moveEvent.clientY - event.clientY), SIZE_LIMITS.minH, SIZE_LIMITS.maxH)),
-          };
-          applySize(size.w, size.h);
-        };
-        const stop = () => {
-          // Store what was asked for, not what the box happens to measure — mid
-          // transition those are different numbers.
-          toolbarEl.classList.remove('resizing');
-          writeStored(SIZE_KEY, JSON.stringify(size));
-          resizeGrip.removeEventListener('pointermove', move);
-          resizeGrip.removeEventListener('pointerup', stop);
-          resizeGrip.removeEventListener('pointercancel', stop);
-        };
-        resizeGrip.addEventListener('pointermove', move);
-        resizeGrip.addEventListener('pointerup', stop);
-        resizeGrip.addEventListener('pointercancel', stop);
-      });
-    }
-
     if (!FLAGS.presence) presenceButtons.forEach((button) => { button.hidden = true; });
     presenceButtons.forEach((button) => {
       button.addEventListener('click', (event) => {
@@ -911,32 +993,19 @@ window.ResearchToolbar = (function () {
       });
     });
 
-    if (compactExpand) {
-      compactExpand.addEventListener('click', (event) => {
+    compactExpands.forEach((button) => {
+      button.addEventListener('click', (event) => {
         event.stopPropagation();
-        setPresence('focus');
+        setPresence('dock');
       });
-    }
+    });
 
-    // Minimised is still a working assistant: the strip advances the session the same
-    // way the question list does, and can end it.
-    if (compactCopy) {
-      compactCopy.addEventListener('click', (event) => {
-        event.stopPropagation();
-        if (handle.dragState.suppressClick) { handle.dragState.suppressClick = false; return; }
-        if (currentVariant !== SCRIPTED_VARIANT) { setPresence('focus'); return; }
-        // Minimised before the recording started, the strip is still how you start it.
-        if (!recording) { startRecording(); return; }
-        advanceScript();
-      });
-    }
-
-    if (compactFinish) {
-      compactFinish.addEventListener('click', (event) => {
+    compactFinishButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
         event.stopPropagation();
         showSessionComplete();
       });
-    }
+    });
 
     // The section head is sticky at the top of the list, so the "top slot" a focused
     // question snaps into sits below it rather than at the container's padding edge.
@@ -1123,8 +1192,8 @@ window.ResearchToolbar = (function () {
       event.preventDefault();
       // Minimised, the question list is display:none, so opening the composer before
       // the mode has finished switching gives the input nothing to take focus in.
-      if (presence !== 'focus' && presence !== 'dock') {
-        setPresence('focus');
+      if (presence !== 'dock') {
+        setPresence('dock');
         window.setTimeout(openComposer, 220);
         return;
       }
@@ -1450,7 +1519,7 @@ window.ResearchToolbar = (function () {
       renderQuestions(currentVariant);
       questionsEl.scrollTop = 0;
       resetInsights();
-      setPresence(readStored(PRESENCE_KEY) || 'focus', { immediate: true, remember: false });
+      setPresence(storedPresence(), { immediate: true, remember: false });
     }
 
     function setVariant(variant) {
@@ -1473,14 +1542,7 @@ window.ResearchToolbar = (function () {
 
     renderQuestions(currentVariant);
 
-    const storedSize = readStored(SIZE_KEY);
-    if (storedSize) {
-      try {
-        const size = JSON.parse(storedSize);
-        if (size && size.w && size.h) applySize(size.w, size.h);
-      } catch (error) { /* ignore a corrupt entry */ }
-    }
-    setPresence(readStored(PRESENCE_KEY) || 'focus', { immediate: true, remember: false });
+    setPresence(storedPresence(), { immediate: true, remember: false });
     applySuggestions();
     setRecording(!FLAGS.recording);
 
@@ -1500,6 +1562,7 @@ window.ResearchToolbar = (function () {
     handle.reset = reset;
     handle.setVariant = setVariant;
     handle.setPresence = setPresence;
+    handle.showSnack = showSnack;
     handle.getPresence = () => presence;
     return handle;
   }

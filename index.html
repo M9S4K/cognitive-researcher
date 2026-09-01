@@ -78,20 +78,26 @@
     <h1>AI Research Assistant — Demo</h1>
     <p class="sub">
       Archived versions. The default experience is
-      <a href="v5.1-paper/windows.html">v5.1 — Windows</a>; everything below is kept for reference.
+      <a href="v5.2-paper/windows.html">v5.2 — Windows</a>; everything below is kept for reference.
     </p>
 
     <div class="cards">
-      <a class="card current" href="v5.1-paper/windows.html">
-        <span class="card-tag">v5.1 — windows · default</span>
-        <div class="card-title">The P21–P25 build</div>
-        <div class="card-desc">v5 with the findings from the five sessions acted on: presence modes and a recording light, a status vocabulary that says answered / skipped / reworded, a script with real sections and progress, notes that actually appear, quieter probes, and a prep step with a visible commit point. Windows only.</div>
+      <a class="card current" href="v5.2-paper/windows.html">
+        <span class="card-tag">v5.2 — windows · default</span>
+        <div class="card-title">The mini bar build</div>
+        <div class="card-desc">Two presences instead of three: the mini bar is the default and runs a whole session on its own — starts the recording, walks the script, shows what Rae heard and what she would follow up with, and ends it — with the sidebar there when you want the script in full. On top of v5.1's Ria onboarding, script previewer and Windows chrome. Windows only.</div>
       </a>
     </div>
 
     <p class="section-label">Archived</p>
 
     <div class="cards">
+      <a class="card" href="v5.1-paper/windows.html">
+        <span class="card-tag">v5.1 — windows</span>
+        <div class="card-title">The P21–P25 build</div>
+        <div class="card-desc">v5 with the findings from the five sessions acted on: three presence modes and a recording light, a status vocabulary that says answered / skipped / reworded, a script with real sections and progress, notes that actually appear, quieter probes, and a prep step with a visible commit point. The fallback for v5.2.</div>
+      </a>
+
       <a class="card" href="v5-paper/os-choice.html">
         <span class="card-tag">v5 — paper</span>
         <div class="card-title">OS-aware desktop flow, scripted session</div>
@@ -131,12 +137,12 @@
   </div>
 
   <script>
-    // Default: go straight into v5.1. The version picker above is only for when it is
+    // Default: go straight into v5.2. The version picker above is only for when it is
     // asked for explicitly — `index.html?archive`.
     if (new URLSearchParams(window.location.search).has('archive')) {
       document.body.classList.add('show-archive');
     } else {
-      window.location.replace('v5.1-paper/windows.html');
+      window.location.replace('v5.2-paper/windows.html');
     }
   </script>
 

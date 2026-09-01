@@ -8,7 +8,51 @@
     @import url('https://fonts.googleapis.com/css2?family=Ancizar+Serif:wght@400;600&family=Averia+Serif+Libre&family=Inter:wght@400;500;600;700&family=Mona+Sans:wdth,wght@100,500&display=swap');
 
     * { box-sizing: border-box; }
-    :root { --ease-out: cubic-bezier(.23, 1, .32, 1); }
+    :root {
+      --ease-out: cubic-bezier(.23, 1, .32, 1);
+      --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+      /* Mini bar motion. --rae-speed scales the whole set at once; the rest are the
+         individual beats. Every value below is read off these, nowhere else. */
+      --rae-speed: 1;
+      /* The section name, the counters and the body all change with the same move, so
+         they share one duration and one curve. */
+      --t-roll: calc(450ms * var(--rae-speed));
+      --ease-roll: cubic-bezier(.42, 0, 0, 1.01);
+      /* The new value starts a beat after the old one leaves, so it reads as a hand-off
+         rather than a crossfade. */
+      --t-roll-lag: calc(70ms * var(--rae-speed));
+      /* How far a value travels on its way in and out. */
+      --m-roll: 5px;
+      --t-height: calc(450ms * var(--rae-speed));
+      --t-foot-fade: calc(200ms * var(--rae-speed));
+      --t-foot-move: calc(260ms * var(--rae-speed));
+      --t-dot: calc(300ms * var(--rae-speed));
+      --t-complete: calc(320ms * var(--rae-speed));
+      /* Rae writing up what she heard. Unhurried on purpose — this is the one moment
+         where the assistant is doing the thinking, and it should be watchable rather
+         than a flicker of text you missed. */
+      --t-beat-in: calc(360ms * var(--rae-speed));
+      --t-beat-tick: calc(440ms * var(--rae-speed));
+      --t-beat-pop: calc(320ms * var(--rae-speed));
+      --t-beat-fade: calc(200ms * var(--rae-speed));
+      --t-beat-again: calc(240ms * var(--rae-speed));
+      --t-beat-fold: calc(320ms * var(--rae-speed));
+      /* How long Rae's offer stands before it withdraws itself. */
+      --t-hint: 10s;
+      --m-rise-foot: 8px;
+      /* The note line's reveal, and the tick landing on a beat. */
+      --t-jot: calc(180ms * var(--rae-speed));
+      --t-probe: calc(260ms * var(--rae-speed));
+      --t-offer-in: calc(520ms * var(--rae-speed));
+      --t-tick: calc(340ms * var(--rae-speed));
+      --ease-tick: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --m-rise-complete: 6px;
+      /* The recording pulse is an ambient loop, not a transition, so it doesn't scale
+         with --rae-speed — a 4x tuning session shouldn't give it an 8-second heartbeat. */
+      --t-pulse: 2s;
+      --m-pulse: 12px;
+      --a-pulse: .52;
+    }
     html, body { width: 100%; min-width: 960px; min-height: 100%; margin: 0; }
     body { overflow-x: auto; background: #282828; font-family: Inter, system-ui, sans-serif; }
 
@@ -196,7 +240,7 @@
     .modal-backdrop.visible { opacity: 1; pointer-events: auto; }
     .script-modal {
       width: 685px;
-      height: 500px;
+      height: 432px;
       overflow: hidden;
       border-radius: 20px;
       background: #fff;
@@ -295,18 +339,33 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 15.429px;
-      height: 65.571px;
-      background: url('assets/previewer-scrim.png') center / 100% 100% no-repeat;
-      backdrop-filter: blur(6.6px);
+      gap: 12px;
+      padding: 16px 0;
+      /* The scrim is a gradient rather than the exported PNG — it stays crisp at any
+         width. The blur is a stack of layers below, not a property here. */
+      background: linear-gradient(180deg, rgb(0 0 0 / 0%) 8.37%, #000 100%);
     }
-    .previewer-footer-copy { margin: 0; color: #fff; font: 500 15.429px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.1543px; text-shadow: 0 1px 1.7px rgb(0 0 0 / 65%); }
+    /* backdrop-filter takes one value, so a blur that ramps has to be built: four layers,
+       each with its own blur, each masked to a band. The ramp runs downwards — sharp where
+       the panel meets the page, softening as the scrim takes over. */
+    .previewer-blur { position: absolute; inset: 0; pointer-events: none; }
+    .previewer-blur i { position: absolute; inset: 0; }
+    .previewer-blur i:nth-child(1) { backdrop-filter: blur(1.43px); -webkit-mask-image: linear-gradient(to bottom, transparent 5%, #000 20%, #000 35%, transparent 50%); mask-image: linear-gradient(to bottom, transparent 5%, #000 20%, #000 35%, transparent 50%); }
+    .previewer-blur i:nth-child(2) { backdrop-filter: blur(2.85px); -webkit-mask-image: linear-gradient(to bottom, transparent 20%, #000 35%, #000 50%, transparent 65%); mask-image: linear-gradient(to bottom, transparent 20%, #000 35%, #000 50%, transparent 65%); }
+    .previewer-blur i:nth-child(3) { backdrop-filter: blur(4.28px); -webkit-mask-image: linear-gradient(to bottom, transparent 35%, #000 50%, #000 65%, transparent 80%); mask-image: linear-gradient(to bottom, transparent 35%, #000 50%, #000 65%, transparent 80%); }
+    .previewer-blur i:nth-child(4) { backdrop-filter: blur(5.7px); -webkit-mask-image: linear-gradient(to bottom, transparent 50%, #000 65%, #000 100%); mask-image: linear-gradient(to bottom, transparent 50%, #000 65%, #000 100%); }
+    /* Figma's wide upward cast, kept, plus two tighter layers under it. The blurred script
+       still shows through directly behind the line, and the soft shadow alone doesn't give
+       the letters an edge to sit against. */
+    .previewer-footer-copy { position: relative; z-index: 1; margin: 0; color: #fff; font: 600 16px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.16px; text-shadow: 0 -8px 19.2px #000, 0 -2px 10px rgb(0 0 0 / 85%), 0 1px 4px rgb(0 0 0 / 75%); }
     .previewer-cta {
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 7.714px;
-      padding: 6.429px 14.29px;
+      padding: 10px 14.29px;
       border: 1.286px solid rgb(0 0 0 / 5%);
       border-radius: 26px;
       background: #1e1e1e;
@@ -415,7 +474,10 @@
 
     .ria-nav { position: absolute; bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 9.171px 18.342px; border: .983px solid rgb(0 0 0 / 5%); border-radius: 41.269px; font: 600 18.342px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.1834px; }
     .ria-nav:hover { transform: none; }
-    .ria-back { left: 12px; background: #f7f7f7; color: #1e1e1e; }
+    /* An arrow on its own — the way back does not need naming beside a Next that does. */
+    .ria-back { left: 12px; background: #f7f7f7; color: #8d8d8d; }
+    .ria-back svg { display: block; width: 26px; height: 26px; }
+    .ria-back:hover { color: #5c5c5c; }
     .ria-back[hidden] { display: none; }
     .ria-next { right: 12px; gap: 15.063px; background: #1e1e1e; color: #fff; }
     .ria-nav .shortcut { flex: none; gap: 3.821px; }
@@ -475,7 +537,10 @@
     .participant i { width: 28px; height: 28px; border-radius: 5px; background: #b1b1b1; }
     .participant b { width: 46px; height: 8px; border-radius: 3px; background: #b1b1b1; }
     .leave-call { position: absolute; top: 18px; right: 15px; display: flex; align-items: center; gap: 10px; padding: 10px 16px 10px 20px; border-radius: 11px; background: #555; color: #fff; font: 600 18px/22px Inter, sans-serif; }
-    .hangup { width: 22px; height: 9px; border-top: 4px solid #fff; border-radius: 50%; transform: rotate(180deg); }
+    /* Material's call_end, the frame's own icon (374:26433). It was a 22x9 box with a 4px
+       top border and a 50% radius, which leaves an inner radius of half a pixel — the
+       handset was being eaten by its own stroke. */
+    .hangup { display: block; width: 22.4px; height: 8.7px; flex: none; }
     .meeting-body { display: flex; height: calc(100vh - 189px); min-height: 500px; }
     .teams-sidebar { width: 82px; flex: none; padding-top: 18px; border-right: 1px solid rgb(0 0 0 / 10%); background: #d9d9d9; }
     .teams-sidebar .participant { margin: 0 auto 24px; }
@@ -490,8 +555,8 @@
       left: calc(50% - 214px);
       --rae-head: 93px;
       --rae-foot: 84.499px;
-      width: var(--rae-w, 476px);
-      height: var(--rae-h, 445px);
+      width: 476px;
+      height: 445px;
       color: #000;
       opacity: 0;
       pointer-events: none;
@@ -564,7 +629,6 @@
        itself; the gutter marks sections, not questions. ---- */
     .doc-info { position: absolute; top: 26.117px; left: 25.453px; width: 302.367px; }
     .doc-note { display: flex; align-items: center; gap: 4px; margin: 0; height: 12px; padding-left: 1px; color: #888; font: 400 12px/1 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; }
-    .doc-note-sep { width: 2.571px; height: 2.571px; border-radius: 7.714px; background: #888; }
     .doc-title { margin: 2px 0 0; color: #000; font: 500 20px/24px 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; }
     .doc-path { margin: 4px 0 0; padding-left: 1px; color: #000; font: 100 10px/12px Inter, system-ui, sans-serif; letter-spacing: .4px; text-transform: uppercase; }
     .rec-status { position: absolute; top: 62.117px; left: 392px; display: flex; align-items: center; gap: 4px; color: #888; font: 400 12px/1 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; }
@@ -584,7 +648,10 @@
     .doc-lines { position: absolute; top: 61.5px; left: 14.453px; display: flex; flex-direction: column; gap: 10px; width: 12px; }
     .doc-line { height: 25px; color: #d2d2d2; font: 500 18px/25px Inter, system-ui, sans-serif; text-align: center; transition: color 220ms var(--ease-out); }
     .doc-line.is-on { color: #5d5d5d; font-feature-settings: 'ss02' 1; }
-    .doc-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+    /* No CSS snapping: it lets a section taller than the panel be rested anywhere inside
+       it, and a correction on top of that is a second move you can see. The landing is
+       done in one place instead — see landOn. */
+    .doc-scroll { position: absolute; inset: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; }
     .doc-scroll::-webkit-scrollbar { width: 0; height: 0; }
     .doc-page { padding: 57.424px 51px 210px 68.711px; }
     /* Every passage carries the padding so text never shifts; only the fill moves. */
@@ -755,52 +822,227 @@
     .research-toolbar.suggestions-off .probe-card { max-height: 0; margin: 0 0 0 39px; padding: 0; border-color: transparent; opacity: 0; pointer-events: none; }
     .research-toolbar.suggestions-off .question.expanded { margin-bottom: 34px; }
 
-    /* Compact — the whole assistant folded down to a draggable strip. Keeps the
-       recording dot, where you are, and the insight count; everything else waits. */
+    /* Compact — the assistant's default shape, and the surface a whole session runs
+       on: it starts the recording, walks the script, and ends it. 324 per the design. */
     .compact-bar { display: none; flex-direction: column; align-items: stretch; }
-    .compact-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 8px 9px 16px; }
-    .compact-where { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    /* 9/8/9/16 against the frame's 39px header — the title and the buttons are the same
+       height, so the row is centred rather than baselined. */
+    .compact-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 8px; padding-left: 16px; }
+    .compact-where { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 3px; }
+    .compact-actions { display: flex; align-items: center; gap: 4px; flex: none; margin-left: auto; }
     .compact-section { flex: none; color: #000; font: 500 13px/1.4 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; white-space: nowrap; }
+    /* Only the part number moves; the total beside it belongs to the section, so it
+       changes when the section name does. */
+    .compact-part-n { display: inline-block; }
     /* Live status sits ahead of the title and breathes while recording. */
-    .compact-rec { position: relative; flex: none; width: 10px; height: 10px; }
-    .compact-rec i { position: absolute; top: 50%; left: 50%; border-radius: 16px; background: #00a138; transform: translate(-50%, -50%); }
-    .compact-rec i:nth-child(1) { width: 10px; height: 10px; opacity: .1; }
-    .compact-rec i:nth-child(2) { width: 8px; height: 8px; opacity: .2; }
-    .compact-rec i:nth-child(3) { width: 6px; height: 6px; animation: compact-rec-pulse 2.4s cubic-bezier(.32, .72, 0, 1) infinite; }
-    .research-toolbar.is-idle .compact-rec i { background: #b6b6b4; }
-    .research-toolbar.is-idle .compact-rec i:nth-child(3) { animation: none; }
+    .compact-rec { position: relative; flex: none; width: 14px; height: 14px; }
+    .compact-rec i { position: absolute; top: 50%; left: 50%; border-radius: 16px; background: #00a138; transform: translate(-50%, -50%); transition: opacity var(--t-dot) var(--ease-out), background-color var(--t-dot) var(--ease-out), border-color var(--t-dot) var(--ease-out), transform var(--t-dot) var(--ease-drawer); }
+    .compact-rec i:nth-child(1) { width: 14px; height: 14px; opacity: .1; }
+    .compact-rec i:nth-child(2) { width: 11px; height: 11px; opacity: .2; }
+    /* The dot is one 10px box in both states — the ring contracts into the live dot
+       rather than the two swapping sizes, so scale carries it and nothing relayouts. */
+    .compact-rec i:nth-child(3) { width: 7px; height: 7px; box-sizing: border-box; border: 1.5px solid transparent; animation: compact-rec-pulse var(--t-pulse) var(--ease-drawer) infinite; }
+    /* One ring breathes with the pulse so the dot reads as live. Two of them, staggered,
+       was the part that turned a heartbeat into a strobe. */
+    .research-toolbar.is-recording .compact-rec i:nth-child(1) { animation: compact-rec-breathe var(--t-pulse) var(--ease-drawer) infinite; }
+    /* Before the recording, the dot is an empty ring — nothing is being captured yet. */
+    .research-toolbar.is-idle .compact-rec i:nth-child(1),
+    .research-toolbar.is-idle .compact-rec i:nth-child(2) { opacity: 0; }
+    .research-toolbar.is-idle .compact-rec i:nth-child(3) { background: none; border-color: #000; animation: none; }
+    /* The dot is drawn at its true 7px now rather than a 10px box held at scale(.6), so
+       the pulse carries that .6 instead — same reach on screen, one fewer transform. */
     @keyframes compact-rec-pulse {
-      0% { box-shadow: 0 0 0 0 rgb(0 161 56 / 45%); }
-      55% { box-shadow: 0 0 0 6px rgb(0 161 56 / 0%); }
+      0% { box-shadow: 0 0 0 0 rgb(0 161 56 / var(--a-pulse)); }
+      60% { box-shadow: 0 0 0 calc(var(--m-pulse) * .6) rgb(0 161 56 / 0%); }
       100% { box-shadow: 0 0 0 0 rgb(0 161 56 / 0%); }
     }
+    @keyframes compact-rec-breathe {
+      0%, 100% { opacity: .1; }
+      45% { opacity: .2; }
+    }
     .compact-sep { flex: none; width: 2.571px; height: 2.571px; border-radius: 7.714px; background: #888; }
-    .compact-part { flex: none; color: #777; font: 500 10px/1.4 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; white-space: nowrap; }
+    /* The body already says which question this is; the counter beside the name was
+       saying it twice. Kept in the markup so it can come back with one line. */
+    .compact-part { display: none; flex: none; color: #777; font: 500 10px/1.4 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; white-space: nowrap; }
     .compact-part-n { color: #000; font-size: 13px; }
-    /* The compact card sits on #fcfcfa, so the switch takes the warmer ground. */
-    .compact-presence { position: static; background: #edebe2; box-shadow: inset 0 0 4px #dad4ba; }
-    .compact-presence .presence-btn { color: #96917f; }
-    .compact-presence .presence-btn.is-on { background: #fcfcfa; color: #37321e; box-shadow: 0 1px 1px rgb(0 0 0 / 12%); }
+    /* One way out of the mini bar, where the three-mode switch used to sit. Dropping
+       the switch is what buys the card the design's 324 rather than 387. */
+    .compact-expand { display: grid; place-items: center; width: 26.32px; height: 21px; flex: none; padding: 2px; border: 0; border-radius: 9px; background: #dcdcdc; cursor: pointer; transition: background-color 160ms ease; }
+    .compact-expand:hover { transform: none; background: #cfcfcf; }
+    .compact-expand .dock-icon { width: 13.563px; height: 13.583px; }
+    /* The mini bar's pills are shorter than the sidebar's — 21 against 25. */
+    .compact-actions .dock-more-btn { width: 26.32px; height: 21px; }
+    .dock-menu.compact-menu { top: 37px; right: 8px; }
+    .research-toolbar:not(.presence-compact) .compact-menu { display: none; }
 
     /* Advancing is a click on the copy, dragging is a grab on the strip — the same
        split the full card makes between its question list and its header. */
-    .compact-body { display: flex; align-items: flex-start; gap: 8px; padding: 12px 10px 8px 15px; cursor: pointer; }
-    .compact-number { flex: none; min-width: 22px; color: #161414; font: 500 13px/18px 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; font-variant-numeric: tabular-nums; }
-    .compact-text { margin: 0; flex: 1 1 auto; min-width: 0; color: #3e3e3e; font: 500 13px/1.5 Inter, system-ui, sans-serif; }
-    .compact-foot { display: flex; justify-content: flex-end; padding: 6px 11px 11px; background: url('assets/compact-scrim.png') bottom / 100% auto no-repeat; }
-    .compact-keys { display: flex; align-items: center; gap: 3.821px; }
-    .compact-keys kbd { display: grid; place-items: center; min-width: 14.52px; width: 16.121px; height: 14.515px; padding: 0 3.057px; border: .764px solid #a4a4a4; border-radius: 3.057px; background: #f7f7f7; box-shadow: 0 1.528px 0 #a4a4a4; color: #8d8d8d; font: 500 9.171px/1 Inter, system-ui, sans-serif; }
+    /* Advancing is a click on the copy, dragging is a grab on the strip — the same
+       split the question list makes against its header. */
+    .compact-body { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 12px 10px 11px 16px; cursor: pointer; }
+    /* The pill carries its own weight at the bottom of the card, so the padding under
+       it gives way rather than stacking. */
+    .compact-body:has(.compact-endrec:not([hidden])) { padding-bottom: 12px; }
+    /* "1/3" — where you are in this section, not a section.part address. The part rolls;
+       the total is set, because it only changes when the section does. */
+    .compact-number { flex: none; width: 18px; color: #3e3e3e; font: 500 13px/1.5 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; font-variant-numeric: lining-nums tabular-nums; text-align: center; white-space: nowrap; }
+    .compact-number-total { font-weight: 600; font-size: 9px; }
+    .compact-column { flex: 1 1 auto; min-width: 0; }
+    /* A value doesn't get replaced in place — the old one leaves and the new one arrives,
+       so both are on screen at once. Going forward the old goes up and the new comes from
+       below; going back, the reverse. Transitions, not keyframes, because a held arrow key
+       fires this faster than an animation can restart. */
+    .roll { position: relative; display: inline-block; vertical-align: top; white-space: nowrap; }
+    .roll-block { position: relative; display: block; }
+    .roll-now { transition: opacity var(--t-roll) var(--ease-roll) var(--t-roll-lag), transform var(--t-roll) var(--ease-roll) var(--t-roll-lag); }
+    .roll > .roll-now { display: inline-block; }
+    .roll-block > .roll-now { display: block; }
+    /* The one leaving drops out of the flow, so the slot takes the incoming value's size
+       and the card's height animates to where it is actually going. */
+    .roll-now.is-out { position: absolute; top: 0; left: 0; right: 0; opacity: 0; pointer-events: none; transition-delay: 0s; }
+    .roll-fwd > .roll-now.is-out { transform: translateY(calc(-1 * var(--m-roll))); }
+    .roll-back > .roll-now.is-out { transform: translateY(var(--m-roll)); }
+    .roll-now.is-start { opacity: 0; transition: none; }
+    .roll-fwd > .roll-now.is-start { transform: translateY(var(--m-roll)); }
+    .roll-back > .roll-now.is-start { transform: translateY(calc(-1 * var(--m-roll))); }
+    /* The name and the counter beside it read as one line, so the line can't jump width
+       under them while the name is still changing. */
+    .roll-width { transition: width var(--t-roll) var(--ease-roll); }
+    /* The body changes by fading, with no travel — it is a paragraph, not a value. */
+    .compact-fade { --m-roll: 0px; }
+    .compact-text { margin: 0; color: #3e3e3e; font: 500 13px/1.5 Inter, system-ui, sans-serif; }
+    /* What Rae heard and what she would ask next, in the smallest form that still
+       reads: the answer as plain text, each probe as a chip. Recording only. */
+    .compact-marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
+    .compact-marks[hidden] { display: none; }
+    .compact-answer { color: #8b8b87; font: 500 13px/20px Inter, system-ui, sans-serif; }
+    /* The same chip as the sidebar's — same grey, same radius, same lift off the page —
+       set at the bar's own type size so it sits with the answer beside it. */
+    .compact-probe { display: flex; align-items: center; justify-content: center; flex: none; box-sizing: border-box; height: 18px; padding: 0 6px 1px; overflow: hidden; border: 1px solid rgb(0 0 0 / 2%); border-radius: 6px; background: #fcfcfa; color: #3e3e3e; font: 400 11px/1.5 Inter, system-ui, sans-serif; white-space: nowrap; }
+    /* A probe that has been asked collapses out of the row, so the ones still open slide
+       into its place rather than the row reflowing under them. */
+    .compact-probe.is-out { padding-right: 0; padding-left: 0; border-width: 0; opacity: 0; transition: width var(--t-probe) var(--ease-out), margin-right var(--t-probe) var(--ease-out), padding var(--t-probe) var(--ease-out), opacity calc(var(--t-probe) * .6) var(--ease-out); }
+    .compact-endrec { display: block; margin-top: 10px; padding: 6px 14px; border: 0; border-radius: 999px; background: #ededea; color: #77776f; font: 500 13px/1 Inter, system-ui, sans-serif; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+    .compact-endrec:hover { transform: none; background: #e2e2de; color: #161414; }
+    .compact-endrec[hidden] { display: none; }
 
-    .research-toolbar.presence-compact { width: var(--compact-w, 322.402px); height: auto; }
+    /* --- The note under the part (436:30104 / 436:30103). An em dash at 20% is the
+       whole affordance while nothing is being written; hovering it says what it is for,
+       and clicking turns it into the field. It keeps its 18px row in every state, so the
+       card's height never moves under the pointer. --- */
+    .compact-jot { display: flex; align-items: center; gap: 8px; margin-top: 3px; height: 18px; }
+    .compact-jot-btn { display: flex; align-items: baseline; gap: 4px; max-width: 100%; padding: 0; border: 0; background: none; color: #000; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; text-align: left; cursor: text; }
+    .compact-jot-btn:hover { transform: none; }
+    .compact-jot-dash { flex: none; opacity: .2; transition: opacity var(--t-jot) var(--ease-out); }
+    .compact-jot-label { overflow: hidden; opacity: 0; text-overflow: ellipsis; white-space: nowrap; transform: translateX(-2px); transition: opacity var(--t-jot) var(--ease-out), transform var(--t-jot) var(--ease-out); }
+    .compact-jot-btn:hover .compact-jot-dash,
+    .compact-jot-btn:focus-visible .compact-jot-dash,
+    .compact-jot.has-note .compact-jot-dash { opacity: 1; }
+    .compact-jot-btn:hover .compact-jot-label,
+    .compact-jot-btn:focus-visible .compact-jot-label,
+    .compact-jot.has-note .compact-jot-label { opacity: 1; transform: translateX(0); }
+    /* Once something is written the line is the note, not an invitation. */
+    .compact-jot.has-note .compact-jot-label { color: #3e3e3e; }
+    .compact-jot-input { display: block; width: 100%; padding: 0; border: 0; background: none; color: #000; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; outline: none; }
+    .compact-jot-input[hidden] { display: none; }
+    .compact-jot.is-editing .compact-jot-btn,
+    .compact-jot.is-editing .compact-probes { display: none; }
+    /* While follow-ups are on the row it is theirs: the dash still opens the field, but
+       it stops advertising itself over the top of them. */
+    .compact-jot.has-probes .compact-jot-label { display: none; }
+
+    /* --- The follow-ups (450:31500). They sit on the dash's row, after it, because they
+       are the same kind of thing: what is still open on this part. Each click asks one,
+       and asking it takes it off the row. --- */
+    .compact-probes { display: flex; align-items: center; gap: 3px; min-width: 0; filter: drop-shadow(0 4px 4px rgb(0 0 0 / 10%)) drop-shadow(0 15px 7.5px rgb(0 0 0 / 9%)); }
+    .compact-probes:empty { display: none; }
+
+    /* --- The footer is a slab behind the card (426:29044), showing 44px of itself below
+       the bottom edge, and it belongs to the idle state only: once the recording is
+       running the card is nothing but where you are and what was said. --- */
+    .compact-slab { position: absolute; top: 0; right: 0; bottom: -44px; left: 0; z-index: 0; display: none; overflow: hidden; border-radius: 19px; background: #dddcd7; }
+    .research-toolbar.presence-compact.is-idle:not(.session-complete) .compact-slab,
+    .research-toolbar.presence-compact.has-offer:not(.session-complete) .compact-slab { display: block; }
+    /* The offer's row carries a progress bar under it, which is the 4px difference. */
+    .research-toolbar.has-offer .compact-slab { bottom: -48px; }
+    .compact-offer { display: none; }
+    .research-toolbar.has-offer:not(.is-idle) .compact-offer { display: block; }
+    .research-toolbar.has-offer:not(.is-idle) .compact-foot { display: none; }
+    /* Semibold, because it is a finding rather than a caption. */
+    .compact-offer-copy { position: absolute; bottom: 15.44px; left: 16px; margin: 0; color: #3e3e3e; font: 600 11px/1.5 Inter, system-ui, sans-serif; white-space: nowrap; }
+    .compact-jump { position: absolute; right: 8px; bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; height: 29.571px; padding: 5px 7px; border: 1.286px solid rgb(0 0 0 / 5%); border-radius: 15px; background: #1e1e1e; color: #fff; font: 500 12px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.12px; cursor: pointer; }
+    .compact-jump:hover { transform: none; background: #000; }
+    .compact-jump .shortcut { display: flex; align-items: center; gap: 3.82px; flex: none; }
+    .compact-jump kbd { display: grid; place-items: center; min-width: 14.518px; height: 14.513px; padding: 0 3.056px; border: .764px solid #474747; border-radius: 3.056px; background: #222121; box-shadow: 0 1.528px 0 #474747; color: #ababab; font: 500 9.169px/1 Inter, system-ui, sans-serif; }
+    /* The same bar the sidebar's panel runs: it is how long the offer has left, not how
+       much of the section was covered — that is what the line beside it says. Running out
+       is what dismisses it, and hovering holds it open for as long as the pointer is on. */
+    .compact-offer-bar { position: absolute; right: 8.7px; bottom: 0; left: 8.61px; height: 3.094px; background: rgb(53 51 40 / 30%); }
+    .compact-offer-bar i { display: block; width: 100%; height: 100%; background: #1d1d1d; }
+    .research-toolbar.is-draining .compact-offer-bar i { animation: doc-hint-drain var(--t-hint) linear forwards; }
+    .compact-slab:hover .compact-offer-bar i { animation-play-state: paused; }
+    /* It rises from under the card, the way the sidebar's rises from the foot of the panel. */
+    .research-toolbar.has-offer:not(.is-idle) .compact-slab { animation: compact-offer-in var(--t-offer-in) var(--ease-out) both; }
+    @keyframes compact-offer-in {
+      from { opacity: 0; transform: translateY(48px); }
+      to { opacity: 1; transform: none; }
+    }
+    .compact-foot { position: absolute; right: 13px; bottom: 7.5px; left: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .compact-start { display: flex; align-items: center; justify-content: center; gap: 4px; flex: none; height: 29.571px; padding: 5px 7px; border: 1.286px solid rgb(0 0 0 / 5%); border-radius: 15px; background: #1e1e1e; color: #fff; font: 500 12px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.12px; cursor: pointer; }
+    .compact-start:hover { transform: none; background: #000; }
+    .compact-start .shortcut { display: flex; align-items: center; gap: 3.82px; flex: none; }
+    .compact-start kbd { display: grid; place-items: center; min-width: 14.518px; height: 14.513px; padding: 0 3.056px; border: .764px solid #474747; border-radius: 3.056px; background: #222121; box-shadow: 0 1.528px 0 #474747; color: #ababab; font: 500 9.169px/1 Inter, system-ui, sans-serif; }
+    .compact-note { color: #000; font: 400 11px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.11px; white-space: nowrap; }
+    /* Starting the recording is the one moment the card changes shape on purpose, so
+       the slab folds rather than vanishing — the card's own height follows it down. */
+    .compact-slab { transition: opacity var(--t-foot-fade) var(--ease-out), transform var(--t-foot-move) var(--ease-out); }
+    /* ...except when it has come back to carry the coverage offer, which is the one
+       thing the slab says during a recording. */
+    .research-toolbar:not(.is-idle):not(.has-offer) .compact-slab { opacity: 0; transform: translateY(calc(-1 * var(--m-rise-foot))); pointer-events: none; }
+
+    /* --- The tick (458:32226). It hangs half off the left edge of the card, so it sits
+       outside the surface that clips — and it is the same fact as the document's tick on
+       the same beat, drawn at 15px. --- */
+    .compact-tick { position: absolute; z-index: 2; top: 53.968px; left: -8.782px; display: grid; place-items: center; width: 17.564px; height: 17.564px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .compact-tick[hidden],
+    .research-toolbar:not(.presence-compact) .compact-tick { display: none; }
+    .compact-tick:hover { transform: none; }
+    .compact-tick img { display: block; width: 100%; height: 100%; }
+    /* Unticked it is the empty ring the document uses; ticked, the mark lands with a
+       small overshoot — a pen coming down, not a state flipping. */
+    .compact-tick:not(.is-checked) img { display: none; }
+    .compact-tick:not(.is-checked)::before { content: ''; width: 12.82px; height: 12.82px; box-sizing: border-box; border: 1.282px solid #b8b8b8; border-radius: 50%; background: #fcfcfa; }
+    .compact-tick:not(.is-checked):hover::before { border-color: #8a8a8a; }
+    .compact-tick.is-checked img { animation: compact-tick-in var(--t-tick) var(--ease-tick) both; }
+    @keyframes compact-tick-in {
+      0% { opacity: 0; transform: scale(.4); }
+      60% { opacity: 1; transform: scale(1.12); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .research-toolbar.presence-compact { width: 324px; height: auto; }
+    /* The height is animated on the surface, not the card: the surface is the box that
+       clips and carries the radius, and `.toolbar-surface { height: 100% }` against an
+       auto-height card is circular — it resolves to nothing on the first pass.
+       Stepping the script is list navigation, so this stays under the threshold where
+       you would start waiting for it. */
+    .research-toolbar.presence-compact .toolbar-surface { height: auto; transition: opacity 260ms ease, height var(--t-height) var(--ease-drawer); }
     .research-toolbar.presence-compact .toolbar-header,
     .research-toolbar.presence-compact .toolbar-foot,
     .research-toolbar.presence-compact .questions,
     .research-toolbar.presence-compact .insight-counter,
     .research-toolbar.presence-compact .insight-plus,
-    .research-toolbar.presence-compact .finish-session,
-    .research-toolbar.presence-compact .snackbar,
-    .research-toolbar.presence-compact .resize-grip { display: none; }
+    .research-toolbar.presence-compact .finish-session { display: none; }
     .research-toolbar.presence-compact .compact-bar { display: flex; }
+    /* The card is its own colour in this mode — #fcfcfa on a lighter shadow, so the slab
+       behind it reads as a separate surface rather than a shade of the same one. */
+    .research-toolbar.presence-compact .toolbar-surface { border-radius: 20px; background: #fcfcfa; box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%); }
+    /* The hint belongs under the card, not inside it — there is no footer to sit above,
+       and outside the card it is no longer bound by the card's width. */
+    .research-toolbar.presence-compact .snackbar { top: calc(100% + 8px); bottom: auto; max-width: none; }
+    /* Clear of the slab while the slab is showing — idle, or carrying the offer. */
+    .research-toolbar.presence-compact.is-idle:not(.session-complete) .snackbar,
+    .research-toolbar.presence-compact.has-offer:not(.session-complete) .snackbar { top: calc(100% + 56px); }
     .research-toolbar.presence-compact .toolbar-surface { cursor: grab; }
     .research-toolbar.presence-compact .toolbar-surface:active { cursor: grabbing; }
 
@@ -808,23 +1050,17 @@
        call stage gives up the width rather than being covered (P23's overlap). */
     .research-toolbar.presence-dock { top: 189px; right: 0; bottom: 0; left: auto; width: 392px; height: auto; }
     .research-toolbar.presence-dock .toolbar-surface { border-width: 0 0 0 1px; border-radius: 0; box-shadow: -10px 0 44px rgb(0 0 0 / 7%); }
-    .research-toolbar.presence-dock .drag-handle,
-    .research-toolbar.presence-dock .resize-grip { display: none; }
+    .research-toolbar.presence-dock .drag-handle { display: none; }
     .research-toolbar.presence-dock,
     .research-toolbar.presence-dock .toolbar-header { cursor: default; }
     .research-toolbar.presence-dock .complete-surface { border-radius: 0; }
     .call-stage { transition: margin-right 340ms cubic-bezier(0.32, 0.72, 0, 1); }
     body[data-rae-presence="dock"] .call-stage { margin-right: 392px; }
 
-    /* The three modes are different shapes; crossfading reads as a deliberate
+    /* The two modes are different shapes; crossfading reads as a deliberate
        switch where tweening the geometry reads as a glitch. */
     .research-toolbar.presence-switching { opacity: 0; transition: opacity 130ms ease; }
-    .research-toolbar.resizing { transition: none; }
 
-    .resize-grip { position: absolute; z-index: 3; right: 1px; bottom: 1px; width: 20px; height: 20px; opacity: 0; cursor: nwse-resize; touch-action: none; transition: opacity 180ms ease; }
-    .resize-grip::after { content: ''; position: absolute; right: 5px; bottom: 5px; width: 8px; height: 8px; border-right: 2px solid #b6b6b4; border-bottom: 2px solid #b6b6b4; border-radius: 0 0 3px 0; }
-    .research-toolbar:hover .resize-grip { opacity: 1; }
-    .research-toolbar.session-complete .resize-grip { display: none; }
 
     /* The card's own footer. Before, the only way to move the session on was to know
        that clicking the white space did something — there was no visible control. */
@@ -864,11 +1100,11 @@
     .research-toolbar:not(.flag-recording) .start-rec { display: none; }
     .research-toolbar:not(.flag-recording) .rec-chip { border-color: transparent; background: transparent; }
 
-    /* presence: one fixed card, no modes and no resizing. */
+    /* presence: one fixed shape, no way to switch. */
     /* the suggestions switch belongs to the probes change */
     .research-toolbar:not(.flag-probes) .suggest-toggle { display: none; }
     .research-toolbar:not(.flag-presence) .presence-switch,
-    .research-toolbar:not(.flag-presence) .resize-grip { display: none; }
+    .research-toolbar:not(.flag-presence) .compact-expand { display: none; }
 
     /* advance: no footer control — clicking the list is the only way on, as in v5. */
     .research-toolbar:not(.flag-advance) .toolbar-foot { justify-content: flex-end; }
@@ -894,24 +1130,39 @@
     .complete-surface { position: absolute; z-index: 2; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; padding: 34px 14px 16px; border: 1px solid rgb(126 126 126 / 20%); border-radius: 20px; background: #fcfcfa; box-shadow: 0 4px 70px 20px rgb(0 0 0 / 8%); opacity: 0; pointer-events: none; transition: opacity 300ms ease; }
     /* The summary is not a fixed card any more — it takes the shape the assistant is
        already in, because that is where the researcher is looking. */
-    .research-toolbar.presence-focus.session-complete { height: calc(var(--rae-h, 363px) + 54px); }
     .research-toolbar.session-complete .toolbar-surface { opacity: 0; pointer-events: none; }
     .research-toolbar.session-complete .complete-surface { opacity: 1; pointer-events: auto; }
     /* Docked, the summary fills the column and keeps the column's square edge. */
     .research-toolbar.presence-dock.session-complete .complete-surface { border-radius: 0; border-width: 0 0 0 1px; }
     .research-toolbar.presence-dock.session-complete .complete-handle { display: none; }
 
-    /* Minimised, the summary stays a strip: the same three numbers and the way in. */
-    .compact-complete { display: none; align-items: center; gap: 12px; height: 100%; padding: 0 9px 0 14px; }
-    .research-toolbar.presence-compact.session-complete .compact-complete { display: flex; }
+    /* The mini bar reports its own session: the three numbers and the way into the doc,
+       so finishing never needs a trip to another mode. */
+    /* Finishing happens once, so the summary is allowed to arrive rather than appear.
+       The bar is discarded on the same beat and the card's height carries the rest. */
+    .compact-complete { display: none; flex-direction: column; align-items: stretch; padding: 13px 16px 16px; opacity: 0; transform: translateY(var(--m-rise-complete)); transition: opacity var(--t-complete) var(--ease-out), transform var(--t-complete) var(--ease-out), display var(--t-complete) allow-discrete; }
+    .research-toolbar.presence-compact.session-complete .compact-complete { display: flex; opacity: 1; transform: none; }
+    @starting-style {
+      .research-toolbar.presence-compact.session-complete .compact-complete { opacity: 0; transform: translateY(var(--m-rise-complete)); }
+    }
     .research-toolbar.presence-compact.session-complete .compact-bar { display: none; }
     .research-toolbar.presence-compact.session-complete .complete-surface { display: none; }
     .research-toolbar.presence-compact.session-complete .toolbar-surface { opacity: 1; pointer-events: auto; }
-    .compact-check { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%; background: #e0e0e0; }
-    .compact-check svg { width: 15px; height: 11px; }
-    .compact-summary { margin: 2px 0 0; color: #3e3e3e; font: 500 13px/17px Inter, sans-serif; font-variant-numeric: tabular-nums; }
-    .compact-doc { flex: none; padding: 9px 13px; border-radius: 9px; background: #161414; color: #fff; font: 600 12px/1 Inter, sans-serif; }
-    .compact-doc:hover { transform: none; }
+    .compact-complete-head { display: flex; align-items: center; gap: 8px; }
+    .compact-check { display: grid; place-items: center; width: 18px; height: 18px; flex: none; }
+    .compact-check svg { width: 18px; height: 18px; }
+    .compact-complete-title { margin: 0; color: #161414; font: 600 14px/1.4 Inter, sans-serif; }
+    .compact-metrics { display: flex; justify-content: space-around; gap: 8px; padding: 16px 0 18px; }
+    .compact-metric { text-align: center; }
+    .compact-metric-value { display: flex; align-items: center; justify-content: center; margin: 0; color: #161414; font: 600 21px/1.1 Inter, sans-serif; font-variant-numeric: tabular-nums; }
+    /* "13/13" reads as one number with the total spoken quietly after it. */
+    .compact-metric-total { color: #8b8b87; font-size: 15px; }
+    .compact-metric-label { margin: 3px 0 0; color: #8b8b87; font: 500 12px/1.4 Inter, sans-serif; }
+    .compact-sparkle { width: 15px; height: 15px; flex: none; margin-right: 4px; color: #f0a323; }
+    .compact-doc { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 12px 16px; border: 0; border-radius: 999px; background: #161414; color: #fff; font: 600 14px/1.2 Inter, sans-serif; cursor: pointer; }
+    .compact-doc:hover { transform: none; background: #000; }
+    .compact-doc .shortcut { display: flex; align-items: center; gap: 4px; flex: none; }
+    .compact-doc kbd { display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border: 1px solid #2d2d2d; border-radius: 4px; background: #222121; box-shadow: 0 1.5px 0 #2d2d2d; color: #ababab; font: 500 10px/1 Inter, system-ui, sans-serif; }
     .complete-handle { position: absolute; top: 10px; left: 50%; width: 53px; height: 9px; flex: none; transform: translateX(-50%); background-image: radial-gradient(#838383 1px, transparent 1.2px); background-size: 3.4px 3.4px; opacity: .7; }
     .complete-head { display: flex; flex-direction: column; align-items: center; gap: 16px; }
     .complete-check { display: grid; place-items: center; width: 86.66px; height: 86.66px; flex: none; border-radius: 50%; background: #e0e0e0; outline: 5.42px solid #fcfcfa; }
@@ -934,7 +1185,7 @@
       z-index: 2;
       left: 50%;
       max-width: calc(100% - 40px);
-      padding: 8px 14px;
+      padding: 5px 12px;
       border: 1px solid rgb(0 0 0 / 6%);
       border-radius: 11px;
       background: #f2f2f0;
@@ -951,7 +1202,9 @@
       transition: opacity 200ms ease, transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
     }
     .snackbar.visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
-    #snackbar-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    #snackbar-label { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .snack-keys { display: inline-flex; align-items: center; gap: 4px; }
+    .snack-keys kbd { display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border: 1px solid #b7b7b3; border-radius: 4px; background: #fbfbf9; box-shadow: 0 1.5px 0 #b7b7b3; color: #6f6f6a; font: 500 10px/1 Inter, system-ui, sans-serif; }
     /* A message about something reversible carries the reverse — the snackbar is where
        attention already is at that moment, not the row it happened on. */
     .snack-action { flex: none; padding: 4px 10px; border: 0; border-radius: 8px; background: #161414; color: #fff; font: 600 12px/16px Inter, sans-serif; cursor: pointer; }
@@ -997,6 +1250,15 @@
       .toolbar-title { animation: none; color: #111; background: none; }
       .rec-dot { animation: none; }
       .research-toolbar, .call-stage, .research-toolbar.presence-switching { transition-duration: 1ms; }
+      .research-toolbar.presence-compact .toolbar-surface { transition-duration: 1ms; }
+      /* The values still cross-fade, because that is what explains the change; they
+         just don't travel to do it, and neither half waits for the other. */
+      .roll-now.is-out, .roll-now.is-start, .compact-complete { transform: none; }
+      .roll-now { transition-delay: 0s; }
+      .roll-width { transition-duration: 1ms; }
+      .compact-foot, .compact-rec i { transition-duration: 1ms; }
+      .research-toolbar:not(.is-idle) .compact-foot { transform: none; }
+      .compact-rec i:nth-child(3) { animation: none; }
     }
     .modal-header { height: 96px; position: relative; padding: 22px 24px 0; border-bottom: 1px solid rgb(0 0 0 / 12%); }
     /* The script belongs to a meeting, and the modal says which — P21 expected it to
@@ -1026,8 +1288,6 @@
     /* Selection has to be unmistakable — P23 could not tell whether the row was a
        button or a state, and three participants stalled on the same screen. */
     .document.selected { background: #161414; color: #fff; }
-    .document.selected .doc-icon { filter: grayscale(1) invert(1) brightness(1.6); }
-    .document.selected::after { content: '✓'; margin-left: auto; padding-left: 8px; font-size: 13px; }
     .doc-icon { width: 19px; height: 20px; flex: none; background: center / contain no-repeat url('assets/doc-thumbnail-word.png'); filter: grayscale(1); }
     .doc-name { overflow: hidden; text-overflow: ellipsis; }
     .document.selected .doc-name { font-weight: 500; }
@@ -1037,7 +1297,7 @@
     .document-title { margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; letter-spacing: -.01em; }
     .document-meta { display: flex; align-items: center; gap: 6px; margin-top: 1px; color: #444; font-size: 12px; line-height: 17px; }
     .pdf-tag { padding: 2px 4px; border-radius: 5px; background: #e4e4e4; color: #686868; font-weight: 700; }
-    .page-wrap { width: 360px; height: 510px; margin: 14px 0 0; overflow: hidden; border: 1px solid #c3c3c3; background: #fff; }
+    .page-wrap { width: 360px; height: 510px; margin: 10px 0 0; overflow: hidden; border: 1px solid #c3c3c3; background: #fff; }
     .page { width: 361px; height: 473px; background: center top / cover no-repeat url('assets/doc-preview.png'); }
     .preview-fade { position: absolute; right: 0; bottom: 0; left: 0; height: 55px; background: linear-gradient(transparent, #f4f4f4); }
     .pagination { position: absolute; bottom: 11px; left: 5px; z-index: 1; padding: 3px 8px 5px; border: 1px solid rgb(0 0 0 / 5%); border-radius: 30px; background: #e0e0e0; color: #494949; font-size: 10px; font-weight: 600; }
@@ -1051,10 +1311,12 @@
 
     /* The action that commits lives on the modal's own edge, not tucked into the
        corner of the preview where nobody looked for it. */
-    .modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 68px; padding: 0 18px 0 24px; border-top: 1px solid rgb(0 0 0 / 12%); background: #fbfbf9; }
-    .footer-hint { margin: 0; min-width: 0; overflow: hidden; color: #8a8a88; font: 400 13px/18px Inter, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
-    .footer-hint.is-ready { color: #3e3e3e; }
-    .use-script { display: flex; align-items: center; gap: 9px; flex: none; padding: 13px 16px 13px 20px; border-radius: 12px; background: #161414; color: #fff; font: 600 15px/20px Inter, sans-serif; }
+    /* What the script is made of belongs with the file it describes, rather than in a bar
+       at the far end of the dialog. */
+    .preview-stats { margin: 7px 0 0; color: #3e3e3e; font: 400 13px/18px Inter, sans-serif; white-space: nowrap; }
+    /* And the commit sits on the thing being committed to. */
+    .use-script { position: absolute; z-index: 2; right: 18px; bottom: 16px; display: none; align-items: center; gap: 9px; padding: 13px 16px 13px 20px; border-radius: 12px; background: #161414; color: #fff; font: 600 15px/20px Inter, sans-serif; }
+    .preview.active .use-script { display: flex; }
     .use-script:disabled { background: #e1e1e1; color: #a4a4a2; cursor: not-allowed; }
     .use-script:disabled:hover { transform: none; }
     .use-script kbd { display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border: 1px solid rgb(255 255 255 / 45%); border-radius: 4px; font: 500 11px/1 Inter, sans-serif; }
@@ -1133,7 +1395,6 @@
     /* --- v5.2 focus card: the script document owns the body before recording,
        the question list takes over once the session is running. Placed last so it
        beats the v5.1 rules it supersedes. --- */
-    .research-toolbar.presence-focus.is-idle .questions,
     .research-toolbar.presence-dock.is-idle .questions { display: none; }
     .research-toolbar:not(.is-idle) .script-doc,
     .research-toolbar.presence-compact .script-doc { display: none; }
@@ -1144,12 +1405,312 @@
     .research-toolbar .toolbar-header .suggest-toggle,
     .research-toolbar .toolbar-header .question-progress,
     .research-toolbar .toolbar-header .legend { display: none; }
-    .research-toolbar.presence-compact .toolbar-foot { display: none; }
     /* The edit chip and section arrows belong to the document, not the question list. */
     .research-toolbar:not(.is-idle) .doc-edit,
     .research-toolbar:not(.is-idle) .doc-keys { display: none; }
     .research-toolbar:not(.is-idle) .toolbar-foot { background: #fcfcfa; border-top: 1px solid #e7e7e4; height: 54px; }
     .research-toolbar:not(.is-idle) { --rae-foot: 54px; }
+
+    /* --- The docked sidebar (Paper "Desktop - 54"). Docked, the assistant stops
+       being a floating card: a full-height column flush to the right edge, starting
+       under the address bar. The call chrome makes room for it rather than hiding
+       behind it. --- */
+    /* The panel now starts under the address bar, so the call toolbar gives up its
+       right end too — otherwise Leave sits behind the sidebar. `data-rae-presence`
+       on the body is already how the stage learns the dock is open. */
+    .participants,
+    .leave-call { transition: right 340ms var(--ease-drawer); }
+    body[data-rae-presence="dock"] .participants { right: 627px; }
+    body[data-rae-presence="dock"] .leave-call { right: 482px; }
+    body[data-rae-presence="dock"] .call-stage { margin-right: 467px; }
+    /* Below about 1180px there is no room left of the panel for seven attendees and
+       a Leave button. The attendees are decoration; Leave is not. */
+    @media (max-width: 1180px) {
+      body[data-rae-presence="dock"] .participants { display: none; }
+    }
+
+    .research-toolbar.presence-dock { top: 107px; width: 467px; --rae-head: 84px; --rae-dock-foot: 71.725px; }
+    .research-toolbar.presence-dock .toolbar-surface { border: 0; box-shadow: none; }
+    /* The two blocks meet at the baseline of the header, not at its top: the title and
+       the button pair are different heights and it is their feet that line up. */
+    .research-toolbar.presence-dock .toolbar-header { display: flex; align-items: flex-end; padding: 17px 20px 15px; }
+
+    .doc-head { display: flex; align-items: flex-end; justify-content: space-between; width: 100%; }
+    .research-toolbar .doc-info { position: static; width: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+    .doc-id-row { display: flex; align-items: center; gap: 8px; }
+    .research-toolbar .doc-title { margin: 0; font: 500 24px/29px 'Mona Sans', Inter, system-ui, sans-serif; }
+    /* The path is the eyebrow now — above the title, sharing its left edge, and black:
+       it names the document the title is the name of, so it is not an aside. */
+    .research-toolbar .doc-path { margin: 0; padding-left: 0; color: #000; font: 200 10px/12px Inter, system-ui, sans-serif; letter-spacing: .4px; }
+
+    /* One button, not a switch: from the sidebar the only way is back to the mini bar. */
+    .research-toolbar .presence-switch { position: static; flex: none; width: 31.333px; height: 25px; align-items: center; justify-content: center; padding: 2px; border-radius: 9px; background: #dcdcdc; box-shadow: none; }
+    .research-toolbar .presence-switch .presence-btn { width: 17px; height: 17px; border-radius: 7px; }
+    /* Figma's own vectors, not redrawn: the arrows are #383838 at 1.5, the dots #1e1e1e
+       at 1.6, and neither takes a colour from the button around it. */
+    .research-toolbar .presence-switch .presence-btn .dock-icon { width: 15.561px; height: 15.585px; }
+    .research-toolbar .presence-switch .presence-btn.is-on { background: none; box-shadow: none; }
+    .research-toolbar .presence-switch .presence-btn[data-presence="dock"] { display: none; }
+
+    /* Collapse and the session menu are two of a kind, so they are drawn as one pair of
+       pills in the corner rather than one button beside the title. */
+    .dock-tools { display: flex; align-items: flex-start; gap: 4px; }
+    .dock-more { position: relative; }
+    .dock-more-btn { display: flex; align-items: center; justify-content: center; width: 31.333px; height: 25px; padding: 2px; border: 0; border-radius: 9px; background: #dcdcdc; cursor: pointer; }
+    /* The frame turns "More horizontal" on its side, so the dots stand up. */
+    .dock-icon-more { width: 17px; height: 17px; transform: rotate(90deg); }
+    /* The icons carry their own colour, so hovering is the pill going darker under them. */
+    .research-toolbar .presence-switch:hover,
+    .dock-more-btn:hover,
+    .dock-more-btn[aria-expanded="true"] { background: #cfcfcf; transform: none; }
+
+    /* The menu holds what the frames took off the header: the two ways to interrupt a
+       recording. Both are dead until there is a recording to interrupt. */
+    .dock-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; display: flex; flex-direction: column; min-width: 168px; padding: 4px; border: 1px solid #e4e4e2; border-radius: 12px; background: #fff; box-shadow: 0 12px 28px rgb(0 0 0 / 12%); }
+    .dock-menu[hidden] { display: none; }
+    .dock-menu-item { display: flex; align-items: center; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: #1e1e1e; font: 500 13px/1.3 Inter, system-ui, sans-serif; text-align: left; cursor: pointer; }
+    .dock-menu-item:hover { transform: none; background: #f2f2f2; }
+    .dock-menu-item:disabled { color: #b4b4b4; cursor: default; }
+    .dock-menu-item:disabled:hover { background: none; }
+
+    /* The note line sits above the buttons while recording and is the only thing in the
+       header that the session changes. */
+    .doc-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 12px; flex: none; }
+    .research-toolbar .rec-status { position: static; align-self: stretch; justify-content: flex-end; height: auto; padding-left: 1px; }
+    .research-toolbar.is-idle .rec-status { display: none; }
+
+    /* --- The bottom panel (436:30014). Starting a session is the last thing on the
+       screen while there is no session, so it sits at the foot of the panel at full
+       size; the moment it starts, the whole bar goes and the header takes over. --- */
+    .dock-foot { position: absolute; right: 0; bottom: 0; left: 0; z-index: 4; display: none; align-items: center; justify-content: space-between; height: var(--rae-dock-foot); padding: 16px 16px 15px 20px; border-top: 1px solid rgb(0 0 0 / 10%); border-radius: 20px 20px 0 0; background: #d4d3cf; }
+    .research-toolbar.presence-dock.is-idle:not(.session-complete) .dock-foot { display: flex; }
+    .research-toolbar .doc-note { position: static; margin: 0; height: auto; color: #181818; font: 500 16px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.16px; }
+    .research-toolbar .start-rec { position: static; height: 39.725px; padding: 5px 14px; gap: 5.79px; border: 1.862px solid rgb(0 0 0 / 5%); border-radius: 21.728px; font: 500 16px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.16px; transform: none; }
+    .research-toolbar .start-rec:hover { transform: none; }
+    .research-toolbar .start-rec .shortcut { gap: 3.85px; }
+    .research-toolbar .start-rec kbd { min-width: 14.62px; height: 14.62px; padding: 0 3.08px; border: .77px solid #474747; border-radius: 3.078px; box-shadow: 0 1.54px 0 #474747; font: 500 9.234px/1 Inter, system-ui, sans-serif; }
+
+    /* The document shows one section at a time; the link under it is the way on. The
+       gutter rail and the scrollbar go with the scroll they described. */
+    .research-toolbar .doc-lines,
+    .research-toolbar .doc-scrollbar { display: none; }
+    /* A definite height on the page is what lets each section ask for a screenful of
+       its own; the sections overflow it, and that overflow is the scroll. */
+    .doc-page { height: 100%; padding: 0 28px 0 20px; }
+    /* One section is a screenful, and it snaps to the top. Everything that made the
+       document feel like a stack of cards is now the browser's own scrolling: it follows
+       the wheel the whole way, carries through several sections on a long throw, and
+       settles on whichever one it stopped nearest. */
+    .doc-passage { position: relative; min-height: 100%; margin: 0; padding: 32px 0 48px; border-radius: 0; color: #000; font: 400 18px/1.5 Inter, system-ui, sans-serif; }
+    .doc-passage.is-on { background: none; }
+    .doc-passage h3 { margin: 0 0 19px; padding-left: 0; color: #000; font: 600 18px/1.5 Inter, system-ui, sans-serif; }
+    .doc-passage p,
+    .doc-passage li { position: relative; margin: 0 0 19px; padding-left: 29px; }
+    /* min-height, not line-height: a one-line question's row is as tall as the circle and
+       its padding, and that is what sets the pitch of a section of questions. It belongs
+       to the question's own line — put it on the whole item and an answer landing
+       underneath would swallow the 1.82px the circle adds. */
+    .beat-line { display: block; min-height: 28.82px; }
+    .doc-passage p:last-child,
+    .doc-passage ol,
+    .doc-passage li:last-child { margin-bottom: 0; }
+    .doc-passage ol { padding-left: 0; list-style: none; }
+    /* One circle per beat — per thing you actually say. Empty until the session runs. */
+    .doc-passage p::before { content: ''; position: absolute; top: 8px; left: 0; box-sizing: border-box; width: 12.82px; height: 12.82px; border: 1.282px solid #b8b8b8; border-radius: 50%; }
+    /* Pinned to the corner of the panel, outside the scroller, so it stays where you
+       last used it while the sections go past underneath. */
+    .doc-next { position: absolute; right: 20px; bottom: 16px; z-index: 1; padding: 0; border: 0; background: none; color: #000; font: 400 12px/1.5 Inter, system-ui, sans-serif; opacity: .5; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; transition: opacity 180ms var(--ease-out); }
+    .doc-next[hidden] { display: none; }
+    .doc-next:hover { opacity: .85; transform: none; }
+
+    /* --- What Rae noticed while you were reading (Figma 372:24832). It rises from the foot
+       of the panel, says its piece and goes; the bar across the top of it is how much of the
+       section it is talking about has been covered. --- */
+    .doc-hint { position: absolute; right: 0; bottom: 0; left: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; padding: 16px 12px 12px; background: #f4f4f4; transition: opacity 460ms var(--ease-out), transform 560ms var(--ease-out); }
+    .doc-hint[hidden] { display: none; }
+    .doc-hint.idle { opacity: 0; transform: translateY(100%); }
+    /* The bar is the five seconds, not a coverage meter: it starts full and runs out, and
+       when it has run out the panel goes. Hovering pauses the animation, which is what
+       holds the panel open too — the dismissal listens for the animation ending rather
+       than counting on its own, so there is only one clock. */
+    .doc-hint-bar { position: absolute; top: 0; right: 0; left: 0; height: 3.094px; background: rgb(53 51 40 / 30%); }
+    .doc-hint-bar i { display: block; width: 100%; height: 100%; background: #1d1d1d; }
+    .doc-hint.is-draining .doc-hint-bar i { animation: doc-hint-drain var(--t-hint) linear forwards; }
+    .doc-hint:hover .doc-hint-bar i { animation-play-state: paused; }
+    @keyframes doc-hint-drain { to { width: 0; } }
+    .doc-hint-said { display: flex; align-items: center; gap: 18px; }
+    .doc-hint-close { display: block; width: 25.789px; height: 25.789px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .doc-hint-close:hover { transform: none; opacity: .82; }
+    .doc-hint-close svg { display: block; width: 100%; height: 100%; }
+    .doc-hint-copy { margin: 0; color: #181818; font: 500 14px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.14px; }
+    .doc-hint-go { display: flex; align-items: center; justify-content: center; gap: 5.794px; height: 39.725px; padding: 5px 8px; border: 1.862px solid rgb(0 0 0 / 5%); border-radius: 21.728px; background: #1e1e1e; color: #fff; font: 500 13px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.13px; cursor: pointer; }
+    .doc-hint-go:hover { transform: none; background: #000; }
+    .doc-hint-go .shortcut { flex: none; gap: 3.85px; }
+    .doc-hint-go kbd { min-width: 14.62px; height: 14.62px; padding: 0 3.08px; border: .77px solid #474747; border-radius: 3.078px; background: #222121; box-shadow: 0 1.54px 0 #474747; color: #ababab; font: 500 9.234px/1 Inter, system-ui, sans-serif; }
+    /* One thing in that corner at a time. */
+    .script-doc.is-hinting .doc-next { opacity: 0; pointer-events: none; }
+
+    /* --- Recording (Figma 373:25265). The sidebar does not swap the script out for a
+       question list when the session starts: the script *is* the session, and its beats
+       are what gets ticked off. The question list stays in the DOM, still bound. --- */
+    .research-toolbar.presence-dock .script-doc { display: block; }
+    .research-toolbar.presence-dock .questions,
+    .research-toolbar.presence-dock .toolbar-foot { display: none; }
+    .research-toolbar .toolbar-foot { left: 0; width: auto; }
+
+    /* Recording, the header's right column is the note line: "Taking notes", the clock
+       and the green light, in black — it is the state of the session, not an aside. */
+    .research-toolbar .rec-status { gap: 4px; color: #000; font: 400 12px/1 'Mona Sans', Inter, system-ui, sans-serif; }
+    .doc-note-sep { width: 2.571px; height: 2.571px; flex: none; border-radius: 7.714px; background: #000; }
+    .research-toolbar .rec-status .toolbar-time { color: #000; font: 400 12px/1 'Mona Sans', Inter, system-ui, sans-serif; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+    .research-toolbar .rec-status .rec-rings { width: 14px; height: 14px; flex: none; }
+    /* Paused, the light goes out and the clock holds: the panel should not keep saying
+       it is listening when it isn't. */
+    .research-toolbar.is-paused .rec-rings i { background: #b6b6b4; }
+
+    /* While the bottom panel is there the document stops above it, so a long section's
+       last line can never end up behind it. */
+    .research-toolbar.presence-dock.is-idle:not(.session-complete) .script-doc { bottom: var(--rae-dock-foot); }
+
+    /* --- The beat marks. Figma draws the circle and the check as one vector, so they
+       are one <svg> here too: the check overhangs the circle, and knocks itself out of
+       it with a white stroke rather than sitting inside it. --- */
+    .beat-check { position: absolute; top: 8px; left: 0; display: block; width: 12.8203px; height: 12.8203px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .beat-check:hover { transform: none; }
+    .beat-check:hover .beat-ring { stroke: #8a8a8a; }
+    .beat-check:focus-visible { outline: 2px solid #1e1e1e; outline-offset: 3px; border-radius: 50%; }
+    .beat-mark { display: block; width: 100%; height: 100%; overflow: visible; }
+    .beat-ring { transition: stroke 160ms var(--ease-out); }
+    /* The check is a filled outline, not a stroked line, so it cannot be drawn with a
+       dash offset. It doesn't need to be: the path runs left to right without ever
+       doubling back, so wiping it in from the left *is* the pen moving along it. */
+    .beat-tick { clip-path: inset(0 100% 0 0); transition: clip-path 170ms var(--ease-out); }
+    /* The circle fills first and the tick is written into it — near-linear, because a pen
+       does not decelerate for most of its travel, just a little push off the mark and a
+       settle at the tip. */
+    .beat-fill { opacity: 0; transform: scale(.55); transform-origin: 50% 50%; transition: opacity 180ms var(--ease-out), transform 240ms var(--ease-out); }
+    .beat.is-checked .beat-fill { opacity: 1; transform: scale(1); }
+    .beat.is-checked .beat-ring { opacity: 0; }
+    .beat.is-checked .beat-tick { clip-path: inset(0 -4% 0 0); transition: clip-path var(--t-beat-tick) cubic-bezier(.45, 0, .25, 1) 110ms; }
+    /* And the mark gives a little as the tip arrives. */
+    .beat.is-checked .beat-mark { transform-origin: 50% 50%; animation: beat-pop var(--t-beat-pop) var(--ease-out) calc(var(--t-beat-tick) * .68) both; }
+    @keyframes beat-pop {
+      0% { transform: scale(1); }
+      46% { transform: scale(1.13); }
+      100% { transform: scale(1); }
+    }
+    /* The circle now lives in the SVG, so the old CSS one would double it up. */
+    .doc-passage p::before { content: none; }
+
+    /* A section of questions is set on a much wider rhythm than a section of prose:
+       single lines need the air that paragraphs make for themselves — and that air is
+       also where the answers go. So a question is a fixed slot rather than a line with a
+       margin: 97.82px of it, holding a 28.82px question and up to 69px of what Rae heard
+       underneath. A one-line answer, a two-line answer and no answer at all all leave the
+       question below exactly where it was.
+
+       The frame only ever shows one-line questions, where a fixed slot and a fixed gap are
+       the same thing. They are not: later sections ask questions that run to two and three
+       lines, and a slot lets a long question eat its own breathing room — 69px under
+       section 1, 43.8 under section 2, 16.8 under the longest in section 4. So the 69 is
+       padding under the question, and what Rae heard floats inside it. */
+    .doc-passage.has-questions h3 { margin-bottom: 42px; }
+    .doc-passage.has-questions li { padding-bottom: 69px; margin-bottom: 0; }
+
+    /* --- What Rae heard (Figma 374:25895). It sits under the question, inside the 69px
+       the section already leaves between one question and the next — so a line landing
+       moves nothing. The bottom margin gives back exactly what the line takes. --- */
+    .beat-body { position: relative; display: block; flex: 1; min-width: 0; }
+    /* The line she wrote and the follow-ups she would ask are two things on one row, so
+       they are two flex items: side by side while they fit, and the chips drop to their
+       own row when they don't — 4px under the line, and starting where the *text* starts.
+       The font goes on the row, not only on the words in it: without it the block keeps
+       the question's 18px strut and every answer line is 27px tall instead of 18. */
+    /* The width of "— " at this size, measured rather than guessed: the frame's 13px was
+       drawn against a different rendering of the dash, and 2px out is visible when a chip
+       is meant to sit under the first word. In em so it holds if the size ever moves. */
+    .beat-answer { --beat-dash: 1.283em; display: none; min-height: 18px; margin-top: 2.18px; padding-left: var(--beat-dash); font: 400 12px/1.5 Inter, system-ui, sans-serif; transition: opacity var(--t-beat-fade) linear; }
+    .beat.has-answer .beat-answer { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 4px; }
+    /* Out of flow in a question section, hanging under the question's last line inside the
+       69px that is already there for it. A one-line answer, a two-line answer and none at
+       all then all leave the question below in exactly the same place. Prose keeps its
+       answer in flow — those paragraphs have no gap underneath to hang it in. */
+    .doc-passage.has-questions .beat-answer { position: absolute; top: calc(100% + 2.18px); right: 0; left: 0; margin-top: 0; }
+    /* Opened, the note is longer than the room under the question, so the question makes
+       room — as padding rather than by rejoining the flow, because padding is a thing the
+       browser will move smoothly and `position` is not. Folded it fits, so folded it moves
+       nothing at all. */
+    .doc-passage.has-questions li { transition: padding-bottom var(--t-beat-fold) var(--ease-out); }
+    .beat-answer.is-fading { opacity: 0; }
+    /* The row's 13px of padding is what puts a wrapped chip under the text. The line
+       itself has to start at the dash instead, so it is pulled back out by the same 13
+       and hangs its own wrapped lines back in — a whole answer, indented from within. */
+    .beat-said { flex: 0 0 auto; max-width: calc(100% + var(--beat-dash)); margin-left: calc(var(--beat-dash) * -1); padding-left: var(--beat-dash); text-indent: calc(var(--beat-dash) * -1); }
+    .beat-probes { display: flex; gap: 3px; }
+
+    /* Folded, a long note shows two lines and fades out of the second rather than cutting
+       it off — the sentence carries on, it just isn't on screen. The chevron sits over
+       the fade, in the same corner whether the note is open or shut, so the control does
+       not move out from under the pointer that just used it. */
+    .beat-answer .beat-said { overflow: hidden; transition: max-height var(--t-beat-fold) var(--ease-out); }
+    /* The fade ends exactly where the chevron begins and the chevron carries the same
+       white behind it, so there is no strip of half-clipped text between the two. */
+    .beat-answer.is-clamped::after { content: ''; position: absolute; right: 14px; bottom: 0; width: 88px; height: 18px; background: linear-gradient(to right, rgb(255 255 255 / 0), #fff 78%); pointer-events: none; }
+    .beat-answer.is-clamped .beat-more { background: #fff; }
+    .beat-more { display: none; position: absolute; right: 0; bottom: 0; width: 14px; height: 18px; padding: 0; border: 0; background: none; color: #8e8e8e; cursor: pointer; }
+    .beat-answer.has-more .beat-more { display: grid; place-items: center; }
+    .beat-more:hover { transform: none; color: #3e3e3e; }
+    .beat-more svg { display: block; width: 10px; height: 6px; transition: transform 220ms var(--ease-out); }
+    .beat-answer.is-open .beat-more svg { transform: rotate(180deg); }
+    /* What she heard reads as a quote, set back from the question it answers. */
+    .beat-said { opacity: .5; color: #000; font-style: italic; }
+    .beat-probes .beat-probe { text-indent: 0; }
+    /* A probe is something she would ask next, not something she heard, so it keeps its
+       full colour and wears a chip. */
+    .beat-probe { display: inline-flex; align-items: center; padding: 0 6px; border-radius: 6px; background: #f6f6f6; color: #3e3e3e; font: 400 12px/1.5 Inter, system-ui, sans-serif; white-space: nowrap; box-shadow: 0 0 .5px rgb(0 0 0 / 10%), 1px 1px 1px rgb(0 0 0 / 9%), 3px 3px 1.5px rgb(0 0 0 / 5%), 6px 6px 1.5px rgb(0 0 0 / 1%); }
+    /* Word by word, each a beat behind the last — she is working it out, not pasting it.
+       Each one rises a little past where it lands and settles back: the overshoot is
+       1.6px, small enough to feel rather than to watch. */
+    /* An inline-block is a block container, so it inherits the hanging indent and pulls
+       every word 13px left onto the one before it. The indent belongs to the line. */
+    .beat-word { display: inline-block; white-space: pre; text-indent: 0; }
+    .beat-in { opacity: 0; animation: beat-in var(--t-beat-in) var(--ease-out) both; }
+    @keyframes beat-in {
+      0% { opacity: 0; transform: translateY(6px); }
+      58% { opacity: 1; transform: translateY(-1.6px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    /* Rewriting a line she already wrote is a correction, not news: quicker, no
+       overshoot, and mostly a fade — it should not ask for the attention the first
+       draft did. */
+    .beat-answer.is-revised .beat-in { animation-name: beat-in-again; animation-duration: var(--t-beat-again); }
+    @keyframes beat-in-again {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* A chip is a thing, not a word, so it arrives as one — in either surface. */
+    .beat-probe.beat-in,
+    .compact-probe.beat-in { animation-name: beat-chip-in; }
+    @keyframes beat-chip-in {
+      0% { opacity: 0; transform: translateY(6px) scale(.92); }
+      58% { opacity: 1; transform: translateY(-1.6px) scale(1.02); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* The number lives inside the question, not out in the gutter beside the circle —
+       that is where the frame puts its (empty) number slot. A fixed slot so the text
+       lines up down the section whether the number is one digit or two, and a flex row
+       so a question that wraps hangs under its own first word rather than under the
+       number. */
+    .doc-passage li { display: flex; align-items: flex-start; }
+    .beat-n { flex: none; min-width: 27px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .beat-tick,
+      .beat.is-checked .beat-tick { transition-duration: 1ms; }
+      .beat-in,
+      .beat.is-checked .beat-mark { animation-duration: 1ms; animation-delay: 0s; }
+    }
   </style>
 </head>
 <body>
@@ -1225,17 +1786,15 @@
             <div class="preview-content">
               <p class="document-title" id="preview-title">Emerging tech - User Interview script.pdf</p>
               <div class="document-meta"><span class="pdf-tag">PDF</span><span id="preview-meta">Edited 30 minutes ago</span></div>
+              <p class="preview-stats" id="preview-stats"></p>
               <div class="page-wrap"><div class="page"></div></div>
             </div>
             <div class="preview-empty" id="preview-empty">Choose a script to preview it</div>
             <div class="preview-fade"></div>
             <span class="pagination">Page 1 of 8</span>
+            <button class="use-script" id="use-script" type="button" disabled>Use this script <kbd>↵</kbd></button>
           </div>
         </div>
-        <footer class="modal-footer">
-          <p class="footer-hint" id="footer-hint">Choose a script to continue</p>
-          <button class="use-script" id="use-script" type="button" disabled>Use this script <kbd>↵</kbd></button>
-        </footer>
       </section>
     </div>
 
@@ -1245,11 +1804,11 @@
           <div class="previewer-file-info">
             <p class="previewer-name" id="previewer-name">ET - Semi-structured interview.doc</p>
             <div class="previewer-meta">
-              <span class="previewer-stat"><span class="previewer-stat-n">5</span><span class="previewer-stat-label">sections</span></span>
+              <span class="previewer-stat"><span class="previewer-stat-n" id="previewer-sections">5</span><span class="previewer-stat-label">sections</span></span>
               <span class="previewer-dot" aria-hidden="true"></span>
-              <span class="previewer-stat"><span class="previewer-stat-n">25</span><span class="previewer-stat-label">questions</span></span>
+              <span class="previewer-stat"><span class="previewer-stat-n" id="previewer-questions">25</span><span class="previewer-stat-label">questions</span></span>
               <span class="previewer-dot" aria-hidden="true"></span>
-              <span class="previewer-stat"><span class="previewer-stat-n">30</span><span class="previewer-stat-label">mins</span></span>
+              <span class="previewer-stat"><span class="previewer-stat-n" id="previewer-mins">30</span><span class="previewer-stat-label">mins</span></span>
             </div>
           </div>
           <div class="previewer-controls" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -1303,6 +1862,7 @@
         </div>
         <div class="previewer-bar" aria-hidden="true"><div class="previewer-thumb" id="previewer-thumb"></div></div>
         <div class="previewer-footer">
+          <span class="previewer-blur" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
           <p class="previewer-footer-copy">Done reviewing your script?</p>
           <button class="previewer-cta" id="setup-assistant" type="button">Set up your assistant <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
         </div>
@@ -1336,7 +1896,7 @@
           <p class="ria-remaining">10m remaining</p>
         </div>
         <div class="ria-dots" id="ria-dots" aria-hidden="true"></div>
-        <button class="ria-nav ria-back" id="ria-back" type="button">Back <span class="shortcut" aria-label="Control Left arrow shortcut"><kbd>Ctrl</kbd><kbd>&#8592;</kbd></span></button>
+        <button class="ria-nav ria-back" id="ria-back" type="button" aria-label="Back" title="Back (Ctrl + &#8592;)"><svg viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M20.5833 13H5.41667M13 5.41667L5.41667 13L13 20.5833" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button class="ria-nav ria-next ria-stagger" id="ria-next" type="button"><span id="ria-next-label">Next</span> <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
         <button class="ria-close" id="ria-close" type="button" aria-label="Close onboarding">
           <svg viewBox="0 0 33.8813 35.155" fill="none" aria-hidden="true">
@@ -1370,50 +1930,97 @@
       <div class="meeting-toolbar">
         <div class="teams-app"><span class="teams-logo"></span>MS Teams</div><span class="toolbar-divider"></span><span class="call-time">00:34</span>
         <div class="participants" aria-hidden="true"><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span></div>
-        <button class="leave-call" id="leave-call" type="button"><span class="hangup"></span>Leave</button>
+        <button class="leave-call" id="leave-call" type="button"><svg class="hangup" viewBox="0 0 22.4 8.7025" fill="none" aria-hidden="true"><path d="M11.2 0C13.1667 0 15.1042 0.395833 17.0125 1.1875C18.9208 1.97917 20.6167 3.16667 22.1 4.75C22.3 4.95 22.4 5.18333 22.4 5.45C22.4 5.71667 22.3 5.95 22.1 6.15L19.8 8.4C19.6167 8.58333 19.4042 8.68333 19.1625 8.7C18.9208 8.71667 18.7 8.65 18.5 8.5L15.6 6.3C15.4667 6.2 15.3667 6.08333 15.3 5.95C15.2333 5.81667 15.2 5.66667 15.2 5.5V2.65C14.5667 2.45 13.9167 2.29167 13.25 2.175C12.5833 2.05833 11.9 2 11.2 2C10.5 2 9.81667 2.05833 9.15 2.175C8.48333 2.29167 7.83333 2.45 7.2 2.65V5.5C7.2 5.66667 7.16667 5.81667 7.1 5.95C7.03333 6.08333 6.93333 6.2 6.8 6.3L3.9 8.5C3.7 8.65 3.47917 8.71667 3.2375 8.7C2.99583 8.68333 2.78333 8.58333 2.6 8.4L0.3 6.15C0.1 5.95 0 5.71667 0 5.45C0 5.18333 0.1 4.95 0.3 4.75C1.76667 3.16667 3.45833 1.97917 5.375 1.1875C7.29167 0.395833 9.23333 0 11.2 0Z" fill="currentColor"/></svg>Leave</button>
       </div>
       <div class="meeting-body">
         <aside class="teams-sidebar" aria-hidden="true"><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span><span class="participant"><i></i><b></b></span></aside>
         <main class="call-stage"><div class="call-self"><div class="avatar">You</div><p class="call-waiting">Waiting for attendee</p></div></main>
       </div>
       <aside class="research-toolbar" id="research-toolbar" aria-label="Research assistant">
+        <!-- The mini bar's footer is a slab behind the card, not a row inside it: it
+             carries the card's own radius and shows 44px of itself below the bottom
+             edge. Outside the surface, because the surface clips. -->
+        <div class="compact-slab">
+          <div class="compact-foot">
+            <span class="compact-note">Ria will take notes</span>
+            <button class="compact-start" id="compact-start-rec" type="button">Start Recording <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
+          </div>
+          <!-- One answer can cover most of a section further down the script. When it
+               does, the slab comes back while recording to say so and offer the jump. -->
+          <div class="compact-offer" id="compact-offer" role="status">
+            <p class="compact-offer-copy" id="compact-offer-copy"></p>
+            <button class="compact-jump" id="compact-jump" type="button"><span id="compact-jump-label">Jump</span> <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
+            <div class="compact-offer-bar" aria-hidden="true"><i id="compact-offer-fill"></i></div>
+          </div>
+        </div>
+        <!-- The beat's tick hangs off the left edge of the card, so it lives outside the
+             surface too. It is the same fact as the document's tick, drawn small. -->
+        <button class="compact-tick" id="compact-tick" type="button" aria-pressed="false" aria-label="Mark as covered" hidden>
+          <img src="assets/mini-tick.svg" alt="" aria-hidden="true">
+        </button>
+        <!-- Outside the surface, which clips: on a one-line part the card is shorter than
+             the menu is tall. Anchored to the header's fixed geometry instead. -->
+        <div class="dock-menu compact-menu" id="compact-menu" role="menu" hidden>
+          <button class="dock-menu-item pause-rec" type="button" role="menuitem">Pause recording</button>
+          <button class="dock-menu-item end-rec" type="button" role="menuitem">Stop recording</button>
+        </div>
         <div class="toolbar-surface">
           <div class="compact-bar" id="compact-bar" aria-hidden="true">
             <div class="compact-head">
               <div class="compact-where">
                 <span class="compact-rec" aria-hidden="true"><i></i><i></i><i></i></span>
-                <span class="compact-section" id="compact-section">Start of the study</span>
-                <span class="compact-part">(<span class="compact-part-n" id="compact-part-n">1</span><span id="compact-part-total">/2</span>)</span>
+                <span class="compact-section roll roll-width" id="compact-section"></span>
+                <span class="compact-part">(<span class="compact-part-n roll" id="compact-part-n"></span><span id="compact-part-total">/2</span>)</span>
               </div>
-              <div class="presence-switch compact-presence" role="group" aria-label="Assistant presence">
-                <button class="presence-btn" type="button" data-presence="focus" aria-pressed="false" title="Focus — floating card">
-                  <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3125" aria-hidden="true"><rect x="2.53" y="3.75" width="9.94" height="7.5" rx="1.875"/></svg>
+              <div class="compact-actions">
+                <button class="compact-expand" type="button" aria-label="Open the sidebar" title="Open the sidebar">
+                  <img class="dock-icon" src="assets/mini-expand.svg" alt="" aria-hidden="true">
                 </button>
-                <button class="presence-btn is-on" type="button" data-presence="compact" aria-pressed="true" title="Compact — fold down to a card">
-                  <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3125" aria-hidden="true"><rect x="2.53" y="6.19" width="9.94" height="2.625" rx="1.3125"/></svg>
-                </button>
-                <button class="presence-btn" type="button" data-presence="dock" aria-pressed="false" title="Dock — pin beside the call">
-                  <svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.3125" aria-hidden="true"><rect x="2.06" y="2.53" width="10.875" height="9.9375" rx="1.875"/><path d="M9 2.53v9.94"/></svg>
+                <button class="dock-more-btn" id="compact-more-btn" type="button" data-menu="compact-menu" aria-haspopup="true" aria-expanded="false" aria-label="Session options">
+                  <img class="dock-icon dock-icon-more" src="assets/dock-more.svg" alt="" aria-hidden="true">
                 </button>
               </div>
             </div>
             <div class="compact-body" id="compact-copy">
-              <span class="compact-number" id="compact-number">1</span>
-              <p class="compact-text" id="compact-part-text">Start of the study</p>
-            </div>
-            <div class="compact-foot">
-              <span class="compact-keys" aria-label="Arrow down and arrow up to move between questions"><kbd>&#8595;</kbd><kbd>&#8593;</kbd></span>
+              <span class="compact-number"><span class="roll" id="compact-number-part"></span><span class="compact-number-total" id="compact-number-total">/3</span></span>
+              <div class="compact-column">
+                <div class="roll-block compact-fade" id="compact-fade"></div>
+                <button class="compact-endrec" id="compact-endrec" type="button" hidden>End recording</button>
+                <!-- The dash under the part is the way to write a note against it. Idle
+                     it is a bare em dash at 20%; hovered it says what it is for. -->
+                <div class="compact-jot" id="compact-jot">
+                  <button class="compact-jot-btn" id="compact-jot-btn" type="button"><span class="compact-jot-dash" aria-hidden="true">&mdash;</span><span class="compact-jot-label">Type here</span></button>
+                  <span class="compact-probes" id="compact-probes"></span>
+                  <input class="compact-jot-input" id="compact-jot-input" type="text" aria-label="Note on this part" hidden>
+                </div>
+              </div>
             </div>
           </div>
           <div class="compact-complete" id="compact-complete" aria-hidden="true">
-            <span class="compact-check" aria-hidden="true">
-              <svg viewBox="0 0 44.13 29.83" aria-hidden="true"><path d="M0 15.389 14.393 29.826 44.133 0" fill="none" stroke="#5B5B5B" stroke-width="6"/></svg>
-            </span>
-            <div class="compact-copy">
-              <p class="compact-meta">Session complete</p>
-              <p class="compact-summary"><span id="compact-complete-insights">0</span> insights · <span id="compact-complete-questions">4/4</span> · <span id="compact-complete-duration">00:34</span></p>
+            <div class="compact-complete-head">
+              <span class="compact-check" aria-hidden="true">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="#0a84ff"/><path d="M4.4 8.2 6.9 10.7 11.7 5.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <p class="compact-complete-title">Session Complete. Nice work!</p>
+              <button class="compact-expand" type="button" aria-label="Open the sidebar" title="Open the sidebar">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.6 6.4 13.2 2.8"/><path d="M9.9 2.8h3.3v3.3"/><path d="M6.4 9.6 2.8 13.2"/><path d="M6.1 13.2H2.8V9.9"/></svg>
+              </button>
             </div>
-            <button class="compact-doc" id="compact-doc" type="button">View doc</button>
+            <div class="compact-metrics">
+              <div class="compact-metric">
+                <p class="compact-metric-value"><svg class="compact-sparkle" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c0 6.075 5.925 12 12 12-6.075 0-12 5.925-12 12 0-6.075-5.925-12-12-12 6.075 0 12-5.925 12-12z"/></svg><span id="compact-complete-insights">0</span></p>
+                <p class="compact-metric-label">Insights</p>
+              </div>
+              <div class="compact-metric">
+                <p class="compact-metric-value"><span id="compact-complete-questions">4</span><span class="compact-metric-total" id="compact-complete-total">/4</span></p>
+                <p class="compact-metric-label">Questions</p>
+              </div>
+              <div class="compact-metric">
+                <p class="compact-metric-value"><span id="compact-complete-duration">00:34</span></p>
+                <p class="compact-metric-label">Duration</p>
+              </div>
+            </div>
+            <button class="compact-doc" id="compact-doc" type="button">View insight analysis <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
           </div>
           <header class="toolbar-header" id="toolbar-header">
             <span class="drag-handle" id="drag-handle" aria-label="Drag research assistant"></span>
@@ -1432,22 +2039,35 @@
             </div>
             <p class="toolbar-title">Rae is taking notes</p>
             <span class="rec-chip" id="rec-chip" role="status"><i class="rec-dot" aria-hidden="true"></i><span class="rec-label"></span><span class="toolbar-time">00:34</span></span>
-            <div class="doc-info">
-              <p class="doc-note">Ria will take notes<span class="doc-note-sep" aria-hidden="true"></span><span id="doc-note-time">00:34</span></p>
-              <p class="doc-title">Research Script</p>
-              <p class="doc-path">ET - Semi-structured interview.doc</p>
-            </div>
-            <div class="rec-status" role="status">Recording<span class="rec-rings" aria-hidden="true"><i></i><i></i><i></i></span></div>
-            <div class="presence-switch" role="group" aria-label="Assistant presence">
-              <button class="presence-btn is-on" type="button" data-presence="focus" aria-pressed="true" title="Focus — floating card">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.7" y="4" width="10.6" height="8" rx="2"/></svg>
-              </button>
-              <button class="presence-btn" type="button" data-presence="compact" aria-pressed="false" title="Compact — fold down to a strip">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.7" y="6.6" width="10.6" height="2.8" rx="1.4"/></svg>
-              </button>
-              <button class="presence-btn" type="button" data-presence="dock" aria-pressed="false" title="Dock — pin beside the call">
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.2" y="2.7" width="11.6" height="10.6" rx="2"/><path d="M9.6 2.7v10.6"/></svg>
-              </button>
+            <div class="doc-head">
+              <div class="doc-info">
+                <p class="doc-path">ET - Semi-structured interview.doc</p>
+                <div class="doc-id-row">
+                  <p class="doc-title">Research Script</p>
+                </div>
+              </div>
+              <div class="doc-actions">
+                <div class="rec-status" role="status">Taking notes<span class="doc-note-sep" aria-hidden="true"></span><span class="toolbar-time">00:00</span><span class="rec-rings" aria-hidden="true"><i></i><i></i><i></i></span></div>
+                <div class="dock-tools">
+                  <div class="presence-switch" role="group" aria-label="Assistant presence">
+                    <button class="presence-btn" type="button" data-presence="compact" aria-pressed="false" aria-label="Collapse the sidebar" title="Collapse — fold down to the mini bar">
+                      <img class="dock-icon" src="assets/dock-collapse.svg" alt="" aria-hidden="true">
+                    </button>
+                    <button class="presence-btn" type="button" data-presence="dock" aria-pressed="false" title="Dock — pin beside the call">
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.2" y="2.7" width="11.6" height="10.6" rx="2"/><path d="M9.6 2.7v10.6"/></svg>
+                    </button>
+                  </div>
+                  <div class="dock-more">
+                    <button class="dock-more-btn" id="dock-more-btn" type="button" data-menu="dock-menu" aria-haspopup="true" aria-expanded="false" aria-label="Session options">
+                      <img class="dock-icon dock-icon-more" src="assets/dock-more.svg" alt="" aria-hidden="true">
+                    </button>
+                    <div class="dock-menu" id="dock-menu" role="menu" hidden>
+                      <button class="dock-menu-item pause-rec" id="pause-rec" type="button" role="menuitem">Pause recording</button>
+                      <button class="dock-menu-item end-rec" id="end-rec" type="button" role="menuitem">Stop recording</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <button class="manual-notes" type="button">Add your own note <kbd>N</kbd></button>
             <button class="suggest-toggle" id="suggest-toggle" type="button" aria-pressed="true"><span class="suggest-dot" aria-hidden="true"></span>Suggestions</button>
@@ -1459,11 +2079,12 @@
               <div class="doc-page">
               <section class="doc-passage is-on" data-section="I">
                 <h3>Start of the study:</h3>
-                <p>Thanks for taking part in this student research project. The purpose of this interview is to understand what life is like as a Master&rsquo;s student at Kingston University, including your studies, daily routine, social life, and any challenges you experience. There are no right or wrong answers. I&rsquo;m interested in your personal experience, so please answer as openly as you feel comfortable. Do you have any questions before we begin?</p>
+                <p>Thanks for taking part in this student research project. The purpose of this interview is to understand what life is like as a Master&rsquo;s student at Kingston University, including your studies, daily routine, social life, and any challenges you experience.</p>
+                <p>There are no right or wrong answers. I&rsquo;m interested in your personal experience, so please answer as openly as you feel comfortable. Do you have any questions before we begin?</p>
                 <p>Is it okay if I audio record this interview for research purposes?</p>
               </section>
-              <section class="doc-passage" data-section="1">
-                <h3>Section 1 - Warm up questions</h3>
+              <section class="doc-passage" data-section="1" data-label="Warm up">
+                <h3>Warm up questions</h3>
                 <ol>
                   <li>Could you tell me a bit about yourself?</li>
                   <li>What course are you studying?</li>
@@ -1471,17 +2092,19 @@
                   <li>Where are you from?</li>
                 </ol>
               </section>
-              <section class="doc-passage" data-section="2">
-                <h3>Section 2: Day-to-Day Student Life</h3>
+              <section class="doc-passage" data-section="2" data-label="Background">
+                <h3>Background</h3>
                 <ol>
                   <li>What does a typical day or week look like for you?</li>
                   <li>How do you usually balance studying, assignments, and your personal life?</li>
                   <li>What do you enjoy most about being a student at Kingston?</li>
                   <li>What has been the most challenging part?</li>
+                  <li>Was there anything you wanted to capture or do during the session that you could not get to?</li>
+                  <li>How complete do your notes feel right now compared to what actually happened in the room?</li>
                 </ol>
               </section>
               <section class="doc-passage" data-section="3">
-                <h3>Section 3: University &amp; Social Life</h3>
+                <h3>University &amp; Social Life</h3>
                 <ol>
                   <li>How would you describe your experience with other students?</li>
                   <li>Do you feel like you&rsquo;ve been able to make friends or meet people?</li>
@@ -1490,7 +2113,7 @@
                 </ol>
               </section>
               <section class="doc-passage" data-section="4">
-                <h3>Section 4: Looking Back</h3>
+                <h3>Looking Back</h3>
                 <ol>
                   <li>If you could give advice to someone starting a Master&rsquo;s at Kingston, what would you tell them?</li>
                   <li>What is one thing you wish you had known before starting?</li>
@@ -1504,6 +2127,16 @@
               </div>
             </div>
             <span class="doc-scrollbar" id="doc-scrollbar" aria-hidden="true"></span>
+            <div class="doc-hint" id="doc-hint" role="status" hidden>
+              <span class="doc-hint-bar" aria-hidden="true"><i id="doc-hint-fill"></i></span>
+              <div class="doc-hint-said">
+                <button class="doc-hint-close" id="doc-hint-close" type="button" aria-label="Dismiss">
+                  <svg viewBox="0 0 25.7891 25.7891" fill="none" aria-hidden="true"><rect width="25.7891" height="25.7891" rx="12.8945" fill="#e5e5e5"/><path d="M17.2376 8.48416L12.5211 13.2006M12.5211 13.2006L7.80467 17.9171M12.5211 13.2006L7.80467 8.48416M12.5211 13.2006L17.2376 17.9171" stroke="#7a7a7a" stroke-width="1.91857" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <p class="doc-hint-copy" id="doc-hint-copy"></p>
+              </div>
+              <button class="doc-hint-go" id="doc-hint-go" type="button"><span id="doc-hint-go-label"></span> <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
+            </div>
           </div>
           <section class="questions"></section>
           <div class="toolbar-foot">
@@ -1514,9 +2147,12 @@
             <span class="insight-plus" id="insight-plus" aria-hidden="true">+1</span>
             <div class="doc-edit"><button type="button" aria-label="Add your own note"><img src="assets/ria-edit.svg" alt=""></button></div>
             <span class="doc-keys" aria-label="Arrow keys move between sections"><kbd>&#8592;</kbd><kbd>&#8594;</kbd></span>
-            <button class="start-rec" id="start-rec" type="button">Start Recording <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
             <button class="next-beat" id="next-beat" type="button" hidden><span id="next-beat-label">Next question</span> <kbd>→</kbd></button>
             <button class="finish-session" id="finish-session" type="button">Finish Session <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
+          </div>
+          <div class="dock-foot">
+            <p class="doc-note">Ria will take notes</p>
+            <button class="start-rec" id="start-rec" type="button">Start Recording <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
           </div>
         </div>
 
@@ -1548,7 +2184,6 @@
           </div>
           <button class="view-doc" id="view-doc" type="button">View insight doc <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>↵</kbd></span></button>
         </section>
-        <span class="resize-grip" id="resize-grip" aria-hidden="true" title="Drag to resize"></span>
         <div class="snackbar" id="snackbar" role="status" aria-live="polite"><span id="snackbar-label"></span><button class="snack-action" id="snack-action" type="button" hidden></button></div>
       </aside>
     </section>
@@ -1603,59 +2238,977 @@
       // One model, read straight off the document, so the floating card and the
       // mini bar can never drift: sections carry parts, parts carry the copy.
       const script = passages.map((section, i) => {
+        // A heading names its section and nothing else — the "Section n" prefix went
+        // with the padding that used to hold it out to the gutter.
         const heading = section.querySelector('h3').textContent.replace(/:\s*$/, '');
-        // The gutter already carries the number, so the name drops its "Section n" prefix.
-        const name = heading.replace(/^Section\s*\d+\s*[-:\u2013\u2014]?\s*/i, '');
-        // The intro is marked "I", not a number — it carries no section prefix.
+        // The intro is marked "I", not a number — it counts as section 0 in the mini
+        // bar's numbering, which is why the opener reads "0.1".
         const marker = markers[i].textContent.trim();
         const numbered = /^\d+$/.test(marker);
         return {
           title: heading,
           marker,
           numbered,
-          label: numbered ? `${marker}. ${name}` : name,
+          number: numbered ? marker : '0',
+          // The bar has one line for the section; a script that spells a heading out in
+          // full can hand it a shorter name to wear.
+          label: section.dataset.label || heading,
           parts: [...section.querySelectorAll('p, li')].map((node) => node.textContent.trim()),
         };
       });
+      // Figma's own vector (374:26307): unchecked it is an outline, checked it is a filled
+      // circle with the tick knocked out of it in white. Both live in the one 12.82 box —
+      // the tick no longer overhangs, so the box is the circle.
+      const BEAT_MARK = '<svg class="beat-mark" viewBox="0 0 12.8203 12.8203" fill="none" aria-hidden="true">'
+        + '<rect class="beat-ring" x="0.641016" y="0.641016" width="11.5383" height="11.5383" rx="5.76914" stroke="#b8b8b8" stroke-width="1.28203"/>'
+        + '<circle class="beat-fill" cx="6.41016" cy="6.41016" r="6.41016" fill="#000"/>'
+        + '<path class="beat-tick" d="M10.8542 3.49047L5.16546 10.3162L4.57077 9.72025L1.96875 7.06524L2.51211 6.52063L3.05547 5.97727L5.06155 8.03633L9.67236 2.50391L10.8542 3.49047Z" fill="#fff"/>'
+        + '</svg>';
+
+      // A tick is a button so it can be reached by keyboard, and `button:focus-visible`
+      // draws a 2px ring on the global 87px radius — right for a Tab, wrong for a click,
+      // where it leaves a black ring sitting around the mark you just made. A click
+      // carries `detail > 0`; Enter and Space carry 0, so the ring survives where it is
+      // earned.
+      function blurIfClicked(event) {
+        if (event.detail > 0) event.currentTarget.blur();
+      }
+
+      // Every paragraph and every numbered question is a beat — a thing you say, and a
+      // thing you can tick off. The button carries the mark so it can be reached by
+      // keyboard; the whole line is a click target because that is what you aim at.
+      const beats = [...scriptDoc.querySelectorAll('.doc-passage p, .doc-passage li')];
+      function setBeatChecked(beat, on) {
+        beat.classList.toggle('is-checked', on);
+        const mark = beat.querySelector('.beat-check');
+        if (mark) mark.setAttribute('aria-pressed', String(on));
+        // One fact, two surfaces: whichever one was ticked, the other says so too.
+        renderCompactTick(compactCard.classList.contains('is-recording'));
+        syncCoverage(beat, on);
+      }
+
+      // ------------------------------------------------------------ coverage
+      // The panel under the mini bar is the sidebar's own jump-to component drawn small:
+      // same copy, same target, and the same answers landing whether or not the offer is
+      // taken. So it is raised and lowered by the same `showHint` / `hideHint`, and which
+      // beat raises it is read off `SCRIPTED_MOVES` rather than written down again here.
+      const offerCopyEl = document.getElementById('compact-offer-copy');
+      const offerFillEl = document.getElementById('compact-offer-fill');
+      const jumpEl = document.getElementById('compact-jump');
+      const jumpLabelEl = document.getElementById('compact-jump-label');
+
+      function hintForKey(key) {
+        let found = null;
+        Object.values(SCRIPTED_MOVES).forEach((moves) => moves.forEach((move) => move.forEach((step) => {
+          if (!found && step.key === key && step.hint) found = step.hint;
+        })));
+        return found;
+      }
+
+      function keyForBeat(beat) {
+        const passage = beat.closest('.doc-passage');
+        const index = passage ? passages.indexOf(passage) : -1;
+        if (index < 0) return null;
+        const at = [...passage.querySelectorAll('.beat')].indexOf(beat);
+        return at < 0 ? null : `${script[index].number}.${at + 1}`;
+      }
+
+      // Ticking the beat is the mini bar's way of saying she has this one — the same
+      // moment the sidebar's move reaches at the end of its own answer. Untick it and the
+      // offer goes with it, so the run can be played again.
+      function syncCoverage(beat, on) {
+        const key = keyForBeat(beat);
+        const hint = key && hintForKey(key);
+        if (!hint) return;
+        if (on) showHint(hint); else hideHint();
+      }
+
+      // Each section counts its own questions from 1. A CSS counter would do it, but the
+      // sections that aren't on screen are `display: none`, and a box that is never
+      // generated never increments anything — so the numbers are written in instead.
+      let questionNo = 0;
+      beats.forEach((beat) => {
+        beat.classList.add('beat');
+
+        // The question and whatever Rae heard under it are one column, so the answer
+        // lines up with the question text rather than with the number in front of it.
+        const body = document.createElement('span');
+        body.className = 'beat-body';
+        const line = document.createElement('span');
+        line.className = 'beat-line';
+        while (beat.firstChild) line.appendChild(beat.firstChild);
+        const answer = document.createElement('span');
+        answer.className = 'beat-answer';
+        body.append(line, answer);
+        beat.appendChild(body);
+
+        const mark = document.createElement('button');
+        mark.type = 'button';
+        mark.className = 'beat-check';
+        mark.setAttribute('aria-pressed', 'false');
+        mark.setAttribute('aria-label', 'Mark as covered');
+        mark.innerHTML = BEAT_MARK;
+        beat.prepend(mark);
+
+        if (beat.tagName === 'LI') {
+          if (beat.parentElement.firstElementChild === beat) questionNo = 0;
+          questionNo += 1;
+          const number = document.createElement('span');
+          number.className = 'beat-n';
+          // The <li> already carries its position; this is the same number drawn.
+          number.setAttribute('aria-hidden', 'true');
+          number.textContent = `${questionNo}.`;
+          beat.insertBefore(number, mark.nextSibling);
+        }
+        const toggle = () => setBeatChecked(beat, !beat.classList.contains('is-checked'));
+        // The passage underneath also takes clicks (it sets the section); a beat is a
+        // smaller target inside it and answers for itself.
+        beat.addEventListener('click', (event) => {
+          event.stopPropagation();
+          toggle();
+        });
+        mark.addEventListener('click', (event) => { event.stopPropagation(); blurIfClicked(event); toggle(); });
+      });
+
+      // '1.3' is section 1, question 3 — the same key the mini bar counts by.
+      function beatFor(key) {
+        const [sectionNo, partNo] = key.split('.');
+        const index = script.findIndex((section) => section.number === sectionNo);
+        if (index < 0) return null;
+        return passages[index].querySelectorAll('.beat')[Number(partNo) - 1] || null;
+      }
+
+      // Each word fades up a beat after the one before it. Returns how long the whole
+      // line takes to arrive, so whatever comes next can wait for it.
+      function streamWords(host, text, from, gap) {
+        let at = from;
+        text.split(' ').forEach((word, i, all) => {
+          const span = document.createElement('span');
+          span.className = 'beat-word beat-in';
+          span.textContent = i === all.length - 1 ? word : `${word} `;
+          span.style.animationDelay = `${at}ms`;
+          host.appendChild(span);
+          at += gap;
+        });
+        return at;
+      }
+
+      // Reserving the line's height and filling it happen in the same frame, so nothing
+      // below it moves while the words are still arriving.
+      // A note is written into a two-line window, and once it outgrows one it keeps being
+      // written: the older lines slide up out of the window and you watch the newest one
+      // arrive, the way text does while something is still writing it.
+      //
+      // All the words are in the DOM from the first frame — only their opacity is
+      // staggered — so the window cannot follow the height, which never changes. It
+      // follows the word that is *arriving*, worked out from the clock and the same
+      // per-word gap the animation delays were built from.
+      function followStream(host, gap, runFor) {
+        const said = host.querySelector('.beat-said');
+        if (!said) return;
+        const shut = CLAMP_LINES * ANSWER_LINE;
+        const words = [...said.querySelectorAll('.beat-word')];
+        const started = performance.now();
+        let outgrew = false;
+        let at = said.scrollTop;
+        window.clearInterval(host.streamTick);
+        host.streamTick = window.setInterval(() => {
+          const now = performance.now();
+          const done = now - started >= runFor;
+          let want = 0;
+          if (!done && words.length) {
+            const word = words[Math.min(words.length - 1, Math.floor((now - started) / Math.max(1, gap)))];
+            // Laid-out position, not the drawn one. Every word is mid-animation as it
+            // arrives — rising 6px, overshooting 1.6 — so measuring where it is *drawn*
+            // makes the target wander by that much every tick, and the window shivers
+            // chasing it. offsetTop does not move.
+            const reached = word.offsetTop + word.offsetHeight;
+            // The fade and the chevron arrive the moment the writing passes the second
+            // line — not before, because until then there is nothing more to show.
+            if (reached > shut + 1) outgrew = true;
+            want = Math.max(0, Math.min(reached - shut, said.scrollHeight - shut));
+          }
+          host.classList.toggle('has-more', outgrew);
+          if (outgrew) host.classList.add('is-clamped');
+          // Eased on a number of our own rather than by reading scrollTop back each tick:
+          // the browser rounds what it gives back, and a lerp fed its own rounding jitters
+          // on the spot instead of settling.
+          at += (want - at) * 0.2;
+          said.scrollTop = at;
+          if (done && at < 0.6) {
+            at = 0;
+            said.scrollTop = 0;
+            window.clearInterval(host.streamTick);
+            host.streamTick = 0;
+            // Back at the top, which is the note's beginning — what the folded state is
+            // there to show.
+            foldAnswer(host);
+          }
+        }, 16);
+      }
+
+      // A long line folds to two, with a way to open it. Measured rather than counted
+      // characters: whether it overflows depends on the words, the width and the font.
+      function foldAnswer(host) {
+        const said = host.querySelector('.beat-said');
+        if (!said) return;
+        const shut = CLAMP_LINES * ANSWER_LINE;
+        said.style.maxHeight = '';
+        const over = said.scrollHeight > shut + 1;
+        host.classList.toggle('has-more', over);
+        setFold(host, over ? false : null);
+      }
+
+      // Open, shut, or neither. The note floats in the 69px under its question, so when it
+      // needs more than that the question's padding is what gives — a length the browser
+      // will move smoothly, where swapping the note back into the flow would only jump.
+      function setFold(host, open) {
+        const said = host.querySelector('.beat-said');
+        const beat = host.closest('.beat');
+        if (!said || !beat) return;
+        if (open === null) {
+          host.classList.remove('is-clamped', 'is-open');
+          said.style.maxHeight = '';
+          beat.style.paddingBottom = '';
+          return;
+        }
+        host.classList.toggle('is-open', open);
+        host.classList.toggle('is-clamped', !open);
+        const full = said.scrollHeight;
+        said.style.maxHeight = open ? `${full}px` : `${CLAMP_LINES * ANSWER_LINE}px`;
+        // The 69px is the gap under whatever is written there, so when the note grows past
+        // it the gap moves down with it rather than being eaten.
+        beat.style.paddingBottom = open ? `${ANSWER_TOP + full + QUESTION_GAP}px` : '';
+      }
+
+      // `atOnce` writes the whole line in one go, for answers Rae already had.
+      function revealAnswer(beat, mark, revised, atOnce) {
+        const host = beat.querySelector('.beat-answer');
+        if (!host || !mark) return 0;
+        host.textContent = '';
+        setFold(host, null);
+        host.classList.remove('has-more');
+        host.classList.toggle('is-revised', !!revised);
+        beat.classList.add('has-answer');
+        window.clearInterval(host.streamTick);
+        const gap = atOnce ? 0 : paced(revised ? ANSWER_WORD_AGAIN : ANSWER_WORD);
+        let at = 0;
+        if (mark.answer) {
+          const said = document.createElement('span');
+          said.className = 'beat-said';
+          host.appendChild(said);
+          at = streamWords(said, `\u2014 ${mark.implied ? 'Implied ' : ''}${mark.answer}`, 0, gap);
+          // The window is two lines from the first word, or there is nothing for the text
+          // to be written *into* and it would just run on down the page.
+          said.style.maxHeight = `${CLAMP_LINES * ANSWER_LINE}px`;
+        }
+        // A probe is something Rae would ask next, not something she heard, so it wears a
+        // chip, keeps its full colour where the quote is set back, and travels with the
+        // others as one row so a wrap takes all of them together.
+        const probes = mark.probes || [];
+        if (probes.length) {
+          const row = document.createElement('span');
+          row.className = 'beat-probes';
+          probes.forEach((probe) => {
+            const chip = document.createElement('span');
+            chip.className = 'beat-probe beat-in';
+            chip.textContent = asQuestion(probe);
+            chip.style.animationDelay = `${at}ms`;
+            row.appendChild(chip);
+            at += gap;
+          });
+          host.appendChild(row);
+        }
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'beat-more';
+        more.setAttribute('aria-label', 'Show the whole note');
+        more.innerHTML = '<svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1.4 5 4.8 9 1.4"/></svg>';
+        more.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const open = !host.classList.contains('is-open');
+          setFold(host, open);
+          more.setAttribute('aria-label', open ? 'Fold the note back' : 'Show the whole note');
+        });
+        host.appendChild(more);
+        followStream(host, gap, at + paced(ANSWER_TICK_LAG));
+        return at;
+      }
+
+      // What Rae says once she has written something up and read ahead: it rises from the
+      // foot of the panel, waits, and goes. The bar is how much of the section she is
+      // talking about she reckons is already covered.
+      const hintEl = document.getElementById('doc-hint');
+      const hintCopyEl = document.getElementById('doc-hint-copy');
+      const hintFillEl = document.getElementById('doc-hint-fill');
+      const hintGoEl = document.getElementById('doc-hint-go');
+      const hintGoLabelEl = document.getElementById('doc-hint-go-label');
+      let hintTimer = 0;
+      let hintTo = -1;
+
+      function hideHint() {
+        // The mini bar's copy of the panel goes with it, whichever one is on screen.
+        compactCard.classList.remove('has-offer', 'is-draining');
+        sizeCompactCard();
+        if (!hintEl || hintEl.hidden) return;
+        window.clearTimeout(hintTimer);
+        // The draining class stays on the way out: taking it off returns the bar to its
+        // full width, and a full bar flashing back while the panel fades is the last thing
+        // it should say. It is reset on the way in instead.
+        hintEl.classList.add('idle');
+        scriptDoc.classList.remove('is-hinting');
+        hintTo = -1;
+        // Long enough for it to have finished leaving, or it is taken off the page part
+        // way out.
+        hintTimer = window.setTimeout(() => { hintEl.hidden = true; }, 620);
+      }
+
+      // Answers Rae already had when she offered. They go in as the offer goes up, not when
+      // it is taken: she has them either way, so scrolling to the section yourself finds it
+      // in the same state as accepting the jump would have.
+      function landAnswers(steps) {
+        (steps || []).forEach((step) => {
+          const beat = beatFor(step.key);
+          if (!beat) return;
+          revealAnswer(beat, step, false, true);
+          if (step.tick) setBeatChecked(beat, true);
+        });
+      }
+
+      function showHint(hint) {
+        if (!hintEl || !hint) return;
+        window.clearTimeout(hintTimer);
+        hintCopyEl.textContent = hint.copy;
+        hintGoLabelEl.textContent = hint.go;
+        hintTo = script.findIndex((section) => section.number === hint.section);
+        landAnswers(hint.lands);
+        hintGoEl.hidden = hintTo < 0;
+        hintEl.hidden = false;
+        hintEl.classList.remove('is-draining');
+        hintEl.classList.add('idle');
+        scriptDoc.classList.add('is-hinting');
+        // Committed before released, or the browser folds the two writes into one and the
+        // panel is simply there rather than arriving.
+        void hintEl.offsetHeight;
+        hintEl.classList.remove('idle');
+        hintEl.classList.add('is-draining');
+        showCompactOffer(hint);
+      }
+
+      // The same panel at the foot of the mini bar. There are 324px to say it in rather
+      // than 467, so a hint may carry a `short` form; without one it wears the sidebar's
+      // own words.
+      function showCompactOffer(hint) {
+        const short = hint.short || {};
+        if (offerCopyEl) offerCopyEl.textContent = short.copy || hint.copy;
+        if (jumpLabelEl) jumpLabelEl.textContent = short.go || hint.go;
+        if (jumpEl) jumpEl.hidden = hintTo < 0;
+        compactCard.classList.remove('is-draining');
+        compactCard.classList.add('has-offer');
+        // Committed before released, or a second offer never restarts the drain.
+        void compactCard.offsetHeight;
+        compactCard.classList.add('is-draining');
+        sizeCompactCard();
+      }
+
+      if (hintEl) {
+        // The bar running out is what dismisses it, so pausing the bar on hover holds the
+        // panel open for exactly as long as the pointer is on it. Either copy of the bar
+        // can be the one that finishes — only one of them is ever on screen.
+        hintFillEl.addEventListener('animationend', hideHint);
+        if (offerFillEl) offerFillEl.addEventListener('animationend', hideHint);
+        // One door: the mini bar's button is the sidebar's, so Ctrl+Enter and the two
+        // panels cannot drift apart on what taking the offer means.
+        if (jumpEl) jumpEl.addEventListener('click', (event) => {
+          event.stopPropagation();
+          hintGoEl.click();
+        });
+        document.getElementById('doc-hint-close').addEventListener('click', (event) => {
+          event.stopPropagation();
+          hideHint();
+        });
+        hintGoEl.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const to = hintTo;
+          hideHint();
+          if (to >= 0) setDocSection(to);
+        });
+      }
+
+      // Each section keeps its own place in its own conversation.
+      const movesPlayed = {};
+      let moveRunning = false;
+
+      // One step: rewrite the line, then tick if this is where the question closes.
+      // A question that is already ticked stays ticked — the tick is a fact about the
+      // question, not about the latest thing she wrote under it.
+      function runStep(beat, step, done) {
+        const revised = beat.classList.contains('has-answer');
+        const start = () => {
+          const landed = revealAnswer(beat, step, revised) + paced(ANSWER_TICK_LAG);
+          const after = () => { if (step.hint) showHint(step.hint); done(); };
+          if (step.tick && !beat.classList.contains('is-checked')) {
+            window.setTimeout(() => {
+              setBeatChecked(beat, true);
+              // The tick's own duration, read back off the rule that is now matching it,
+              // rather than a second copy of the number living in here.
+              const tick = beat.querySelector('.beat-tick');
+              const drawn = tick ? parseFloat(getComputedStyle(tick).transitionDuration) * 1000 : 0;
+              window.setTimeout(after, drawn + paced(ANSWER_HOLD));
+            }, landed);
+            return;
+          }
+          window.setTimeout(after, landed + paced(ANSWER_HOLD));
+        };
+        // Revising a line she already wrote: let the old one go first, or the new words
+        // arrive on top of the ones they replace.
+        if (!revised) { start(); return; }
+        const host = beat.querySelector('.beat-answer');
+        host.classList.add('is-fading');
+        window.setTimeout(() => { host.classList.remove('is-fading'); start(); }, paced(ANSWER_FADE));
+      }
+
+      function movesLeft() {
+        const number = script[docSection].number;
+        const moves = SCRIPTED_MOVES[number] || [];
+        return (movesPlayed[number] || 0) < moves.length;
+      }
+
+      function playNextMove() {
+        if (moveRunning) return;
+        const number = script[docSection].number;
+        const played = movesPlayed[number] || 0;
+        const move = (SCRIPTED_MOVES[number] || [])[played];
+        if (!move) return;
+        movesPlayed[number] = played + 1;
+        moveRunning = true;
+        let at = 0;
+        const next = () => {
+          const step = move[at];
+          at += 1;
+          if (!step) { moveRunning = false; return; }
+          const beat = beatFor(step.key);
+          if (!beat) { next(); return; }
+          runStep(beat, step, next);
+        };
+        window.setTimeout(next, paced(ANSWER_LEAD));
+      }
+
+      // A click anywhere in a section is another stretch of listening: Rae writes up what
+      // she has, and the next click gets what she has after that. When that section's
+      // conversation runs out, a click is a tick again. Captured, so it runs before the
+      // beat under the pointer takes the click.
+      docScroll.addEventListener('click', (event) => {
+        if (!moveRunning && !movesLeft()) return;
+        if (!compactCard.classList.contains('is-recording')) return;
+        // The controls inside a note are not part of "anywhere".
+        if (event.target.closest('.doc-next, .beat-more')) return;
+        event.stopPropagation();
+        event.preventDefault();
+        playNextMove();
+      }, true);
+
+      passages.forEach((passage) => {
+        // A section that asks numbered questions is set on the wider rhythm.
+        passage.classList.toggle('has-questions', !!passage.querySelector('ol'));
+      });
+
+      // One way on for the whole document, in the corner of the panel rather than under
+      // each section: it no longer names the section it points at, so it no longer has
+      // to travel with one. It sits outside the scroller, so it stays put while the
+      // sections go past, and it goes away on the last one — there is nowhere to point.
+      const docNext = document.createElement('button');
+      docNext.type = 'button';
+      docNext.className = 'doc-next';
+      docNext.textContent = 'Scroll to next section';
+      docNext.addEventListener('click', (event) => {
+        event.stopPropagation();
+        setDocSection(docSection + 1);
+      });
+      scriptDoc.appendChild(docNext);
+
+      // A section taller than the panel is read by scrolling it, so the way on waits until
+      // you have reached the end of it — otherwise it offers to skip what you haven't read.
+      function renderDocNext() {
+        if (docSection >= passages.length - 1) { docNext.hidden = true; return; }
+        const here = passages[docSection];
+        const left = (here.offsetTop + here.offsetHeight) - (docScroll.scrollTop + docScroll.clientHeight);
+        // What is left below the fold has to be more than the section's own trailing air
+        // to count as something you have not read yet.
+        docNext.hidden = left > SECTION_TAIL;
+      }
+
       const compactSectionEl = document.getElementById('compact-section');
       const compactPartNEl = document.getElementById('compact-part-n');
       const compactPartTotalEl = document.getElementById('compact-part-total');
-      const compactPartTextEl = document.getElementById('compact-part-text');
-      const compactNumberEl = document.getElementById('compact-number');
+      const compactNumberTotalEl = document.getElementById('compact-number-total');
+      const compactNumberPartEl = document.getElementById('compact-number-part');
+      const compactTickEl = document.getElementById('compact-tick');
+      const compactJotEl = document.getElementById('compact-jot');
+      const compactProbesEl = document.getElementById('compact-probes');
+      const compactJotBtnEl = document.getElementById('compact-jot-btn');
+      const compactJotLabelEl = compactJotBtnEl && compactJotBtnEl.querySelector('.compact-jot-label');
+      const compactJotInputEl = document.getElementById('compact-jot-input');
+      const compactFadeEl = document.getElementById('compact-fade');
       const compactCard = document.getElementById('research-toolbar');
 
-      // Fix the mini bar to the widest title it will ever show, so nothing clips and
-      // the card doesn't resize as you move through the script.
-      function sizeCompact() {
-        if (!compactSectionEl) return;
-        const style = getComputedStyle(compactSectionEl);
-        const probe = document.createElement('span');
-        probe.style.cssText = `position:absolute;left:-9999px;top:0;visibility:hidden;white-space:nowrap;font:${style.font};font-variation-settings:${style.fontVariationSettings};`;
-        document.body.appendChild(probe);
-        let widest = 0;
-        script.forEach((section) => {
-          probe.textContent = section.label;
-          widest = Math.max(widest, probe.getBoundingClientRect().width);
-        });
-        probe.remove();
-        // title + separator + "Q n of n" + presence switch + the row's own padding
-        compactCard.style.setProperty('--compact-w', `${Math.max(300, Math.ceil(widest + 10 + 6 + 6 + 42 + 6 + 89 + 24 + 2))}px`);
+      // What Rae has heard and what she would follow up with, per script part. These
+      // are the session's content, so they belong to the document the session runs on
+      // — and they are drawn only while recording, because before it there is nothing
+      // for her to have heard.
+      // Section 1 as a conversation, one click at a time. Each move is what Rae has
+      // after another stretch of listening; a key that comes back has been *revised*,
+      // and the line is rewritten rather than added to. A probe is a follow-up she
+      // would ask — when the answer arrives the chip stops being a question and folds
+      // into the line, which is why the later moves carry no probes.
+      const SCRIPTED_MOVES = {
+        '1': [
+          [
+            { key: '1.1', answer: 'Sarah Chen, UX Designer from Hong Kong', tick: true },
+            // Only inferred, so it gets a line and no tick. Inferring is not hearing.
+            { key: '1.3', answer: 'UX Designer', implied: true, probes: ['years of experience'] },
+            { key: '1.4', answer: 'Hong Kong', tick: true },
+          ],
+          [
+            { key: '1.2', answer: 'MSc. User Experience Design, Kingston University', probes: ['where', 'course length'], tick: true },
+          ],
+          [
+            { key: '1.2', answer: '1 year MSc. User Experience Design, Kingston University. Uni is at Kingston, Penrhyn road', tick: true },
+          ],
+          [
+            { key: '1.3', answer: 'UX Designer, 6 years of experience', tick: true },
+          ],
+        ],
+        // Long enough to need folding — which is the point of it. And once it is written,
+        // Rae has been reading ahead: what she says about it is the panel at the foot.
+        '2': [
+          [
+            {
+              key: '2.1',
+              answer: 'Mornings at the studio, two afternoons on campus, coursework after seven most nights. Weekends are when the assignments actually get written, so the week never really ends — it just changes shape depending on what is due.',
+              tick: true,
+              // She has been reading ahead: some of section 3 has already been answered in
+              // passing, which is why she offers to take you there. The answers land with
+              // you rather than being written in front of you — she had them before you
+              // arrived.
+              hint: {
+                copy: '60% of Section 3 is covered',
+                go: 'Jump to Section 3?',
+                // What the mini bar says instead — the same offer in 324px.
+                short: { copy: '60% of section 3 covered', go: 'Jump to sec 3?' },
+                section: '3',
+                lands: [
+                  { key: '3.1', answer: 'Friendly enough, but everyone is on a different timetable', tick: true },
+                  { key: '3.2', answer: 'Two or three from the studio, mostly through group work', tick: true },
+                  { key: '3.3', answer: 'Studio most evenings', implied: true },
+                ],
+              },
+            },
+          ],
+        ],
+      };
+
+      // What Rae has heard and what she would follow up with, per script part. These are
+      // the session's content, so they belong to the document the session runs on — and
+      // they are drawn only while recording, because before it there is nothing for her
+      // to have heard.
+      //
+      // The mini bar's own model, and deliberately not the sidebar's: the sidebar walks
+      // the conversation a move at a time and gets its lines from SCRIPTED_MOVES, while
+      // the bar shows one part at a time and always has. Deriving one from the other
+      // reads as tidier than it is — it changes what the bar says.
+      const MARKS = {
+        '1.2': { probes: ['where', 'course length'] },
+        '1.3': { answer: 'UX designer', probes: ['ux designer', 'years of experience'] },
+        '1.4': { answer: 'Hong Kong' },
+      };
+
+      // A line arrives the way she works it out: word after word, not all at once, and
+      // slowly enough to read as thinking rather than as a page repainting. The lead is
+      // the beat between your click and the first word — she takes a moment too.
+      const ANSWER_LEAD = 200;
+      const ANSWER_WORD = 64;
+      // Rewriting a line she already wrote is a correction, not news, so it goes quicker.
+      const ANSWER_WORD_AGAIN = 44;
+      // The last word is still arriving when its delay runs out; the tick waits for it.
+      const ANSWER_TICK_LAG = 220;
+      const ANSWER_HOLD = 460;
+      // Letting a line she already wrote go before the new one arrives.
+      const ANSWER_FADE = 200;
+      // A note folds to two lines; the rest is behind the chevron. Must match the answer
+      // line's own line-height in the stylesheet.
+      const ANSWER_LINE = 18;
+      const CLAMP_LINES = 2;
+      // Where the note starts under the question, and the gap kept under the note. Both
+      // read off the stylesheet's own numbers.
+      const ANSWER_TOP = 2.18;
+      const QUESTION_GAP = 69;
+      // The document's own easing, written the way it would be in CSS. There is no way to
+      // hand the browser a scrollTop to animate, so this does what it would do for a
+      // cubic-bezier(): Newton-Raphson for the t at a given x, then read y off it.
+      function bezier(x1, y1, x2, y2) {
+        const cx = 3 * x1;
+        const bx = 3 * (x2 - x1) - cx;
+        const ax = 1 - cx - bx;
+        const cy = 3 * y1;
+        const by = 3 * (y2 - y1) - cy;
+        const ay = 1 - cy - by;
+        const atX = (t) => ((ax * t + bx) * t + cx) * t;
+        const atY = (t) => ((ay * t + by) * t + cy) * t;
+        const slope = (t) => (3 * ax * t + 2 * bx) * t + cx;
+        return (x) => {
+          if (x <= 0) return 0;
+          if (x >= 1) return 1;
+          let t = x;
+          for (let i = 0; i < 8; i += 1) {
+            const off = atX(t) - x;
+            if (Math.abs(off) < 1e-5) return atY(t);
+            const d = slope(t);
+            if (Math.abs(d) < 1e-6) break;
+            t -= off / d;
+          }
+          // Newton gives up on the flat parts of a curve this steep; halve the interval.
+          let lo = 0;
+          let hi = 1;
+          t = x;
+          for (let i = 0; i < 24 && Math.abs(atX(t) - x) > 1e-5; i += 1) {
+            if (atX(t) < x) lo = t; else hi = t;
+            t = (lo + hi) / 2;
+          }
+          return atY(t);
+        };
+      }
+      // Leaving a section for the one before or after it is a snap: slow off the mark, a
+      // hard run through the middle, a long settle. It is the only animated move in the
+      // document — everything inside a section is the wheel and nothing else.
+      const SNAP_EASE = bezier(0.76, 0.01, 0.06, 1);
+      const SNAP_MS = 500;
+      // A section's trailing air. Overflowing by less than this hides nothing you need to
+      // read, so it does not count as a section you scroll through — matches the
+      // padding-bottom on .doc-passage.
+      const SECTION_TAIL = 48;
+      // Wheel events closer together than this belong to the same gesture. Low enough that
+      // deliberate notches on a mouse wheel count separately — at 160ms they did not, and
+      // scrolling twice in a row got you one section — high enough that a trackpad's
+      // inertia, which arrives every frame or two, still counts as the gesture it came
+      // from.
+      const GESTURE_GAP = 90;
+
+      // Everything here scales with --rae-speed like the rest of the motion, so the dials
+      // move the whole sequence instead of the half of it that lives in CSS.
+      function paced(ms) {
+        const speed = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rae-speed'));
+        return ms * (speed > 0 ? speed : 1);
+      }
+      const compactEndRecEl = document.getElementById('compact-endrec');
+      const compactBarEl = document.getElementById('compact-bar');
+      const compactSurface = compactCard.querySelector('.toolbar-surface');
+      const compactCompleteEl = document.getElementById('compact-complete');
+      // The surface's border, top and bottom — the one part of its height that isn't content.
+      const SURFACE_BORDER = 2;
+
+      // The card hugs its content, and `auto` is not a value CSS can transition between,
+      // so the height is written out in pixels. Measure the panel rather than the surface:
+      // the panel lays out at its natural height whatever the surface is animating
+      // through, where reading the surface back gives you the number mid-flight.
+      function sizeCompactCard() {
+        if (!compactCard.classList.contains('presence-compact')) {
+          compactSurface.style.height = '';
+          return;
+        }
+        const panel = compactCard.classList.contains('session-complete') ? compactCompleteEl : compactBarEl;
+        if (!panel) return;
+        // offsetHeight, not getBoundingClientRect: the browser window scales open from
+        // the taskbar, and a rect is reported through every ancestor transform — during
+        // that animation the whole card measures a few pixels tall.
+        const settled = compactSurface.style.height;
+        const from = compactSurface.offsetHeight;
+        const to = panel.offsetHeight + SURFACE_BORDER;
+
+        // Nothing to travel — and on the first pass there is no previous height to travel
+        // from, so the card simply arrives at its size.
+        if (!settled || Math.abs(to - from) < 0.5) {
+          compactSurface.style.transition = 'none';
+          compactSurface.style.height = `${to}px`;
+          void compactSurface.offsetWidth;
+          compactSurface.style.transition = '';
+          return;
+        }
+
+        compactSurface.style.height = `${to}px`;
       }
 
-      function renderCompact() {
+      // Where we are in the script as one running number, so any change — a step, a
+      // click on a passage — knows whether it moved forwards or backwards.
+      function absIndex(sectionIndex, partIndex) {
+        let n = 0;
+        for (let i = 0; i < sectionIndex; i += 1) n += script[i].parts.length;
+        return n + partIndex;
+      }
+
+      // One roll is worth the same as the next, so the cleanup timer reads the duration
+      // off the stylesheet rather than hard-coding it — the motion panel changes it.
+      function rollMs() {
+        const probe = document.querySelector('.roll-now');
+        if (!probe) return 520;
+        const style = getComputedStyle(probe);
+        return (parseFloat(style.transitionDuration) + parseFloat(style.transitionDelay)) * 1000 || 520;
+      }
+
+      // Hand a slot its new value: the old one leaves in the direction of travel, the new
+      // one arrives from the other side. `fill` builds the content so the same helper
+      // serves a single digit and the whole body.
+      function rollTo(slot, fill, dir) {
+        if (!slot) return;
+        // A held arrow key outruns the animation; anything still leaving goes now, or the
+        // ghosts stack up on top of each other.
+        slot.querySelectorAll('.roll-now.is-out').forEach((el) => el.remove());
+        const current = slot.querySelector('.roll-now');
+
+        const incoming = document.createElement(slot.classList.contains('roll-block') ? 'div' : 'span');
+        incoming.className = 'roll-now';
+        fill(incoming);
+
+        if (!current) { slot.appendChild(incoming); return; }
+        if (current.innerHTML === incoming.innerHTML) return;
+
+        // Nothing to watch: the slot is hidden, or the whole bar is, as it is while the
+        // sidebar is open. Swap it and skip the animation rather than measuring zeroes.
+        if (!slot.offsetParent) {
+          current.remove();
+          slot.appendChild(incoming);
+          return;
+        }
+
+        const fromWidth = slot.offsetWidth;
+        slot.classList.remove('roll-fwd', 'roll-back');
+        slot.classList.add(dir < 0 ? 'roll-back' : 'roll-fwd');
+
+        current.classList.add('is-out');
+        incoming.classList.add('is-start');
+        slot.appendChild(incoming);
+
+        if (slot.classList.contains('roll-width')) {
+          const toWidth = slot.offsetWidth;
+          slot.style.width = `${fromWidth}px`;
+          void slot.offsetWidth;
+          slot.style.width = `${toWidth}px`;
+        }
+
+        // Commit the start state before releasing it, or the browser collapses the two
+        // style changes into one and nothing moves.
+        void incoming.offsetWidth;
+        incoming.classList.remove('is-start');
+
+        window.setTimeout(() => {
+          current.remove();
+          slot.style.width = '';
+        }, rollMs() + 90);
+      }
+
+      function renderCompact(dir) {
         const section = script[docSection];
         if (!section || !compactSectionEl) return;
-        compactSectionEl.textContent = section.label;
-        compactPartNEl.textContent = docPart + 1;
+        const way = dir === undefined ? 1 : dir;
+
+        // The name rolls; the total beside it belongs to the section, so it is simply set
+        // — it only ever changes at the moment the name does.
+        rollTo(compactSectionEl, (el) => { el.textContent = section.label; }, way);
+        rollTo(compactPartNEl, (el) => { el.textContent = String(docPart + 1); }, way);
         compactPartTotalEl.textContent = `/${section.parts.length}`;
-        compactPartTextEl.textContent = section.parts[docPart] || section.title;
-        // "1.2" reads as section 1, question 2; the unnumbered intro just counts its parts.
-        if (compactNumberEl) compactNumberEl.textContent = section.numbered
-          ? `${section.marker}.${docPart + 1}`
-          : `${docPart + 1}`;
+
+        // "1/3" reads as the first of this section's three beats. Same split as the
+        // counter above — only the part moves, the total is set.
+        const key = `${section.number}.${docPart + 1}`;
+        if (compactNumberTotalEl) compactNumberTotalEl.textContent = `/${section.parts.length}`;
+        rollTo(compactNumberPartEl, (el) => { el.textContent = String(docPart + 1); }, way);
+
+        const recording = compactCard.classList.contains('is-recording');
+
+        // The body is the question and nothing else for now: what Rae heard is off the
+        // mini bar. `MARKS` still carries the answers and `.compact-answer` is still in
+        // the stylesheet, so putting them back is one block. What she would still *ask*
+        // stays — it is on the dash's row, see renderProbes.
+        rollTo(compactFadeEl, (el) => {
+          const text = document.createElement('p');
+          text.className = 'compact-text';
+          text.textContent = section.parts[docPart] || section.title;
+          el.appendChild(text);
+        }, way);
+
+        // The last part of the last section is where the session ends, so that is the only
+        // place the way out appears.
+        if (compactEndRecEl) {
+          const last = docSection === script.length - 1 && docPart === script[docSection].parts.length - 1;
+          compactEndRecEl.hidden = !(recording && last);
+        }
+
+        renderCompactTick(recording);
+        renderCompactJot(key);
+        // Arriving at a part shows whatever is still open on it, without re-animating.
+        renderProbes(false);
+        sizeCompactCard();
       }
-      // Parts run on past the end of a section into the next one, so the mini bar
-      // walks the whole script rather than dead-ending six times.
+
+      // ------------------------------------------------- the tick and the note
+      // The beat the mini bar is showing is the same DOM node the document ticks, so the
+      // two surfaces cannot disagree: one fact, drawn twice.
+      function beatAt(sectionIndex, partIndex) {
+        const passage = passages[sectionIndex];
+        if (!passage) return null;
+        return passage.querySelectorAll('p, li')[partIndex] || null;
+      }
+
+      function renderCompactTick(recording) {
+        if (!compactTickEl) return;
+        // Idle there is nothing to have covered yet, so the mark has nothing to say.
+        compactTickEl.hidden = !recording;
+        const beat = beatAt(docSection, docPart);
+        const on = !!beat && beat.classList.contains('is-checked');
+        compactTickEl.classList.toggle('is-checked', on);
+        compactTickEl.setAttribute('aria-pressed', String(on));
+      }
+
+      if (compactTickEl) compactTickEl.addEventListener('click', (event) => {
+        event.stopPropagation();
+        blurIfClicked(event);
+        const beat = beatAt(docSection, docPart);
+        if (!beat) return;
+        setBeatChecked(beat, !beat.classList.contains('is-checked'));
+        renderCompactTick(compactCard.classList.contains('is-recording'));
+      });
+
+      // A note is written against the beat, not against the card, so stepping away and
+      // back finds it again. Keyed the same way `MARKS` is.
+      const jotted = new Map();
+
+      function renderCompactJot(key) {
+        if (!compactJotEl) return;
+        compactJotEl.dataset.key = key;
+        const note = jotted.get(key) || '';
+        compactJotEl.classList.toggle('has-note', !!note);
+        compactJotEl.classList.remove('is-editing');
+        compactJotInputEl.hidden = true;
+        compactJotLabelEl.textContent = note || 'Type here';
+      }
+
+      function openJot() {
+        if (!compactJotEl) return;
+        const key = compactJotEl.dataset.key;
+        compactJotEl.classList.add('is-editing');
+        compactJotInputEl.hidden = false;
+        compactJotInputEl.value = jotted.get(key) || '';
+        compactJotInputEl.focus();
+      }
+
+      function closeJot(commit) {
+        if (!compactJotEl || !compactJotEl.classList.contains('is-editing')) return;
+        const key = compactJotEl.dataset.key;
+        if (commit) {
+          const value = compactJotInputEl.value.trim();
+          if (value) jotted.set(key, value); else jotted.delete(key);
+        }
+        renderCompactJot(key);
+      }
+
+      if (compactJotBtnEl) {
+        compactJotBtnEl.addEventListener('click', (event) => { event.stopPropagation(); openJot(); });
+        compactJotInputEl.addEventListener('click', (event) => event.stopPropagation());
+        compactJotInputEl.addEventListener('blur', () => closeJot(true));
+        compactJotInputEl.addEventListener('keydown', (event) => {
+          event.stopPropagation();
+          if (event.key === 'Enter') { event.preventDefault(); compactJotInputEl.blur(); }
+          else if (event.key === 'Escape') { event.preventDefault(); closeJot(false); }
+        });
+      }
+
+      // A probe is a question she would ask, so it is written as one. Added here rather
+      // than in the data: every probe is a question, in both surfaces, and none of them
+      // should have to remember to say so.
+      function asQuestion(text) {
+        return /\?$/.test(text) ? text : `${text}?`;
+      }
+
+      // A follow-up Rae would ask, dressed the same in both surfaces.
+      function makeProbe(text) {
+        const probe = document.createElement('span');
+        probe.className = 'compact-probe';
+        probe.textContent = asQuestion(text);
+        return probe;
+      }
+
+      // What Rae would ask next is a suggestion, not part of the question, so the bar
+      // arrives with the question alone and offers the follow-ups when you ask for them.
+      // From there a click is worth one follow-up: the first offers them all, and each one
+      // after that asks the one at the front of the row and takes it off. Only when the
+      // row is empty does a click move the script on.
+      //
+      // Keyed by part, so what is left is remembered — stepping away and back finds the
+      // same row, and a part whose follow-ups are all spent never offers them again.
+      const probesLeft = new Map();
+
+      function partKey() {
+        const section = script[docSection];
+        return `${section.number}.${docPart + 1}`;
+      }
+
+      function probesFor(key) {
+        return (MARKS[key] || {}).probes || [];
+      }
+
+      // The chips live on the dash's row, which is outside the block that rolls — so they
+      // can be added and taken away in place while the question stays put.
+      function renderProbes(entering) {
+        if (!compactProbesEl) return;
+        const left = probesLeft.get(partKey()) || [];
+        compactProbesEl.textContent = '';
+        left.forEach((text, i) => {
+          const probe = makeProbe(text);
+          if (entering) {
+            probe.classList.add('beat-in');
+            probe.style.animationDelay = `${i * paced(ANSWER_WORD)}ms`;
+          }
+          compactProbesEl.appendChild(probe);
+        });
+        compactJotEl.classList.toggle('has-probes', left.length > 0);
+      }
+
+      // Returns whether the click was spent on the follow-ups, so the caller knows not to
+      // move the script on.
+      function spendProbeClick() {
+        if (!compactCard.classList.contains('is-recording')) return false;
+        const key = partKey();
+        if (!probesFor(key).length) return false;
+        // First click: they arrive, all of them.
+        if (!probesLeft.has(key)) {
+          probesLeft.set(key, [...probesFor(key)]);
+          renderProbes(true);
+          sizeCompactCard();
+          return true;
+        }
+        const left = probesLeft.get(key);
+        if (!left.length) return false;
+        // Every click after that asks the one at the front. It collapses out of the row
+        // rather than disappearing, so the ones still open slide into its place.
+        left.shift();
+        const chip = compactProbesEl.firstElementChild;
+        if (chip) {
+          chip.style.width = `${chip.offsetWidth}px`;
+          void chip.offsetWidth;
+          chip.classList.add('is-out');
+          chip.style.width = '0px';
+          chip.style.marginRight = '-3px';
+          window.setTimeout(() => {
+            chip.remove();
+            compactJotEl.classList.toggle('has-probes', left.length > 0);
+            sizeCompactCard();
+          }, paced(260));
+        }
+        return true;
+      }
+
+      // Parts run on past the end of a section into the next one, so the mini bar walks
+      // the whole script rather than dead-ending six times.
       function stepPart(delta) {
         let s = docSection;
         let i = docPart + delta;
@@ -1670,46 +3223,288 @@
         const scrollable = docScroll.scrollHeight - docScroll.clientHeight;
         docBar.style.top = `${73.5 + (scrollable ? (docScroll.scrollTop / scrollable) * travel : 0)}px`;
       }
-      function setDocSection(index, part) {
+
+      // The section the top of the panel is inside — not the nearest one, because a
+      // section taller than the panel is somewhere you can be part way through.
+      // The section a given scroll position is inside — not the nearest one, because a
+      // section taller than the panel is somewhere you can be part way through.
+      function sectionFor(top) {
+        let found = 0;
+        passages.forEach((el, i) => { if (el.offsetTop <= top + 8) found = i; });
+        return found;
+      }
+
+      // Where a section's top sits against the top of the panel.
+      function restingTop(index) {
+        return Math.min(passages[index].offsetTop, docScroll.scrollHeight - docScroll.clientHeight);
+      }
+
+      // Landing is ours, not the browser's — no CSS snapping anywhere in this document, so
+      // there is only ever one thing moving the scroller. Driven on a timer, not on frames:
+      // requestAnimationFrame does not run in a background tab, and a landing that never
+      // finished would leave its flag set and stop the document snapping at all.
+      let landing = 0;
+      let landingTo = -1;
+
+      function stopLanding() {
+        window.clearTimeout(landing);
+        landing = 0;
+        landingTo = -1;
+      }
+
+      // `how`: true to be there already, otherwise the snap.
+      function landOn(top, how) {
+        const far = docScroll.scrollHeight - docScroll.clientHeight;
+        const to = Math.max(0, Math.min(top, far));
+        if (Math.abs(docScroll.scrollTop - to) < 1) { stopLanding(); return; }
+        if (landing && landingTo === to) return;
+        stopLanding();
+        if (how === true) { docScroll.scrollTop = to; return; }
+        const from = docScroll.scrollTop;
+        // 500ms is the time to cross the panel's own height, which is a section to the next
+        // section; a shorter move takes proportionally less, so they go at the same speed
+        // rather than for the same length of time.
+        const reach = Math.min(1, Math.abs(to - from) / Math.max(1, docScroll.clientHeight));
+        const ms = Math.max(160, paced(SNAP_MS) * reach);
+        const started = performance.now();
+        landingTo = to;
+        const step = () => {
+          const t = Math.min(1, (performance.now() - started) / ms);
+          docScroll.scrollTop = from + (to - from) * SNAP_EASE(t);
+          if (t < 1) landing = window.setTimeout(step, 16);
+          else stopLanding();
+        };
+        landing = window.setTimeout(step, 0);
+      }
+
+      function goToSection(index, smooth) {
+        const target = passages[index];
+        // In the mini bar there is no document to scroll; it catches up when the sidebar
+        // comes back.
+        if (!target || !scriptDoc.offsetParent) return;
+        landOn(restingTop(index), smooth === false);
+      }
+
+      // `scroll` false means the scroller already went there and is telling us — sending
+      // it back would have the read-back and the write chasing each other.
+      function setDocSection(index, part, scroll) {
+        const was = absIndex(docSection, docPart);
         docSection = Math.min(Math.max(index, 0), passages.length - 1);
         docPart = Math.min(Math.max(part || 0, 0), script[docSection].parts.length - 1);
         passages.forEach((el, i) => el.classList.toggle('is-on', i === docSection));
         markers.forEach((el, i) => el.classList.toggle('is-on', i === docSection));
-        const target = passages[docSection];
-        docScroll.scrollTo({ top: Math.max(target.offsetTop - 36.34, 0), behavior: 'smooth' });
-        renderCompact();
+        renderDocNext();
+        if (scroll !== false) goToSection(docSection);
+        // Direction comes from where we landed, not from who asked — scrolling the
+        // document moves the mini bar too, and it should move the same way.
+        renderCompact(absIndex(docSection, docPart) < was ? -1 : 1);
       }
-      docScroll.addEventListener('scroll', syncDocBar);
+
+      // The scroller only ever reports; it never corrects. Everything that moves it is
+      // deliberate — the wheel below, a key, the way on.
+      let settleTimer = 0;
+      docScroll.addEventListener('scroll', () => {
+        syncDocBar();
+        renderDocNext();
+        window.clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(() => {
+          // Mid-landing the scroller is somewhere it is only passing through; reading the
+          // section off it there puts the panel back on the one being left.
+          if (!scriptDoc.offsetParent || landing) return;
+          const at = sectionFor(docScroll.scrollTop);
+          if (at !== docSection) setDocSection(at, 0, false);
+          renderDocNext();
+        }, 90);
+      }, { passive: true });
+
+      // Where a section begins and ends, as scroll positions. For one that fits, the two
+      // are the same place.
+      function sectionSpan(index) {
+        const far = docScroll.scrollHeight - docScroll.clientHeight;
+        const el = passages[index];
+        return {
+          from: Math.min(el.offsetTop, far),
+          to: Math.min(el.offsetTop + el.offsetHeight - docScroll.clientHeight, far),
+        };
+      }
+
+      // Inside a section that doesn't fit, the wheel just scrolls it — no animation, no
+      // lock, nothing between your fingers and the page. It is clamped to the section, so
+      // it comes to rest at the end rather than running on into the next one. At either
+      // end of a section, a gesture is worth one section instead.
+      let lastWheel = 0;
+      let peakDelta = 0;
+      let faded = false;
+      let startedAtEdge = false;
+      let snapped = false;
+
+      docScroll.addEventListener('wheel', (event) => {
+        if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+        event.preventDefault();
+
+        const now = Date.now();
+        const size = Math.abs(event.deltaY);
+        // Two ways to know a new gesture has started. A gap in the events is one — but a
+        // trackpad keeps sending for over a second after the fingers lift, and a swipe that
+        // lands on that tail would be read as part of it and thrown away, which is what
+        // "there's a delay I have to wait for" was.
+        //
+        // The other is the shape of the deltas. A swipe ramps up, peaks, then decays; only
+        // the decay is inertia. So watch the gesture's own peak: once the deltas have
+        // fallen well below it the tail has set in, and a delta that climbs back to half
+        // the peak after that is a hand rather than a tail. Comparing against the peak
+        // rather than the last delta is what keeps a swipe's own ramp-up from reading as
+        // half a dozen new gestures.
+        let fresh = now - lastWheel > GESTURE_GAP;
+        lastWheel = now;
+        if (fresh) {
+          peakDelta = size;
+          faded = false;
+        } else {
+          if (size > peakDelta) peakDelta = size;
+          if (size < peakDelta * 0.25) faded = true;
+          else if (faded && size > peakDelta * 0.5) fresh = true;
+        }
+
+        // A snap owns the scroller for the rest of the gesture that asked for it — its own
+        // inertia must not cancel it a frame later. A new gesture takes over at once, and
+        // the move it interrupted finishes there and then rather than being abandoned part
+        // way, or the section you are in is one the document was only passing through.
+        if (landing) {
+          if (!fresh) return;
+          const target = landingTo;
+          stopLanding();
+          if (target >= 0) docScroll.scrollTop = target;
+        }
+
+        const dir = event.deltaY > 0 ? 1 : -1;
+        const here = sectionFor(docScroll.scrollTop);
+        const span = sectionSpan(here);
+        const at = docScroll.scrollTop;
+        // Overflowing by less than its own trailing air hides nothing, so it fits.
+        const roomy = span.to - span.from > SECTION_TAIL;
+        const onEdge = !roomy || Math.abs(at - (dir > 0 ? span.to : span.from)) <= 1;
+
+        if (fresh) {
+          startedAtEdge = onEdge;
+          snapped = false;
+          peakDelta = size;
+          faded = false;
+        }
+
+        // A gesture that has already snapped is spent. Its tail must not then scroll the
+        // section it has just arrived in — which only section 2 has the room to do, and
+        // which read as the document bouncing after it landed.
+        if (snapped) return;
+
+        if (roomy && !onEdge) {
+          docScroll.scrollTop = Math.min(span.to, Math.max(span.from, at + event.deltaY));
+          return;
+        }
+        // Arriving at the end is not the same as asking to leave it: the gesture that ran
+        // you into the end stops there. The next one moves on.
+        if (!startedAtEdge) return;
+
+        const next = here + dir;
+        if (next < 0 || next >= passages.length) return;
+        snapped = true;
+        hideHint();
+        const going = sectionSpan(next);
+        setDocSection(next, 0, false);
+        // Coming up into a section that doesn't fit, you arrive at the bottom of it — the
+        // end you are about to read up through. One that fits has no bottom to arrive at,
+        // and landing on the few pixels of trailing air it overflows by would just push
+        // its heading off the top.
+        const bottom = dir < 0 && going.to - going.from > SECTION_TAIL;
+        landOn(bottom ? going.to : going.from);
+      }, { passive: false });
+
       syncDocBar();
-      // ArrowRight is already the toolbar's "start / advance" key. While the document
-      // is on screen the arrows belong to it, so claim them in the capture phase
-      // before the toolbar's own listener sees them.
+
+      // Switching back from the mini bar, the document has to be where the mini bar got
+      // to — it could not scroll while it had no layout to scroll in.
+      compactCard.addEventListener('rae:shape', () => {
+        window.requestAnimationFrame(() => goToSection(docSection, false));
+      });
+
+      // Anything typed into a field, or nudged inside the motion panel, belongs to that
+      // control — not to the script.
+      function keysAreElsewhere(event) {
+        if (event.ctrlKey || event.metaKey) return true;
+        if (!(event.target instanceof Element)) return false;
+        return !!event.target.closest('input, textarea, [contenteditable], [class*="dialkit"]');
+      }
+
+      // ArrowRight is already the toolbar's "start / advance" key. While the document is
+      // on screen the arrows belong to it, so claim them in the capture phase before the
+      // toolbar's own listener sees them.
       document.addEventListener('keydown', (event) => {
         if (!scriptDoc.offsetParent) return;
         if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-        if (event.ctrlKey || event.metaKey) return;
-        if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable]')) return;
+        if (keysAreElsewhere(event)) return;
         setDocSection(docSection + (event.key === 'ArrowRight' ? 1 : -1));
         event.preventDefault();
         event.stopPropagation();
       }, true);
 
-      // The mini bar shows one part at a time; its arrows step parts, not sections.
-      const compactBarEl = document.getElementById('compact-bar');
+      // The mini bar shows one part at a time, so all four arrows step parts — which is
+      // what the arrival hint promises.
+      const COMPACT_STEPS = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
       document.addEventListener('keydown', (event) => {
         if (!compactBarEl || !compactBarEl.offsetParent) return;
-        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-        if (event.ctrlKey || event.metaKey) return;
-        if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable]')) return;
-        stepPart(event.key === 'ArrowDown' ? 1 : -1);
+        const step = COMPACT_STEPS[event.key];
+        if (!step) return;
+        if (keysAreElsewhere(event)) return;
+        stepPart(step);
         event.preventDefault();
         event.stopPropagation();
       }, true);
+
       const compactBody = document.querySelector('.compact-body');
-      if (compactBody) compactBody.addEventListener('click', () => stepPart(1));
-      sizeCompact();
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(sizeCompact);
+      if (compactBody) compactBody.addEventListener('click', (event) => {
+        // The pill inside the body ends the session; the rest of the body advances it.
+        if (event.target.closest('button')) return;
+        // A drag that ended on the body is not a click on it.
+        if (toolbar.dragState.suppressClick) { toolbar.dragState.suppressClick = false; return; }
+        // A question with follow-ups spends a click on each of them — the first offers
+        // them, each one after that asks one. Once the row is empty the click moves on.
+        if (spendProbeClick()) return;
+        stepPart(1);
+      });
+
+      // Replaying for the motion panel: a dial only affects the *next* transition, so
+      // something has to run one. Stepping is what shows both the content arriving and
+      // the height travelling, and it ping-pongs at the ends of the script so repeated
+      // replays bounce between two questions instead of running out.
+      let replayDir = 1;
+      compactCard.addEventListener('rae:replay', () => {
+        const last = script.length - 1;
+        if (docSection === last && docPart === script[last].parts.length - 1) replayDir = -1;
+        else if (docSection === 0 && docPart === 0) replayDir = 1;
+        stepPart(replayDir);
+      });
+
+      // Starting the recording, finishing the session and switching presence all change
+      // the card's shape, and each one has to re-measure before it can animate.
+      compactCard.addEventListener('rae:recording', renderCompact);
+      compactCard.addEventListener('rae:shape', renderCompact);
+      // The bottom panel leaves when the session starts, so every section grows by its
+      // height. Land on the current one again or it would be left resting part off the top.
+      compactCard.addEventListener('rae:recording', () => {
+        window.requestAnimationFrame(() => goToSection(docSection, false));
+      });
       renderCompact();
+      renderDocNext();
+
+      // The panel's natural height also changes for reasons no render knows about — a
+      // web font landing and rewrapping the paragraph, the browser window finishing its
+      // scale-open. Watching it is what keeps the card honest; the calls above only
+      // decide when the change is worth animating.
+      if (window.ResizeObserver) {
+        const sizer = new ResizeObserver(() => sizeCompactCard());
+        sizer.observe(compactBarEl);
+        if (compactCompleteEl) sizer.observe(compactCompleteEl);
+      }
       passages.forEach((el, i) => el.addEventListener('click', () => setDocSection(i)));
     }
 
@@ -1722,7 +3517,7 @@
     const preview = document.getElementById('preview');
     const previewTitle = document.getElementById('preview-title');
     const useScript = document.getElementById('use-script');
-    const footerHint = document.getElementById('footer-hint');
+    const previewStats = document.getElementById('preview-stats');
     const preflightScript = document.getElementById('preflight-script');
     const selectedToast = document.getElementById('script-selected');
     const joinMeeting = document.querySelector('.join-meeting');
@@ -1731,12 +3526,89 @@
     const researchToolbar = document.getElementById('research-toolbar');
     const toolbar = ResearchToolbar.init(researchToolbar);
     let toolbarTimer;
+    let hintTimer;
+    // The mini bar arrives without a manual, so it says how to move through the script —
+    // once, the first time you see it, and never again. A beat after it lands, so the
+    // arrival and the hint are two events rather than one.
+    //
+    // It belongs to the mini bar and nowhere else. Its arrows are the mini bar's arrows:
+    // in the sidebar the up and down ones do nothing, and left and right move between
+    // sections rather than between questions, so shown there it is an instruction that
+    // isn't true.
+    let hintSeen = false;
+
+    function arrivalHint() {
+      if (!researchToolbar.classList.contains('visible')) return;
+      if (researchToolbar.classList.contains('session-complete')) return;
+      if (toolbar.getPresence() !== 'compact' || hintSeen) return;
+      hintSeen = true;
+      toolbar.showSnack('Move between questions with \u2191 \u2193 or \u2190 \u2192', null, {
+        hold: 5000,
+        anywhere: true,
+        html: 'Move between questions with <span class="snack-keys"><kbd>\u2191</kbd><kbd>\u2193</kbd></span> or <span class="snack-keys"><kbd>\u2190</kbd><kbd>\u2192</kbd></span>',
+      });
+    }
+
+    function showToolbar() {
+      researchToolbar.classList.add('visible');
+      window.clearTimeout(hintTimer);
+      hintTimer = window.setTimeout(arrivalHint, 1000);
+    }
+
+    // Folding down to the mini bar is the other way of meeting it for the first time.
+    researchToolbar.addEventListener('rae:shape', () => {
+      window.clearTimeout(hintTimer);
+      hintTimer = window.setTimeout(arrivalHint, 700);
+    });
     const documents = [...document.querySelectorAll('.document')];
     // The script's own shape, read from the assistant so the two cannot drift.
     const pinnedVariant = new URLSearchParams(window.location.search).get('variant');
-    const loadedScript = ResearchToolbar.SCRIPTS[pinnedVariant === '1' ? '1' : '2'];
-    const sectionCount = loadedScript.sections.length;
-    const questionCount = loadedScript.sections.reduce((total, section) => total + section.questions.length, 0);
+
+    // The previewer header, the preflight card and the footer hint all describe the same
+    // script, and each used to count it from a different place — hence three different
+    // answers on screen at once. They read off the document now, which is the thing the
+    // session actually walks.
+    const SCRIPT_STATS = (() => {
+      const passages = [...document.querySelectorAll('#script-doc .doc-passage')];
+      // A section is one that asks numbered questions. That leaves out the opening
+      // preamble and the closing thank-you without having to match them by name.
+      const asking = passages.filter((passage) => passage.querySelector('li'));
+      const questions = passages.reduce((total, passage) => total + passage.querySelectorAll('li').length, 0);
+
+      // Long enough to be worth showing, rough enough to say "about". A question is read
+      // aloud and then answered; everything else is read aloud and briefly acknowledged.
+      const ASK_WPM = 140;
+      const ANSWER_SECONDS = 65;
+      const ASIDE_SECONDS = 15;
+      const words = (node) => node.textContent.trim().split(/\s+/).filter(Boolean).length;
+
+      let seconds = 0;
+      passages.forEach((passage) => {
+        passage.querySelectorAll('li').forEach((item) => {
+          seconds += (words(item) / ASK_WPM) * 60 + ANSWER_SECONDS;
+        });
+        passage.querySelectorAll('p').forEach((para) => {
+          seconds += (words(para) / ASK_WPM) * 60 + ASIDE_SECONDS;
+        });
+      });
+
+      return {
+        sections: asking.length,
+        questions,
+        minutes: Math.max(5, Math.round(seconds / 60 / 5) * 5),
+      };
+    })();
+    const sectionCount = SCRIPT_STATS.sections;
+    const questionCount = SCRIPT_STATS.questions;
+
+    // The previewer header is the one place all three numbers appear together.
+    const setStat = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
+    setStat('previewer-sections', sectionCount);
+    setStat('previewer-questions', questionCount);
+    setStat('previewer-mins', SCRIPT_STATS.minutes);
     let chosenScript = null;
 
     // Searching filters the list; it no longer selects anything. Choosing is a
@@ -1755,8 +3627,7 @@
       preview.classList.add('active');
       previewTitle.textContent = `${chosenScript}.pdf`;
       useScript.disabled = false;
-      footerHint.textContent = `${sectionCount} sections · ${questionCount} questions · about 30 min`;
-      footerHint.classList.add('is-ready');
+      previewStats.textContent = `${sectionCount} sections · ${questionCount} questions · about ${SCRIPT_STATS.minutes} min`;
     }
 
     documents.forEach((button) => button.addEventListener('click', () => chooseDocument(button)));
@@ -1930,7 +3801,7 @@
       browserTask.classList.add('active');
       browserWindow.classList.add('open');
       window.clearTimeout(toolbarTimer);
-      toolbarTimer = window.setTimeout(() => researchToolbar.classList.add('visible'), 500);
+      toolbarTimer = window.setTimeout(() => showToolbar(), 500);
     });
     document.getElementById('leave-call').addEventListener('click', () => {
       browserWindow.classList.remove('open');
@@ -1952,10 +3823,19 @@
         const offsetX = event.clientX - toolbarRect.left;
         const offsetY = event.clientY - toolbarRect.top;
         let moved = false;
-        surface.setPointerCapture(event.pointerId);
 
+        // Capturing the pointer on the way down is what broke clicking the card: with the
+        // capture in force the browser retargets `click` to the capturing element, so a
+        // click on the question arrived on `#compact-bar` and never reached the listener
+        // on `.compact-body` inside it. Nothing on the card advanced under a real pointer.
+        // The capture is only worth having once this *is* a drag, so it is taken at the
+        // threshold; a plain click never captures and lands where it was aimed.
         const move = (moveEvent) => {
-          if (Math.abs(moveEvent.clientX - event.clientX) > 4 || Math.abs(moveEvent.clientY - event.clientY) > 4) moved = true;
+          if (!moved && (Math.abs(moveEvent.clientX - event.clientX) > 4 || Math.abs(moveEvent.clientY - event.clientY) > 4)) {
+            moved = true;
+            surface.setPointerCapture(event.pointerId);
+          }
+          if (!moved) return;
           const maxX = browserRect.width - toolbarRect.width;
           const maxY = browserRect.height - toolbarRect.height;
           const x = Math.max(0, Math.min(maxX, moveEvent.clientX - browserRect.left - offsetX));
@@ -1965,13 +3845,16 @@
         };
         const stop = () => {
           toolbar.dragState.suppressClick = moved;
-          surface.removeEventListener('pointermove', move);
-          surface.removeEventListener('pointerup', stop);
-          surface.removeEventListener('pointercancel', stop);
+          if (moved && surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', stop);
+          window.removeEventListener('pointercancel', stop);
         };
-        surface.addEventListener('pointermove', move);
-        surface.addEventListener('pointerup', stop);
-        surface.addEventListener('pointercancel', stop);
+        // On window, not on the surface: without a capture in force a pointer that leaves
+        // the card would stop reporting, and the drag would stick to the last position.
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', stop);
+        window.addEventListener('pointercancel', stop);
       });
     }
     makeDraggable(document.getElementById('toolbar-header'));
@@ -2047,6 +3930,8 @@
       window.setTimeout(fitAppFrame, 60);
     });
     document.addEventListener('keydown', (event) => {
+      const hint = document.getElementById('doc-hint');
+      if (event.ctrlKey && event.key === 'Enter' && hint && !hint.hidden) { document.getElementById('doc-hint-go').click(); return; }
       const finishSession = document.getElementById('finish-session');
       if (event.ctrlKey && event.key === 'Enter' && finishSession.classList.contains('visible')) { finishSession.click(); return; }
       if (event.ctrlKey && event.key === 'Enter' && researchToolbar.classList.contains('session-complete')) { document.getElementById('view-doc').click(); return; }
@@ -2062,11 +3947,19 @@
       if (event.key === 'Escape') { modal.classList.remove('visible'); previewer.classList.remove('visible'); riaOnboarding.classList.remove('visible'); riaCard.classList.remove('ready'); }
     });
 
+    // ?dials=1 brings up the motion panel. Dev-only, and loaded on demand so the
+    // shipped page never fetches it.
+    if (new URLSearchParams(window.location.search).has('dials')) {
+      const dials = document.createElement('script');
+      dials.src = 'motion-dials.js';
+      document.body.appendChild(dials);
+    }
+
     if (new URLSearchParams(window.location.search).get('skip') === 'call') {
       notification.classList.add('hidden');
       browserTask.classList.add('active');
       browserWindow.classList.add('open');
-      researchToolbar.classList.add('visible');
+      showToolbar();
     }
   </script>
 </body>

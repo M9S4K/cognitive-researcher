@@ -4,7 +4,10 @@
     {
       "name": "cognitive-researcher",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "python3 -m http.server \"$PORT\""],
+      "runtimeArgs": [
+        "-c",
+        "python3 .claude/serve.py \"$PORT\""
+      ],
       "port": 3400,
       "autoPort": true
     }
