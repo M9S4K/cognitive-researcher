@@ -78,12 +78,18 @@
     <h1>AI Research Assistant — Demo</h1>
     <p class="sub">
       Archived versions. The default experience is
-      <a href="v5.2-paper/windows.html">v5.2 — Windows</a>; everything below is kept for reference.
+      <a href="live-participant-testing/windows.html">Live participant testing</a>; everything below is kept for reference.
     </p>
 
     <div class="cards">
-      <a class="card current" href="v5.2-paper/windows.html">
-        <span class="card-tag">v5.2 — windows · default</span>
+      <a class="card current" href="live-participant-testing/windows.html">
+        <span class="card-tag">live participant testing · default</span>
+        <div class="card-title">Live participant testing</div>
+        <div class="card-desc">Same as v5.2, plus: open a shared session with a ?room= code and both you and your participant see the same screen. Any click, keystroke, or scroll by either person mirrors instantly to the other. If either person reloads, both go back to the start together.</div>
+      </a>
+
+      <a class="card" href="v5.2-paper/windows.html">
+        <span class="card-tag">v5.2 — windows</span>
         <div class="card-title">The mini bar build</div>
         <div class="card-desc">Two presences instead of three: the mini bar is the default and runs a whole session on its own — starts the recording, walks the script, shows what Rae heard and what she would follow up with, and ends it — with the sidebar there when you want the script in full. On top of v5.1's Ria onboarding, script previewer and Windows chrome. Windows only.</div>
       </a>
@@ -142,7 +148,7 @@
     if (new URLSearchParams(window.location.search).has('archive')) {
       document.body.classList.add('show-archive');
     } else {
-      window.location.replace('v5.2-paper/windows.html');
+      window.location.replace('live-participant-testing/windows.html');
     }
   </script>
 
