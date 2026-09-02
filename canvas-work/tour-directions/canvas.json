@@ -1,0 +1,61 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Spotlight",
+      "x": 0,
+      "y": 0,
+      "w": 880,
+      "h": 600
+    },
+    {
+      "file": "RiasVoice.dc.html",
+      "title": "Ria's voice",
+      "x": 980,
+      "y": 0,
+      "w": 880,
+      "h": 600
+    },
+    {
+      "file": "OnePager.dc.html",
+      "title": "One-pager",
+      "x": 1960,
+      "y": 0,
+      "w": 880,
+      "h": 660
+    }
+  ],
+  "annotations": [
+    {
+      "id": "axis-spotlight",
+      "x": 0,
+      "y": -330,
+      "w": 440,
+      "text": "SPOTLIGHT — what's built today.\nAxis: the room goes dark so Ria is the only thing you can look at. Four cards, each pointing at one control.\nFor: nothing competes with it, and the card and the thing it names are on screen together.\nTradeoff: the app is inert while it runs — you read about a control you can't touch — and it is four interruptions before you start."
+    },
+    {
+      "id": "axis-voice",
+      "x": 980,
+      "y": -330,
+      "w": 440,
+      "text": "RIA'S VOICE — no overlay at all.\nAxis: the tutorial isn't a layer over the product, it IS the product. Her footer slab grows to hold what she's saying, and the part she's naming is tinted in that same slab colour.\nFor: nothing is blocked, so you can try each thing as you read it. No new surface to design or dismiss.\nTradeoff: quiet. On a busy call it can be missed, and it displaces her own footer while it runs."
+    },
+    {
+      "id": "axis-onepager",
+      "x": 1960,
+      "y": -330,
+      "w": 440,
+      "text": "ONE-PAGER — read once, dismiss once.\nAxis: no stepping. One sheet with the panel drawn small and its four parts numbered.\nFor: fifteen seconds, one decision, no pointer-chasing. Easy to re-open from the menu and re-read whole.\nTradeoff: the words sit beside a PICTURE of the control, not the control — you still have to find the real one afterwards."
+    },
+    {
+      "id": "note-copy",
+      "x": 2980,
+      "y": -330,
+      "w": 440,
+      "text": "All three carry the settled copy so you're judging the treatment, not the words."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

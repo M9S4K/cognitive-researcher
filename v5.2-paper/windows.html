@@ -11,6 +11,8 @@
     :root {
       --ease-out: cubic-bezier(.23, 1, .32, 1);
       --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+      /* Even at both ends — for something being uncovered rather than thrown into place. */
+      --ease-reveal: cubic-bezier(.4, 0, .2, 1);
       /* Mini bar motion. --rae-speed scales the whole set at once; the rest are the
          individual beats. Every value below is read off these, nowhere else. */
       --rae-speed: 1;
@@ -43,8 +45,16 @@
       /* The note line's reveal, and the tick landing on a beat. */
       --t-jot: calc(180ms * var(--rae-speed));
       --t-probe: calc(260ms * var(--rae-speed));
-      --t-offer-in: calc(520ms * var(--rae-speed));
+      --t-offer-in: calc(620ms * var(--rae-speed));
       --t-switch: calc(200ms * var(--rae-speed));
+      --t-tour: calc(280ms * var(--rae-speed));
+      /* The gap between a line and whatever sits under it — her note or yours. One value,
+         so the two rows are interchangeable and a beat with only one of them looks the
+         same as a beat with the other. */
+      --beat-gap: 4px;
+      /* Ria's mark on a line she wrote (MingCute, message-3-ai-line). Masked rather than
+         inked, so it wears the text's own colour and fades with it. */
+      --ria-mark: url('assets/ria-mark.svg');
       --t-tick: calc(340ms * var(--rae-speed));
       --ease-tick: cubic-bezier(0.34, 1.56, 0.64, 1);
       --m-rise-complete: 6px;
@@ -430,20 +440,24 @@
     .ria-lede.idle { transform: translateY(12px); }
     .ria-onboarding.back .ria-lede.idle { transform: translateY(-12px); }
 
-    .ria-features-heading, .ria-feature-list li, .ria-outro p {
+    .ria-features-heading, .ria-feature-list li, .ria-outro p, .ria-modes-lede, .ria-mode {
       transition: opacity 320ms var(--ease-out) calc(var(--d, 0) * 1ms), transform 320ms var(--ease-out) calc(var(--d, 0) * 1ms);
     }
     .ria-body.idle .ria-features-heading,
     .ria-body.idle .ria-feature-list li,
+    .ria-body.idle .ria-mode,
     .ria-body.idle p { opacity: 0; transform: translateY(12px); transition-delay: 0s; transition-duration: 140ms; }
     .ria-onboarding.back .ria-body.idle .ria-features-heading,
     .ria-onboarding.back .ria-body.idle .ria-feature-list li,
+    .ria-onboarding.back .ria-body.idle .ria-mode,
     .ria-onboarding.back .ria-body.idle p { transform: translateY(-12px); }
     .ria-feature-list li:nth-child(1) { --d: 70; }
     .ria-feature-list li:nth-child(2) { --d: 125; }
     .ria-feature-list li:nth-child(3) { --d: 180; }
     .ria-feature-list li:nth-child(4) { --d: 235; }
     .ria-feature-list li:nth-child(5) { --d: 290; }
+    .ria-mode:nth-child(1) { --d: 90; }
+    .ria-mode:nth-child(2) { --d: 150; }
     .ria-outro-b { --d: 90; }
     .ria-remaining { --d: 180; }
 
@@ -463,8 +477,62 @@
       .ria-back,
       .ria-features-heading,
       .ria-feature-list li,
+      .ria-mode,
       .ria-outro p { transform: none !important; transition-duration: 160ms; }
     }
+
+    /* Step 3: pick a mode. The card is 1:1 with the design frame, so every offset
+       below is the frame's own — the two tiles are screenshots drawn in divs. */
+    .ria-modes { position: absolute; inset: 0; }
+    .ria-modes-lede { position: absolute; top: 161.19px; left: 110.5px; margin: 0; width: 549.348px; color: #242424; font: 400 22.927px/1.2 'Ancizar Serif', Georgia, serif; font-feature-settings: 'salt' 1; text-align: center; }
+    .ria-mode-grid { position: absolute; top: 227px; left: 56px; display: flex; }
+    .ria-mode { display: grid; place-items: center; width: 329px; height: 279px; padding: 0; border-radius: 18px; background: transparent; color: inherit; font: inherit; transition: background-color 200ms var(--ease-out), opacity 320ms var(--ease-out), transform 320ms var(--ease-out); }
+    .ria-mode:hover { transform: none; background: #f1f1f1; }
+    .ria-mode.is-on, .ria-mode.is-on:hover { background: #d4d4d4; }
+    /* The design's column sits 4px below the tile's centre. */
+    .mode-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 267.77px; transform: translateY(4px); }
+    .mode-name { color: #242424; font: 600 16px/1.4 Inter, system-ui, sans-serif; font-feature-settings: 'salt' 1; text-align: center; white-space: nowrap; }
+    .mode-name span { display: block; font-weight: 400; }
+
+    /* The screenshot. Children are positioned against the border box, the way the
+       design nests them, so the chrome can run under the 1.79px frame. */
+    .mode-shot { position: relative; box-sizing: border-box; width: 267.77px; height: 190.414px; border: 1.79px solid rgb(0 0 0 / 10%); border-radius: 8.053px; background: #fff; overflow: hidden; }
+    .mode-shot i, .mode-shot span, .mode-shot img { position: absolute; display: block; }
+    .ms-topbar { top: -1.79px; left: -1.79px; width: 267.77px; height: 9.87px; border-radius: 3.719px 3.719px 0 0; background: #a5a5a5; }
+    .ms-tab { top: 1.11px; left: -1.79px; width: 267.77px; height: 10.447px; }
+    .ms-shade { top: 18.18px; left: -1.79px; height: 15.248px; border-bottom: .186px solid rgb(0 0 0 / 10%); background: #595959; }
+    .ria-mode[data-mode="compact"] .ms-shade { width: 267.77px; }
+    .ria-mode[data-mode="dock"] .ms-shade { width: 172.641px; }
+    .ms-rail { top: 33.42px; left: -1.79px; width: 15.248px; height: 165.184px; border-right: .186px solid rgb(0 0 0 / 10%); background: #595959; }
+    .ms-rail-item { top: 37.24px; left: 2.12px; width: 6.694px; height: 6.694px; background: #595959; }
+    .ms-rail-app { top: 22px; left: 2.86px; width: 5.95px; height: 5.95px; background: #595959; }
+    .mode-shot .ms-people { top: 21.8px; display: flex; align-items: center; gap: 4.463px; }
+    .ms-people .ms-seats { position: static; display: flex; align-items: center; gap: 4.463px; padding: .744px; }
+    .ria-mode[data-mode="compact"] .ms-people { left: 178.19px; }
+    .ria-mode[data-mode="dock"] .ms-people { left: 80.6px; }
+    .ms-people i { position: static; flex: none; width: 5.206px; height: 5.206px; }
+    /* Five of the seven seats are empty in the design; they hold the row's width. */
+    .ms-seats i:nth-child(n+6) { border-radius: .93px; background: #b1b1b1; }
+    .ms-people .ms-leave { width: 16.014px; height: 7.298px; border-radius: 2.045px; background: #a6a6a6; }
+    .mode-shot .ms-stage { display: grid; place-items: center; place-content: center; background: #3a3a3a; }
+    .ria-mode[data-mode="compact"] .ms-stage { top: 23.5px; left: 13.27px; width: 252.708px; height: 165.125px; }
+    .ria-mode[data-mode="dock"] .ms-stage { top: 23.26px; left: 13.49px; width: 159.275px; height: 165.539px; }
+    .ms-stage .ms-avatar { position: static; display: grid; place-items: center; width: 37.134px; height: 37.134px; border-radius: 50%; background: #656565; color: #e2e2e2; font: 700 13.017px/1 Inter, system-ui, sans-serif; letter-spacing: .5207px; }
+    .ms-float { top: 14.02px; left: 148.11px; width: 95.3px; height: 29.873px; border-radius: 4.474px; background: #fff; }
+    .ms-float i { left: 5.83px; border-radius: 7.158px; background: #d9d9d9; }
+    .ms-float i:nth-child(1) { top: 5.79px; width: 29.854px; height: 5.392px; }
+    .ms-float i:nth-child(2) { top: 16.95px; width: 83.647px; height: 6.851px; }
+    .ms-panel { top: 8.05px; left: 170.85px; width: 95.744px; height: 180.75px; background: #fff; }
+    .ms-panel-pill { top: 4.89px; left: 5.82px; width: 29.854px; height: 5.392px; border-radius: 7.158px; background: #d9d9d9; }
+    .mode-shot .ms-lines { top: 20.35px; left: 5.82px; display: flex; flex-direction: column; gap: 18.791px; width: 83.647px; }
+    .ms-lines > span { position: static; display: flex; flex-direction: column; gap: 1.79px; width: 100%; }
+    .ms-lines i { position: static; width: 100%; height: 5.032px; border-radius: 7.158px; background: #d9d9d9; }
+
+    /* Next is the only way on, so it says so: no mode picked, no way on. */
+    .ria-next { transition: background-color 220ms var(--ease-out); }
+    .ria-next[disabled] { background: #8e8e8e; cursor: default; }
+    .ria-next[disabled]:hover { transform: none; }
+    .ria-next[disabled] kbd { border-color: #a2a2a2; background: #909090; box-shadow: 0 1.528px 0 #a2a2a2; color: #d5d5d5; }
     .ria-outro p { position: absolute; left: 64.13px; margin: 0; width: 665.479px; font: 400 35.919px/1.2 'Ancizar Serif', Georgia, serif; font-feature-settings: 'salt' 1; }
     .ria-outro-a { top: 220.5px; }
     .ria-outro-b { top: 393.35px; }
@@ -826,9 +894,16 @@
     /* Compact — the assistant's default shape, and the surface a whole session runs
        on: it starts the recording, walks the script, and ends it. 324 per the design. */
     .compact-bar { display: none; flex-direction: column; align-items: stretch; }
-    /* 9/8/9/16 against the frame's 39px header — the title and the buttons are the same
+    /* The grip sits in its own strip above the header — 43 x 6 of dots, centred, with a
+       little air over it. Dragging already worked anywhere on the card; this is where you
+       would reach for it. */
+    .compact-grip { display: flex; justify-content: center; padding-top: 7px; cursor: grab; }
+    .compact-grip:active { cursor: grabbing; }
+    .compact-grip img { display: block; width: 43px; height: 6px; }
+
+    /* 8/8/9/16 against the frame's 39px header — the title and the buttons are the same
        height, so the row is centred rather than baselined. */
-    .compact-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 8px; padding-left: 16px; }
+    .compact-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 8px 9px; padding-left: 16px; }
     .compact-where { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 3px; }
     .compact-actions { display: flex; align-items: center; gap: 4px; flex: none; margin-left: auto; }
     .compact-section { flex: none; color: #000; font: 500 13px/1.4 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; white-space: nowrap; }
@@ -914,9 +989,12 @@
     .compact-text { margin: 0; color: #3e3e3e; font: 500 13px/1.5 Inter, system-ui, sans-serif; }
     /* What Rae heard and what she would ask next, in the smallest form that still
        reads: the answer as plain text, each probe as a chip. Recording only. */
-    .compact-marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
+    .compact-marks { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-top: var(--beat-gap); }
     .compact-marks[hidden] { display: none; }
-    .compact-answer { color: #8b8b87; font: 500 13px/20px Inter, system-ui, sans-serif; }
+    /* The same line the sidebar draws, at the bar's size: her squiggle, her italic, set
+       back to half black so it reads under the question rather than beside it. */
+    .compact-answer { --beat-dash: 1.283em; display: block; opacity: .5; color: #000; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; transition: opacity var(--t-beat-fade) linear; }
+    .compact-answer.is-fading { opacity: 0; }
     /* The same chip as the sidebar's — same grey, same radius, same lift off the page —
        set at the bar's own type size so it sits with the answer beside it. */
     .compact-probe { display: flex; align-items: center; justify-content: center; flex: none; box-sizing: border-box; height: 18px; padding: 0 6px 1px; overflow: hidden; border: 1px solid rgb(0 0 0 / 2%); border-radius: 6px; background: #fcfcfa; color: #3e3e3e; font: 400 11px/1.5 Inter, system-ui, sans-serif; white-space: nowrap; }
@@ -931,26 +1009,38 @@
        whole affordance while nothing is being written; hovering it says what it is for,
        and clicking turns it into the field. It keeps its 18px row in every state, so the
        card's height never moves under the pointer. --- */
-    .compact-jot { display: flex; align-items: center; gap: 8px; margin-top: 3px; height: 18px; }
-    .compact-jot-btn { display: flex; align-items: baseline; gap: 4px; max-width: 100%; padding: 0; border: 0; background: none; color: #000; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; text-align: left; cursor: text; }
+    /* The dash is the row's mark, the way the icon is Ria's — it belongs to the line, not
+       to the button, so it stays put when the button gives way to the field. */
+    .compact-jot { display: flex; align-items: baseline; gap: 4px; margin-top: var(--beat-gap); height: 18px; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; }
+    .compact-jot-btn { display: flex; align-items: baseline; min-width: 0; padding: 0; border: 0; background: none; color: #000; font: inherit; text-align: left; cursor: text; }
     .compact-jot-btn:hover { transform: none; }
-    .compact-jot-dash { flex: none; opacity: .2; transition: opacity var(--t-jot) var(--ease-out); }
-    .compact-jot-label { overflow: hidden; opacity: 0; text-overflow: ellipsis; white-space: nowrap; transform: translateX(-2px); transition: opacity var(--t-jot) var(--ease-out), transform var(--t-jot) var(--ease-out); }
-    .compact-jot-btn:hover .compact-jot-dash,
-    .compact-jot-btn:focus-visible .compact-jot-dash,
+    /* Same rule as the document's: the row is not there until you look for it, and it is
+       the row that answers — the strip under the question, not the card around it. */
+    .compact-jot-dash,
+    .compact-jot-label { opacity: 0; transition: opacity var(--t-jot) var(--ease-out); }
+    .compact-jot-dash { flex: none; }
+    .compact-jot-label { overflow: hidden; color: #8e8e8e; text-overflow: ellipsis; white-space: nowrap; transform: translateX(-2px); transition: opacity var(--t-jot) var(--ease-out), transform var(--t-jot) var(--ease-out); }
+    .compact-jot.has-note .compact-jot-label { color: #3e3e3e; }
+    .compact-jot:hover .compact-jot-dash,
+    .compact-jot:focus-within .compact-jot-dash,
     .compact-jot.has-note .compact-jot-dash { opacity: 1; }
-    .compact-jot-btn:hover .compact-jot-label,
-    .compact-jot-btn:focus-visible .compact-jot-label,
+    .compact-jot:hover .compact-jot-label,
+    .compact-jot:focus-within .compact-jot-label,
     .compact-jot.has-note .compact-jot-label { opacity: 1; transform: translateX(0); }
+    /* On their own row they line up with the question above them; beside her note the
+       row's own 6px gap is the spacing. */
+    .compact-column > .compact-probes:not(:empty) { margin-top: var(--beat-gap); }
+    /* One line under the question, not two: while there are follow-ups open they are what
+       that line is for, and the dash comes back the moment they are spent. Stacking the
+       two rows made the card taller every time a question had something still open on it. */
+    .compact-column:has(> .compact-probes:not(:empty)) > .compact-jot { display: none; }
     /* Once something is written the line is the note, not an invitation. */
     .compact-jot.has-note .compact-jot-label { color: #3e3e3e; }
-    .compact-jot-input { display: block; width: 100%; padding: 0; border: 0; background: none; color: #000; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; outline: none; }
+    .compact-jot-input { display: block; flex: 1 1 auto; min-width: 0; padding: 0; border: 0; background: none; color: #000; font: inherit; outline: none; }
+    .compact-jot-input::placeholder { color: #000; opacity: .35; }
     .compact-jot-input[hidden] { display: none; }
     .compact-jot.is-editing .compact-jot-btn,
     .compact-jot.is-editing .compact-probes { display: none; }
-    /* While follow-ups are on the row it is theirs: the dash still opens the field, but
-       it stops advertising itself over the top of them. */
-    .compact-jot.has-probes .compact-jot-label { display: none; }
 
     /* --- The follow-ups (450:31500). They sit on the dash's row, after it, because they
        are the same kind of thing: what is still open on this part. Each click asks one,
@@ -961,7 +1051,7 @@
     /* --- The footer is a slab behind the card (426:29044), showing 44px of itself below
        the bottom edge, and it belongs to the idle state only: once the recording is
        running the card is nothing but where you are and what was said. --- */
-    .compact-slab { position: absolute; top: 0; right: 0; bottom: -44px; left: 0; z-index: 0; display: none; overflow: hidden; border-radius: 19px; background: #dddcd7; }
+    .compact-slab { position: absolute; top: 0; right: 0; bottom: -44px; left: 0; z-index: 0; display: none; overflow: hidden; border-radius: 19px; background: #dddcd7; box-shadow: 0 8px 20px rgb(0 0 0 / 14%); }
     .research-toolbar.presence-compact.is-idle:not(.session-complete) .compact-slab,
     .research-toolbar.presence-compact.has-offer:not(.session-complete) .compact-slab { display: block; }
     /* The offer's row carries a progress bar under it, which is the 4px difference. */
@@ -982,11 +1072,24 @@
     .compact-offer-bar i { display: block; width: 100%; height: 100%; background: #1d1d1d; }
     .research-toolbar.is-draining .compact-offer-bar i { animation: doc-hint-drain var(--t-hint) linear forwards; }
     .compact-slab:hover .compact-offer-bar i { animation-play-state: paused; }
-    /* It rises from under the card, the way the sidebar's rises from the foot of the panel. */
-    .research-toolbar.has-offer:not(.is-idle) .compact-slab { animation: compact-offer-in var(--t-offer-in) var(--ease-out) both; }
+    /* It is uncovered from behind the card, not moved. Translating the slab meant the whole
+       band travelled — its text, its button and its shadow — which is a lot of movement for
+       something that is only 48px tall, and on the drawer curve most of it happened at once.
+       The band is exactly the 48px below the card, so clipping that much away and letting
+       the clip open downward reveals it in place: nothing on it moves at all. The words and
+       the button then fade up over the tail, so they arrive rather than being wiped through. */
+    .research-toolbar.has-offer:not(.is-idle) .compact-slab { animation: compact-offer-in var(--t-offer-in) var(--ease-reveal) both; }
+    /* The clip has to reach past the box or it clips the shadow that separates the band from
+       the call behind it — 30px is the shadow's own reach (8 down, 20 of blur) and no more,
+       so almost all of the travel is the reveal you actually see. */
     @keyframes compact-offer-in {
-      from { opacity: 0; transform: translateY(48px); }
-      to { opacity: 1; transform: none; }
+      from { clip-path: inset(-30px -30px 48px -30px); }
+      to { clip-path: inset(-30px -30px -30px -30px); }
+    }
+    .research-toolbar.has-offer:not(.is-idle) .compact-offer { animation: compact-offer-said calc(var(--t-offer-in) * .5) var(--ease-out) calc(var(--t-offer-in) * .5) both; }
+    @keyframes compact-offer-said {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     .compact-foot { position: absolute; right: 13px; bottom: 7.5px; left: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .compact-start { display: flex; align-items: center; justify-content: center; gap: 4px; flex: none; height: 29.571px; padding: 5px 7px; border: 1.286px solid rgb(0 0 0 / 5%); border-radius: 15px; background: #1e1e1e; color: #fff; font: 500 12px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.12px; cursor: pointer; }
@@ -1004,7 +1107,7 @@
     /* --- The tick (458:32226). It hangs half off the left edge of the card, so it sits
        outside the surface that clips — and it is the same fact as the document's tick on
        the same beat, drawn at 15px. --- */
-    .compact-tick { position: absolute; z-index: 2; top: 53.968px; left: -8.782px; display: grid; place-items: center; width: 17.564px; height: 17.564px; padding: 0; border: 0; background: none; cursor: pointer; }
+    .compact-tick { position: absolute; z-index: 2; left: -8.782px; display: grid; place-items: center; width: 17.564px; height: 17.564px; padding: 0; border: 0; background: none; cursor: pointer; }
     .compact-tick[hidden],
     .research-toolbar:not(.presence-compact) .compact-tick { display: none; }
     .compact-tick:hover { transform: none; }
@@ -1014,7 +1117,7 @@
     .compact-tick:not(.is-checked) img { display: none; }
     .compact-tick:not(.is-checked)::before { content: ''; width: 12.82px; height: 12.82px; box-sizing: border-box; border: 1.282px solid #b8b8b8; border-radius: 50%; background: #fcfcfa; }
     .compact-tick:not(.is-checked):hover::before { border-color: #8a8a8a; }
-    .compact-tick.is-checked img { animation: compact-tick-in var(--t-tick) var(--ease-tick) both; }
+    .compact-tick.is-checked.is-landing img { animation: compact-tick-in var(--t-tick) var(--ease-tick) both; }
     @keyframes compact-tick-in {
       0% { opacity: 0; transform: scale(.4); }
       60% { opacity: 1; transform: scale(1.12); }
@@ -1216,6 +1319,50 @@
       .snackbar { transition-duration: 1ms; }
       .question-number::after { animation: none; }
     }
+    /* --- The tour. Not an overlay: nothing is dimmed and nothing is blocked, because the
+       whole point is to look at the thing being named while you read about it. A ring
+       around the control, a card beside it, three of them, and it is done. --- */
+    /* The tutorial takes the whole window, and takes the pointer with it: while it is up
+       the only live thing is its own card. The scrim's box is only Ria's shape, so it is
+       the wrong element to block with — its shadow paints outside itself but does not
+       catch clicks there. */
+    .tour { position: absolute; inset: 0; z-index: 40; pointer-events: auto; }
+    .tour[hidden] { display: none; }
+    /* The dark is a hole, not a layer: the box itself is transparent and its shadow spreads
+       9999px in every direction, so Ria shows through and the call behind her goes down.
+       It takes the pointer as well — while the tutorial is up, the only live thing is the
+       card. That is the trade an overlay buys: you can read about a control, not try it. */
+    .tour-scrim { position: absolute; pointer-events: none; box-shadow: 0 0 0 9999px rgb(0 0 0 / 55%); transition: top var(--t-tour) var(--ease-drawer), left var(--t-tour) var(--ease-drawer), width var(--t-tour) var(--ease-drawer), height var(--t-tour) var(--ease-drawer), border-radius var(--t-tour) var(--ease-drawer); }
+    .tour-ring { position: absolute; border: 2px solid #1e1e1e; border-radius: 10px; box-shadow: 0 0 0 3px rgb(255 255 255 / 65%); transition: top var(--t-tour) var(--ease-drawer), left var(--t-tour) var(--ease-drawer), width var(--t-tour) var(--ease-drawer), height var(--t-tour) var(--ease-drawer); }
+    .tour-card { position: absolute; width: 268px; padding: 14px 16px 12px; border-radius: 14px; background: #1e1e1e; color: #fff; box-shadow: 0 14px 34px rgb(0 0 0 / 28%); pointer-events: auto; transition: top var(--t-tour) var(--ease-drawer), left var(--t-tour) var(--ease-drawer); }
+    /* The notch is what makes it point rather than float. It is moved to sit under the
+       middle of the target, and flipped when the card goes above. */
+    .tour-notch { position: absolute; width: 12px; height: 12px; border-radius: 2px; background: #1e1e1e; transform: rotate(45deg); }
+    .tour.side-below .tour-notch { top: -6px; }
+    .tour.side-above .tour-notch { bottom: -6px; }
+    .tour.side-left .tour-notch { right: -6px; }
+    .tour.side-right .tour-notch { left: -6px; }
+    /* A title is what makes four cards scannable rather than four paragraphs. */
+    .tour-title { margin: 0 0 4px; color: #fff; font: 600 14px/1.35 'Mona Sans', Inter, system-ui, sans-serif; font-variation-settings: 'wdth' 100; letter-spacing: -.14px; }
+    .tour-copy { margin: 0; color: #c9c9c7; font: 400 13px/1.5 Inter, system-ui, sans-serif; letter-spacing: -.13px; }
+    .tour-keys { display: inline-flex; gap: 3px; vertical-align: -2px; }
+    .tour-copy kbd { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border: .77px solid #474747; border-radius: 3.5px; background: #222121; color: #ababab; font: 500 10px/1 Inter, system-ui, sans-serif; vertical-align: baseline; }
+    .tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+    .tour-count { flex: 1 1 auto; color: #8e8e8e; font: 500 11px/1 Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+    .tour-skip { flex: none; padding: 5px 8px; border: 0; border-radius: 9px; background: none; color: #ababab; font: 500 12px/1.4 Inter, system-ui, sans-serif; cursor: pointer; }
+    .tour-skip:hover { transform: none; background: #2d2d2d; color: #fff; }
+    .tour-next { display: flex; align-items: center; justify-content: center; gap: 5px; flex: none; height: 28px; padding: 5px 8px; border: 0; border-radius: 15px; background: #fff; color: #1e1e1e; font: 500 12px/1.4 Inter, system-ui, sans-serif; letter-spacing: -.12px; cursor: pointer; }
+    .tour-next:hover { transform: none; background: #ececea; }
+    .tour-next kbd { display: grid; place-items: center; min-width: 14.52px; height: 14.51px; padding: 0 3.06px; border: .77px solid #d4d4d2; border-radius: 3.06px; background: #f2f2f0; color: #8e8e8e; font: 500 9.17px/1 Inter, system-ui, sans-serif; }
+    /* It arrives with the surface it is about, so it fades rather than sliding in from
+       somewhere the eye has to follow. */
+    .tour-card, .tour-ring { animation: tour-in var(--t-tour) var(--ease-out) both; }
+    @keyframes tour-in { from { opacity: 0; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .tour-card, .tour-ring, .tour-scrim { transition-duration: 1ms; animation-duration: 1ms; }
+    }
+
+
     .insight-counter {
       display: flex;
       align-items: center;
@@ -1505,6 +1652,48 @@
     .research-toolbar:not(.opt-manual) .compact-jot-btn,
     .research-toolbar:not(.opt-manual) .beat-jot { display: none; }
 
+    /* --- …except while the tutorial is pointing at them. A card that points at nothing is
+       worse than no card, and two of the things it is about are not on screen when it runs:
+       the mini bar's mark only exists during a recording, and the note row is off unless
+       manual notes are on. The step that names one asks for it, for as long as that card is
+       up. These have to sit *after* the switches above — same specificity, later wins. --- */
+    .research-toolbar[data-tour-reveal="tick"] .compact-tick { display: grid; }
+    .research-toolbar[data-tour-reveal="jot"] .compact-jot-btn { display: flex; }
+    .research-toolbar[data-tour-reveal="jot"] .beat-jot { display: flex; opacity: 1; }
+    .research-toolbar[data-tour-reveal="jot"] .compact-jot-dash,
+    .research-toolbar[data-tour-reveal="jot"] .compact-jot-label { opacity: 1; }
+
+    /* The note card doesn't pose the affordance, it plays it: the line offers itself, it is
+       written on, and the note is kept. These have to beat the reveal above, which holds the
+       row open at full opacity — so they come after it and carry a class of their own. */
+    .compact-jot.is-demo .compact-jot-dash,
+    .compact-jot.is-demo .compact-jot-label { opacity: 0; transition: opacity var(--t-jot) var(--ease-out); }
+    .compact-jot.is-demo.is-demo-on .compact-jot-dash,
+    .compact-jot.is-demo.is-demo-on .compact-jot-label { opacity: 1; }
+    .beat-jot.is-demo { opacity: 0; }
+    .beat-jot.is-demo.is-demo-on { opacity: 1; }
+    /* Something is being typed here, so there is a cursor. */
+    .compact-jot.is-typing .compact-jot-label::after,
+    .beat-jot.is-typing .beat-jot-label::after {
+      content: '';
+      display: inline-block;
+      width: 1px;
+      height: 1em;
+      margin-left: 1px;
+      background: currentColor;
+      vertical-align: -.14em;
+      animation: tour-caret 1.06s steps(1, end) infinite;
+    }
+    @keyframes tour-caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .compact-jot.is-typing .compact-jot-label::after,
+      .beat-jot.is-typing .beat-jot-label::after { animation: none; }
+    }
+    /* Checkboxes: the mark in the gutter, in both surfaces. The gutter itself stays, so
+       the text does not move when they go — the script reads the same either way. */
+    .research-toolbar:not(.opt-ticks) .beat-check,
+    .research-toolbar:not(.opt-ticks) .compact-tick { display: none; }
+
     /* The note line sits above the buttons while recording and is the only thing in the
        header that the session changes. */
     .doc-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 12px; flex: none; }
@@ -1542,7 +1731,7 @@
        its padding, and that is what sets the pitch of a section of questions. It belongs
        to the question's own line — put it on the whole item and an answer landing
        underneath would swallow the 1.82px the circle adds. */
-    .beat-line { display: block; min-height: 28.82px; }
+    .beat-line { display: block; min-height: 1.5em; }
     .doc-passage p:last-child,
     .doc-passage ol,
     .doc-passage li:last-child { margin-bottom: 0; }
@@ -1617,6 +1806,9 @@
        dash offset. It doesn't need to be: the path runs left to right without ever
        doubling back, so wiping it in from the left *is* the pen moving along it. */
     .beat-tick { clip-path: inset(0 100% 0 0); transition: clip-path 170ms var(--ease-out); }
+    /* Drawn already made, not made in front of you. */
+    .beat.no-tick-anim .beat-tick,
+    .beat.no-tick-anim .beat-fill { transition: none; }
     /* The circle fills first and the tick is written into it — near-linear, because a pen
        does not decelerate for most of its travel, just a little push off the mark and a
        settle at the tip. */
@@ -1661,13 +1853,15 @@
     /* The width of "— " at this size, measured rather than guessed: the frame's 13px was
        drawn against a different rendering of the dash, and 2px out is visible when a chip
        is meant to sit under the first word. In em so it holds if the size ever moves. */
-    .beat-answer { --beat-dash: 1.283em; display: none; min-height: 18px; margin-top: 2.18px; padding-left: var(--beat-dash); font: 400 12px/1.5 Inter, system-ui, sans-serif; transition: opacity var(--t-beat-fade) linear; }
+    .beat-answer { --beat-dash: 1.283em; display: none; min-height: 18px; margin-top: var(--beat-gap); padding-left: var(--beat-dash); font: 400 12px/1.5 Inter, system-ui, sans-serif; transition: opacity var(--t-beat-fade) linear; }
     .beat.has-answer .beat-answer { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 4px; }
     /* Out of flow in a question section, hanging under the question's last line inside the
        69px that is already there for it. A one-line answer, a two-line answer and none at
        all then all leave the question below in exactly the same place. Prose keeps its
        answer in flow — those paragraphs have no gap underneath to hang it in. */
-    .doc-passage.has-questions .beat-answer { position: absolute; top: calc(100% + 2.18px); right: 0; left: 0; margin-top: 0; }
+    .beat-under { display: block; }
+    .doc-passage.has-questions .beat-under { position: absolute; top: calc(100% + var(--beat-gap)); right: 0; left: 0; }
+    .doc-passage.has-questions .beat-answer { margin-top: 0; }
     /* Opened, the note is longer than the room under the question, so the question makes
        room — as padding rather than by rejoining the flow, because padding is a thing the
        browser will move smoothly and `position` is not. Folded it fits, so folded it moves
@@ -1683,18 +1877,24 @@
     /* --- A note of your own, in the document. The same dash the mini bar carries, one
        per beat: quiet until you point at the beat it belongs to, so a screenful of them
        reads as one column of text rather than a column of invitations. --- */
-    .beat-jot { display: block; min-height: 18px; margin-top: 2.18px; padding-left: var(--beat-dash, 1.283em); }
-    .beat-jot-btn { display: flex; align-items: baseline; gap: 4px; max-width: 100%; padding: 0; border: 0; background: none; color: #000; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; text-align: left; cursor: text; opacity: 0; transition: opacity var(--t-jot) var(--ease-out); }
+    /* No indent of its own. Her note pays for its hanging indent with a negative margin on
+       `.beat-said`, so her mark sits at the row's left edge — this row's dash has to start
+       there too, or the two marks under one beat step apart. */
+    .beat-jot { display: flex; align-items: baseline; gap: 4px; min-height: 18px; margin-top: var(--beat-gap); font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; opacity: 0; transition: opacity var(--t-jot) var(--ease-out); }
+    .beat:hover .beat-jot,
+    .beat-jot:focus-within,
+    .beat-jot.has-note { opacity: 1; }
+    .beat-jot-btn { display: flex; align-items: baseline; min-width: 0; padding: 0; border: 0; background: none; color: #000; font: inherit; text-align: left; cursor: text; }
     .beat-jot-btn:hover { transform: none; }
-    .beat:hover .beat-jot-btn,
-    .beat-jot-btn:focus-visible,
-    .beat-jot.has-note .beat-jot-btn { opacity: 1; }
     .beat-jot-dash { flex: none; opacity: .2; }
     .beat-jot.has-note .beat-jot-dash { opacity: 1; }
     .beat-jot-label { overflow: hidden; color: #8e8e8e; text-overflow: ellipsis; white-space: nowrap; }
     .beat-jot.has-note .beat-jot-label { color: #3e3e3e; }
-    .beat-jot-input { display: block; width: 100%; padding: 0; border: 0; background: none; color: #000; font: 400 italic 12px/1.5 Inter, system-ui, sans-serif; outline: none; }
+    .beat-jot-input { display: block; flex: 1 1 auto; min-width: 0; padding: 0; border: 0; background: none; color: #000; font: inherit; outline: none; }
+    .beat-jot-input::placeholder { color: #000; opacity: .35; }
     .beat-jot-input[hidden] { display: none; }
+    /* Only the label gives way to the field. The dash stays: it is the mark on the line,
+       and a line that loses its mark the moment you write on it reads as a different line. */
     .beat-jot.is-editing .beat-jot-btn { display: none; }
 
     /* Folded, a long note shows two lines and fades out of the second rather than cutting
@@ -1713,6 +1913,22 @@
     .beat-answer.is-open .beat-more svg { transform: rotate(180deg); }
     /* What she heard reads as a quote, set back from the question it answers. */
     .beat-said { opacity: .5; color: #000; font-style: italic; }
+    /* Ria's own mark. It used to be an em dash streamed in with the words, which read as
+       punctuation — the start of a sentence rather than a sign of who wrote it, and the
+       same character the note you write yourself already uses. Square, so it sits in the
+       dash's slot without stretching. */
+    .beat-said::before,
+    .compact-answer::before {
+      content: '';
+      display: inline-block;
+      width: calc(var(--beat-dash, 1.283em) - 2px);
+      height: calc(var(--beat-dash, 1.283em) - 2px);
+      margin-right: 2px;
+      vertical-align: -.19em;
+      background: currentColor;
+      -webkit-mask: var(--ria-mark) no-repeat center / contain;
+      mask: var(--ria-mark) no-repeat center / contain;
+    }
     .beat-probes .beat-probe { text-indent: 0; }
     /* A probe is something she would ask next, not something she heard, so it keeps its
        full colour and wears a chip. */
@@ -1939,6 +2155,57 @@
             <li><span class="ria-feature-icon chart"><img src="assets/ria-chart.svg" alt=""></span>Organise all insights into one place</li>
           </ul>
         </div>
+        <div class="ria-modes ria-body idle" id="ria-modes">
+          <p class="ria-modes-lede">Ria has two modes of collaboration, pick one to continue.<br>You can switch modes at any time</p>
+          <div class="ria-mode-grid" role="radiogroup" aria-label="How Ria sits beside the call">
+            <button class="ria-mode" type="button" role="radio" aria-checked="false" data-mode="compact">
+              <span class="mode-inner">
+              <span class="mode-shot">
+                <i class="ms-topbar"></i>
+                <img class="ms-tab" src="assets/mode-tab.svg" alt="">
+                <i class="ms-shade"></i>
+                <i class="ms-rail"></i>
+                <i class="ms-rail-item"></i>
+                <i class="ms-rail-app"></i>
+                <span class="ms-people"><span class="ms-seats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><i class="ms-leave"></i></span>
+                <span class="ms-stage">
+                  <span class="ms-avatar">JD</span>
+                  <span class="ms-float"><i></i><i></i></span>
+                </span>
+              </span>
+                <span class="mode-name">Floating Script<span>Focused conversations</span></span>
+              </span>
+            </button>
+            <button class="ria-mode" type="button" role="radio" aria-checked="false" data-mode="dock">
+              <span class="mode-inner">
+              <span class="mode-shot">
+                <i class="ms-topbar"></i>
+                <img class="ms-tab" src="assets/mode-tab.svg" alt="">
+                <i class="ms-shade"></i>
+                <i class="ms-rail"></i>
+                <i class="ms-rail-item"></i>
+                <i class="ms-rail-app"></i>
+                <span class="ms-people"><span class="ms-seats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><i class="ms-leave"></i></span>
+                <span class="ms-stage">
+                  <span class="ms-avatar">JD</span>
+                </span>
+                <span class="ms-panel">
+                  <i class="ms-panel-pill"></i>
+                  <span class="ms-lines">
+                    <span><i></i><i style="width: 32.79px;"></i></span>
+                    <span style="width: 71.497px;"><i></i><i style="width: 49.948px;"></i></span>
+                    <span><i></i><i style="width: 13.946px;"></i></span>
+                    <span><i></i><i style="width: 32.79px;"></i></span>
+                    <span><i></i></span>
+                    <span><i style="width: 71.497px;"></i></span>
+                  </span>
+                </span>
+              </span>
+                <span class="mode-name">Sidebar Script<span>Section by section script</span></span>
+              </span>
+            </button>
+          </div>
+        </div>
         <div class="ria-outro ria-body idle" id="ria-outro">
           <p class="ria-outro-a">Don&rsquo;t worry, you&rsquo;re still in control and can take notes and personalise the tool as per your preferences.</p>
           <p class="ria-outro-b">Join the meeting when you&rsquo;re ready</p>
@@ -2018,8 +2285,16 @@
           <button class="dock-menu-item menu-toggle" type="button" role="menuitemcheckbox" data-opt="ai" aria-checked="true"><span class="menu-label">Show Ria’s notes</span><span class="menu-switch" aria-hidden="true"></span></button>
           <button class="dock-menu-item menu-toggle" type="button" role="menuitemcheckbox" data-opt="jumps" aria-checked="true"><span class="menu-label">Section jump suggestions</span><span class="menu-switch" aria-hidden="true"></span></button>
           <button class="dock-menu-item menu-toggle" type="button" role="menuitemcheckbox" data-opt="manual" aria-checked="true"><span class="menu-label">Allow manual notes</span><span class="menu-switch" aria-hidden="true"></span></button>
+          <button class="dock-menu-item menu-toggle" type="button" role="menuitemcheckbox" data-opt="ticks" aria-checked="true"><span class="menu-label">Show checkboxes</span><span class="menu-switch" aria-hidden="true"></span></button>
           <span class="menu-rule" aria-hidden="true"></span>
           <button class="dock-menu-item menu-toggle" type="button" role="menuitemcheckbox" data-opt="linked" aria-checked="false"><span class="menu-label">Use these settings in both modes</span><span class="menu-switch" aria-hidden="true"></span></button>
+          <span class="menu-rule" aria-hidden="true"></span>
+          <!-- Not a `.menu-act`: those two are about the recording and go dead without one.
+               Showing someone around is always available. -->
+          <button class="dock-menu-item menu-tour" type="button" role="menuitem">
+            <svg class="menu-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="5.4"/><path d="M5.6 5.5a1.5 1.5 0 1 1 1.9 1.8v.9"/><circle cx="7" cy="10" r=".55" fill="currentColor" stroke="none"/></svg>
+            <span class="menu-label">Show me around</span>
+          </button>
           <span class="menu-rule" aria-hidden="true"></span>
           <button class="dock-menu-item menu-act pause-rec" type="button" role="menuitem">
             <svg class="menu-icon" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><rect x="3" y="2.4" width="2.6" height="9.2" rx="1.3"/><rect x="8.4" y="2.4" width="2.6" height="9.2" rx="1.3"/></svg>
@@ -2032,6 +2307,9 @@
         </template>
         <div class="toolbar-surface">
           <div class="compact-bar" id="compact-bar" aria-hidden="true">
+            <!-- The card has always been draggable and never said so. The grip is the one
+                 thing in it you are meant to grab, so it sits above everything else. -->
+            <div class="compact-grip" aria-hidden="true"><img src="assets/handle.svg" alt=""></div>
             <div class="compact-head">
               <div class="compact-where">
                 <span class="compact-rec" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -2055,9 +2333,10 @@
                 <!-- The dash under the part is the way to write a note against it. Idle
                      it is a bare em dash at 20%; hovered it says what it is for. -->
                 <div class="compact-jot" id="compact-jot">
-                  <button class="compact-jot-btn" id="compact-jot-btn" type="button"><span class="compact-jot-dash" aria-hidden="true">&mdash;</span><span class="compact-jot-label">Type here</span></button>
+                  <span class="compact-jot-dash" aria-hidden="true">&mdash;</span>
+                  <button class="compact-jot-btn" id="compact-jot-btn" type="button"><span class="compact-jot-label">add your notes</span></button>
                   <span class="compact-probes" id="compact-probes"></span>
-                  <input class="compact-jot-input" id="compact-jot-input" type="text" aria-label="Note on this part" hidden>
+                  <input class="compact-jot-input" id="compact-jot-input" type="text" placeholder="add your notes" aria-label="Note on this part" hidden>
                 </div>
               </div>
             </div>
@@ -2249,6 +2528,23 @@
         </section>
         <div class="snackbar" id="snackbar" role="status" aria-live="polite"><span id="snackbar-label"></span><button class="snack-action" id="snack-action" type="button" hidden></button></div>
       </aside>
+      <!-- The tour. Three things per surface, each one pointed at the control it is about,
+           so the sentence and the thing it names are on screen together. Outside the
+           toolbar because it points at the document too. -->
+      <div class="tour" id="tour" role="dialog" aria-label="What this does" hidden>
+        <span class="tour-scrim" id="tour-scrim" aria-hidden="true"></span>
+        <span class="tour-ring" id="tour-ring" aria-hidden="true"></span>
+        <div class="tour-card" id="tour-card">
+          <span class="tour-notch" aria-hidden="true"></span>
+          <p class="tour-title" id="tour-title"></p>
+          <p class="tour-copy" id="tour-copy"></p>
+          <div class="tour-foot">
+            <span class="tour-count" id="tour-count"></span>
+            <button class="tour-skip" id="tour-skip" type="button">Skip</button>
+            <button class="tour-next" id="tour-next" type="button"><span id="tour-next-label">Next</span> <span class="shortcut" aria-label="Control Enter shortcut"><kbd>Ctrl</kbd><kbd>&#8629;</kbd></span></button>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -2341,8 +2637,12 @@
       // thing you can tick off. The button carries the mark so it can be reached by
       // keyboard; the whole line is a click target because that is what you aim at.
       const beats = [...scriptDoc.querySelectorAll('.doc-passage p, .doc-passage li')];
-      function setBeatChecked(beat, on) {
+      // `quiet` is for a tick that was true before you looked: the mark is drawn already
+      // made rather than being made in front of you.
+      function setBeatChecked(beat, on, quiet) {
+        if (quiet) beat.classList.add('no-tick-anim');
         beat.classList.toggle('is-checked', on);
+        if (quiet) { void beat.offsetWidth; beat.classList.remove('no-tick-anim'); }
         const mark = beat.querySelector('.beat-check');
         if (mark) mark.setAttribute('aria-pressed', String(on));
         // One fact, two surfaces: whichever one was ticked, the other says so too.
@@ -2402,11 +2702,18 @@
         while (beat.firstChild) line.appendChild(beat.firstChild);
         const answer = document.createElement('span');
         answer.className = 'beat-answer';
-        body.append(line, answer);
-        beat.appendChild(body);
+        // What Rae heard and what you wrote are one stack under the line, in that order:
+        // hers first because it is what was said, yours under it because it is what you
+        // made of it. One block, so a question section can hang both in the gap it
+        // already keeps rather than hanging one and pushing the other above it.
+        const under = document.createElement('span');
+        under.className = 'beat-under';
+        under.appendChild(answer);
         // The class went on a line ago, so this beat is already countable and can be
         // keyed the same way both surfaces key it.
-        body.appendChild(buildBeatJot(beat, keyForBeat(beat)));
+        under.appendChild(buildBeatJot(beat, keyForBeat(beat)));
+        body.append(line, under);
+        beat.appendChild(body);
 
         const mark = document.createElement('button');
         mark.type = 'button';
@@ -2428,8 +2735,11 @@
         }
         const toggle = () => setBeatChecked(beat, !beat.classList.contains('is-checked'));
         // The passage underneath also takes clicks (it sets the section); a beat is a
-        // smaller target inside it and answers for itself.
+        // smaller target inside it and answers for itself — unless its mark is hidden,
+        // in which case there is nothing here to tick and the click belongs to the
+        // section, not to a state you cannot see.
         beat.addEventListener('click', (event) => {
+          if (!compactCard.classList.contains('opt-ticks')) return;
           event.stopPropagation();
           toggle();
         });
@@ -2563,7 +2873,7 @@
           const said = document.createElement('span');
           said.className = 'beat-said';
           host.appendChild(said);
-          at = streamWords(said, `\u2014 ${mark.implied ? 'Implied ' : ''}${mark.answer}`, 0, gap);
+          at = streamWords(said, `${mark.implied ? 'Implied ' : ''}${mark.answer}`, 0, gap);
           // The window is two lines from the first word, or there is nothing for the text
           // to be written *into* and it would just run on down the page.
           said.style.maxHeight = `${CLAMP_LINES * ANSWER_LINE}px`;
@@ -2886,10 +3196,30 @@
       // the conversation a move at a time and gets its lines from SCRIPTED_MOVES, while
       // the bar shows one part at a time and always has. Deriving one from the other
       // reads as tidier than it is — it changes what the bar says.
+      // `then` is the line she has once the follow-ups have been asked — the same revision
+      // the sidebar's later moves make, so the two surfaces end up saying the same thing
+      // about the same question. A probe is an open end; closing it changes the answer.
       const MARKS = {
-        '1.2': { probes: ['where', 'course length'] },
-        '1.3': { answer: 'UX designer', probes: ['ux designer', 'years of experience'] },
-        '1.4': { answer: 'Hong Kong' },
+        // `ticks` says the click that brings the follow-ups up also marks this one
+        // answered — she has enough to tick it, and what is left is only detail. It is a
+        // property of the question, not a rule about clicking, so it lives here.
+        '1.2': {
+          answer: 'MSc. User Experience Design, Kingston University',
+          then: '1 year MSc. User Experience Design, Kingston University. Uni is at Kingston, Penrhyn road',
+          probes: ['where', 'course length'],
+          ticks: true,
+        },
+        // `ahead` rather than `ticks`: you don't have to ask for these, and you don't watch
+        // her do them either. She has heard them in passing by the time the session starts,
+        // so they are already ticked — and anything still open on them is already on the
+        // row — before you ever reach them.
+        '1.3': {
+          answer: 'UX designer',
+          then: 'UX Designer, 6 years of experience',
+          probes: ['years of experience'],
+          ahead: true,
+        },
+        '1.4': { answer: 'Hong Kong', ahead: true },
       };
 
       // A line arrives the way she works it out: word after word, not all at once, and
@@ -2904,6 +3234,14 @@
       const ANSWER_HOLD = 460;
       // Letting a line she already wrote go before the new one arrives.
       const ANSWER_FADE = 200;
+      // Follow-ups arriving. A chip is a bigger object than a word, so they come one after
+      // the other rather than nearly together — and they wait a beat first, or they land
+      // under the pointer that asked for them. Longer when the same click ticked the
+      // question off: the mark gets to land before the chips start.
+      const PROBE_LEAD = 140;
+      const PROBE_LEAD_TICKED = 300;
+      const PROBE_STAGGER = 110;
+
       // A note folds to two lines; the rest is behind the chevron. Must match the answer
       // line's own line-height in the stylesheet.
       const ANSWER_LINE = 18;
@@ -3098,17 +3436,18 @@
         // is 324px of one question at a time, and switched on from the menu. What she
         // would still *ask* is a different setting on a different row: see renderProbes.
         const marks = recording && compactCard.classList.contains('opt-ai') ? MARKS[key] : null;
+        const said = marks && (probesClosed(key) ? marks.then || marks.answer : marks.answer);
         rollTo(compactFadeEl, (el) => {
           const text = document.createElement('p');
           text.className = 'compact-text';
           text.textContent = section.parts[docPart] || section.title;
           el.appendChild(text);
-          if (!marks || !marks.answer) return;
+          if (!said) return;
           const row = document.createElement('div');
           row.className = 'compact-marks';
           const answer = document.createElement('span');
           answer.className = 'compact-answer';
-          answer.textContent = marks.answer;
+          answer.textContent = said;
           row.appendChild(answer);
           el.appendChild(row);
         }, way);
@@ -3122,7 +3461,8 @@
 
         renderCompactTick(recording);
         renderCompactJot(key);
-        // Arriving at a part shows whatever is still open on it, without re-animating.
+        // Arriving at a part shows whatever is still open on it, without re-animating —
+        // and the roll just built a new body, so the row is placed against that one.
         renderProbes(false);
         sizeCompactCard();
       }
@@ -3136,14 +3476,47 @@
         return passage.querySelectorAll('p, li')[partIndex] || null;
       }
 
+      // One mark serves every part, so arriving at a question that was already ticked used
+      // to run the same animation as ticking one — she appeared to do it as you got there.
+      // It only animates when the state actually changed while you were on that part.
+      let tickShown = { key: '', on: false };
+      // The mark's own size, from the rule that draws it.
+      const TICK_SIZE = 17.564;
+
+      // How far one element sits below another in layout, ignoring every transform between
+      // them. Null when they are not on the same offset chain.
+      function offsetWithin(el, host) {
+        let y = 0;
+        let node = el;
+        while (node && node !== host) { y += node.offsetTop; node = node.offsetParent; }
+        return node === host ? y : null;
+      }
+
       function renderCompactTick(recording) {
         if (!compactTickEl) return;
         // Idle there is nothing to have covered yet, so the mark has nothing to say.
         compactTickEl.hidden = !recording;
+        // It hangs off the left edge, so it lives outside the surface and cannot be laid out
+        // against the row it belongs to — but it can be measured against it. It used to
+        // carry the offset as a number, which was right until the header changed height and
+        // left the mark pointing at nothing.
+        //
+        // Measured by offsets, not by rects: this runs inside renderCompact, which runs
+        // while the card is switching presence — and a rect there is reported through the
+        // toolbar's own transform, which put the mark 70px above the question it names.
+        const slot = compactCard.querySelector('.compact-number');
+        const top = slot && offsetWithin(slot, compactTickEl.offsetParent);
+        if (top !== null && slot.offsetHeight) {
+          compactTickEl.style.top = `${top + (slot.offsetHeight - TICK_SIZE) / 2}px`;
+        }
         const beat = beatAt(docSection, docPart);
         const on = !!beat && beat.classList.contains('is-checked');
+        const key = partKey();
+        const landed = on && tickShown.key === key && tickShown.on === false;
         compactTickEl.classList.toggle('is-checked', on);
+        compactTickEl.classList.toggle('is-landing', landed);
         compactTickEl.setAttribute('aria-pressed', String(on));
+        tickShown = { key, on };
       }
 
       if (compactTickEl) compactTickEl.addEventListener('click', (event) => {
@@ -3166,16 +3539,21 @@
         const jot = document.createElement('div');
         jot.className = 'beat-jot';
         jot.dataset.key = key;
+        const dash = document.createElement('span');
+        dash.className = 'beat-jot-dash';
+        dash.setAttribute('aria-hidden', 'true');
+        dash.textContent = '\u2014';
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'beat-jot-btn';
-        button.innerHTML = '<span class="beat-jot-dash" aria-hidden="true">&mdash;</span><span class="beat-jot-label">Type here</span>';
+        button.innerHTML = '<span class="beat-jot-label">add your notes</span>';
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'beat-jot-input';
+        input.placeholder = 'add your notes';
         input.setAttribute('aria-label', 'Note on this part');
         input.hidden = true;
-        jot.append(button, input);
+        jot.append(dash, button, input);
 
         const close = (commit) => {
           if (!jot.classList.contains('is-editing')) return;
@@ -3210,7 +3588,7 @@
           jot.classList.toggle('has-note', !!note);
           jot.classList.remove('is-editing');
           jot.querySelector('.beat-jot-input').hidden = true;
-          jot.querySelector('.beat-jot-label').textContent = note || 'Type here';
+          jot.querySelector('.beat-jot-label').textContent = note || 'add your notes';
         });
         if (compactJotEl) renderCompactJot(compactJotEl.dataset.key || partKey());
       }
@@ -3222,7 +3600,7 @@
         compactJotEl.classList.toggle('has-note', !!note);
         compactJotEl.classList.remove('is-editing');
         compactJotInputEl.hidden = true;
-        compactJotLabelEl.textContent = note || 'Type here';
+        compactJotLabelEl.textContent = note || 'add your notes';
       }
 
       function openJot() {
@@ -3289,21 +3667,60 @@
         return (MARKS[key] || {}).probes || [];
       }
 
+      // Offered and all spent — the open ends of this question are closed, so the line she
+      // has for it is the revised one.
+      function probesClosed(key) {
+        const left = probesLeft.get(key);
+        return !!left && !left.length;
+      }
+
+      // A rewrite is quieter than a first draft: the line she already had gives way and
+      // the fuller one takes its place, in the same slot, without the question moving.
+      function reviseAnswer(key) {
+        const mark = MARKS[key] || {};
+        if (!mark.then) return;
+        const answer = compactFadeEl.querySelector('.roll-now:not(.is-out) .compact-answer');
+        if (!answer) return;
+        answer.classList.add('is-fading');
+        window.setTimeout(() => {
+          answer.textContent = mark.then;
+          answer.classList.remove('is-fading');
+          sizeCompactCard();
+        }, paced(ANSWER_FADE));
+      }
+
       // The chips live on the dash's row, which is outside the block that rolls — so they
       // can be added and taken away in place while the question stays put.
-      function renderProbes(entering) {
+      function renderProbes(entering, lead) {
         if (!compactProbesEl) return;
         const left = probesLeft.get(partKey()) || [];
         compactProbesEl.textContent = '';
+        const from = lead === undefined ? PROBE_LEAD : lead;
         left.forEach((text, i) => {
           const probe = makeProbe(text);
           if (entering) {
             probe.classList.add('beat-in');
-            probe.style.animationDelay = `${i * paced(ANSWER_WORD)}ms`;
+            probe.style.animationDelay = `${paced(from + i * PROBE_STAGGER)}ms`;
           }
           compactProbesEl.appendChild(probe);
         });
-        compactJotEl.classList.toggle('has-probes', left.length > 0);
+        placeProbes();
+      }
+
+      // Where the chips go: beside Ria's note when there is one on screen, on the dash's
+      // row when there isn't. Both are things still open on this part, so they belong on
+      // one line — and with her note showing, that line is hers. The row is moved rather
+      // than rebuilt, so a chip mid-collapse is not interrupted by being asked to exist
+      // somewhere else.
+      function placeProbes() {
+        if (!compactProbesEl || !compactJotEl) return;
+        const marks = compactFadeEl.querySelector('.roll-now:not(.is-out) .compact-marks');
+        // Beside her note when there is one; otherwise a row of its own directly under the
+        // question, starting where the question starts. On the dash's row they began after
+        // the dash — and the dash is invisible until you hover it, so they read as
+        // indented from nothing.
+        if (marks) marks.appendChild(compactProbesEl);
+        else compactJotEl.parentNode.insertBefore(compactProbesEl, compactJotEl);
       }
 
       // Returns whether the click was spent on the follow-ups, so the caller knows not to
@@ -3314,10 +3731,16 @@
         if (!compactCard.classList.contains('opt-probes')) return false;
         const key = partKey();
         if (!probesFor(key).length) return false;
-        // First click: they arrive, all of them.
+        // First click: they arrive, all of them — and on a question that says so, the
+        // same click ticks it off. Both surfaces get the tick, as ever.
         if (!probesLeft.has(key)) {
           probesLeft.set(key, [...probesFor(key)]);
-          renderProbes(true);
+          const ticked = !!(MARKS[key] || {}).ticks;
+          if (ticked) {
+            const beat = beatAt(docSection, docPart);
+            if (beat && !beat.classList.contains('is-checked')) setBeatChecked(beat, true);
+          }
+          renderProbes(true, ticked ? PROBE_LEAD_TICKED : PROBE_LEAD);
           sizeCompactCard();
           return true;
         }
@@ -3336,6 +3759,9 @@
           window.setTimeout(() => {
             chip.remove();
             compactJotEl.classList.toggle('has-probes', left.length > 0);
+            // The last one closing is what changes the answer — until then she still only
+            // has what she had.
+            if (!left.length) reviseAnswer(key);
             sizeCompactCard();
           }, paced(260));
         }
@@ -3621,6 +4047,32 @@
 
       // Starting the recording, finishing the session and switching presence all change
       // the card's shape, and each one has to re-measure before it can animate.
+      // What she already had. Done as the session starts, quietly, so these are simply true
+      // by the time you walk onto them rather than being ticked in front of you.
+      // MARKS is the mini bar's story, and so is the head start it describes. The
+      // sidebar shows the same beats, so running this while docked ticked off two
+      // questions the researcher had not reached — Ria appearing to answer ahead of the
+      // conversation in the one view that shows the whole script at once.
+      function markWhatSheAlreadyHas() {
+        if (!compactCard.classList.contains('presence-compact')) return;
+        Object.keys(MARKS).forEach((key) => {
+          if (!MARKS[key].ahead) return;
+          const beat = beatFor(key);
+          if (beat && !beat.classList.contains('is-checked')) setBeatChecked(beat, true, true);
+          if (probesFor(key).length && !probesLeft.has(key)) probesLeft.set(key, [...probesFor(key)]);
+        });
+        renderCompactTick(compactCard.classList.contains('is-recording'));
+      }
+      compactCard.addEventListener('rae:recording', (event) => {
+        if (event.detail && event.detail.recording) markWhatSheAlreadyHas();
+      });
+      // Collapsing into the mini bar mid-session is arriving at its story late; the head
+      // start is applied then rather than never. It is never taken back the other way —
+      // once she has ticked something, she has ticked it.
+      compactCard.addEventListener('rae:shape', () => {
+        if (compactCard.classList.contains('is-recording')) markWhatSheAlreadyHas();
+      });
+
       compactCard.addEventListener('rae:recording', renderCompact);
       compactCard.addEventListener('rae:shape', renderCompact);
       // The bottom panel leaves when the session starts, so every section grows by its
@@ -3674,30 +4126,392 @@
     // in the sidebar the up and down ones do nothing, and left and right move between
     // sections rather than between questions, so shown there it is an instruction that
     // isn't true.
-    let hintSeen = false;
+    // ------------------------------------------------------------------ the tour
+    // Three things per surface, each pointed at the control it is about. Not an overlay:
+    // nothing is dimmed and nothing is blocked, because what makes it quick is reading
+    // the sentence with the thing it names in view.
+    //
+    // It supersedes the single arrival snackbar §8 shipped — that said one of these three
+    // and had nowhere to say the other two.
+    const TOURS = {
+      compact: [
+        {
+          at: '.compact-where',
+          title: 'Welcome to your focused script',
+          body: 'Your script is broken into focused segments, so you can move through questions one by one.',
+        },
+        {
+          at: '.compact-body',
+          reveal: 'tick',
+          sample: 'tick',
+          title: 'Ria is always taking notes',
+          body: 'Ria listens along and ticks things off for you. A hollow mark just means there\u2019s more to explore.',
+        },
+        {
+          at: '#compact-probes',
+          reveal: 'jot',
+          sample: 'probes',
+          title: 'Helpful nudges as you go',
+          body: 'Ria might offer follow-ups or suggest jumping ahead. They are just suggestions; you are fully in control.',
+        },
+        {
+          at: '#compact-jot',
+          reveal: 'jot',
+          sample: 'note',
+          title: 'Take shorthand notes',
+          body: 'Add quick notes on your own anytime. Just hover under the question, click and start typing.',
+        },
+        {
+          at: '#compact-start-rec',
+          title: 'That\u2019s it!',
+          body: 'Start the recording whenever you are ready. You can use <span class="tour-keys"><kbd>\u2190</kbd><kbd>\u2192</kbd></span> to move between questions.',
+        },
+      ],
+      dock: [
+        {
+          at: '.doc-passage.is-on h3',
+          title: 'Welcome to your focused script',
+          body: 'Your script is broken into focused segments, so you can move through questions one by one.',
+        },
+        {
+          at: '.doc-passage.is-on .beat:first-of-type .beat-check',
+          sample: 'tick',
+          title: 'Ria is always taking notes',
+          body: 'Ria listens along and ticks things off for you. A hollow mark just means there\u2019s more to explore.',
+        },
+        {
+          at: '.doc-passage.is-on .beat:first-of-type .beat-probes',
+          sample: 'probes',
+          title: 'Helpful nudges as you go',
+          body: 'Ria might offer follow-ups or suggest jumping ahead. They are just suggestions; you are fully in control.',
+        },
+        {
+          at: '.doc-passage.is-on .beat:first-of-type .beat-jot',
+          reveal: 'jot',
+          sample: 'note',
+          title: 'Take shorthand notes',
+          body: 'Add quick notes on your own anytime. Just hover under the question, click and start typing.',
+        },
+        {
+          at: '#start-rec',
+          title: 'That\u2019s it!',
+          body: 'Start the recording whenever you are ready. You can scroll to move between sections.',
+        },
+      ],
+    };
+    const TOUR_KEY = 'rae-tour';
 
-    function arrivalHint() {
+    const tourEl = document.getElementById('tour');
+    const tourCard = document.getElementById('tour-card');
+    const tourRing = document.getElementById('tour-ring');
+    const tourCopy = document.getElementById('tour-copy');
+    const tourTitle = document.getElementById('tour-title');
+    const tourScrim = document.getElementById('tour-scrim');
+    const tourCount = document.getElementById('tour-count');
+    const tourNextLabel = document.getElementById('tour-next-label');
+    let tourSteps = [];
+    let tourAt = -1;
+    let tourFor = '';
+    let tourSettle = 0;
+
+    // A card naming something the panel is not currently showing has nothing to point at.
+    // The tutorial runs before the recording, so a mark, a follow-up and a note of your own
+    // are all things that have not happened yet — it lends the panel one of each while the
+    // card that names it is up, and takes them back on the way out. Nothing here is state:
+    // every sample carries the undo that removes it.
+    const SAMPLE_PROBES = ['where?', 'course length?'];
+    const SAMPLE_NOTE = 'she paused before answering';
+    // The beats of the note demonstration: the line offers itself, it is clicked, the words
+    // go in one at a time, and Enter keeps it.
+    const NOTE_DEMO_SHOW = 320;
+    const NOTE_DEMO_CLICK = 1100;
+    const NOTE_DEMO_KEY = 58;
+    let samples = [];
+
+    function clearSamples() {
+      samples.forEach((undo) => undo());
+      samples = [];
+    }
+
+    function sampleChip(className, text) {
+      const chip = document.createElement('span');
+      chip.className = className;
+      chip.textContent = text;
+      return chip;
+    }
+
+    function showSample(kind, mode) {
+      clearSamples();
+      if (!kind) return;
+      const beat = document.querySelector('.doc-passage.is-on .beat');
+
+      if (kind === 'tick') {
+        if (mode === 'compact') {
+          // The mark reads its state off the beat; borrowing the look costs the beat
+          // nothing, so the mini bar's sample touches no script state at all.
+          const mark = document.getElementById('compact-tick');
+          if (mark && !mark.classList.contains('is-checked')) {
+            mark.classList.add('is-checked');
+            samples.push(() => mark.classList.remove('is-checked'));
+          }
+        } else if (beat && !beat.classList.contains('is-checked')) {
+          beat.classList.add('is-checked', 'no-tick-anim');
+          void beat.offsetWidth;
+          beat.classList.remove('no-tick-anim');
+          samples.push(() => beat.classList.remove('is-checked'));
+        }
+        return;
+      }
+
+      if (kind === 'probes') {
+        if (mode === 'compact') {
+          const row = document.getElementById('compact-probes');
+          if (!row) return;
+          SAMPLE_PROBES.forEach((text) => row.appendChild(sampleChip('compact-probe', text)));
+          samples.push(() => { row.textContent = ''; });
+        } else if (beat) {
+          const host = beat.querySelector('.beat-answer');
+          if (!host) return;
+          const row = document.createElement('span');
+          row.className = 'beat-probes';
+          SAMPLE_PROBES.forEach((text) => row.appendChild(sampleChip('beat-probe', text)));
+          host.appendChild(row);
+          const had = beat.classList.contains('has-answer');
+          beat.classList.add('has-answer');
+          samples.push(() => { row.remove(); if (!had) beat.classList.remove('has-answer'); });
+        }
+        return;
+      }
+
+      if (kind === 'note') {
+        const jot = mode === 'compact'
+          ? document.getElementById('compact-jot')
+          : (beat && beat.querySelector('.beat-jot'));
+        if (!jot) return;
+        const label = jot.querySelector(mode === 'compact' ? '.compact-jot-label' : '.beat-jot-label');
+        if (!label) return;
+        const was = label.textContent;
+        const had = jot.classList.contains('has-note');
+        const timers = [];
+        const at = (ms, fn) => timers.push(window.setTimeout(fn, paced(ms)));
+
+        // Played, not posed: the line offers itself, someone writes on it, and it is kept.
+        // It runs on the label rather than the real field — the field has a blur handler
+        // that would save this into your notes, and a demonstration must not leave anything
+        // behind. Nothing here is typed anywhere real.
+        jot.classList.add('is-demo');
+        at(NOTE_DEMO_SHOW, () => jot.classList.add('is-demo-on'));
+        at(NOTE_DEMO_CLICK, () => { label.textContent = ''; jot.classList.add('is-typing'); });
+        SAMPLE_NOTE.split('').forEach((ch, i) => {
+          at(NOTE_DEMO_CLICK + 260 + i * NOTE_DEMO_KEY, () => { label.textContent = SAMPLE_NOTE.slice(0, i + 1); });
+        });
+        at(NOTE_DEMO_CLICK + 260 + SAMPLE_NOTE.length * NOTE_DEMO_KEY + 520, () => {
+          jot.classList.remove('is-typing');
+          jot.classList.add('has-note');
+        });
+
+        samples.push(() => {
+          timers.forEach(window.clearTimeout);
+          jot.classList.remove('is-demo', 'is-demo-on', 'is-typing');
+          label.textContent = was;
+          if (!had) jot.classList.remove('has-note');
+        });
+      }
+    }
+
+    function tourSeen() {
+      if (/[?&]tour=1\b/.test(window.location.search)) return {};
+      try { return JSON.parse(window.localStorage.getItem(TOUR_KEY) || '{}') || {}; } catch (error) { return {}; }
+    }
+
+    function markTourSeen(mode) {
+      const seen = tourSeen();
+      seen[mode] = true;
+      try { window.localStorage.setItem(TOUR_KEY, JSON.stringify(seen)); } catch (error) { /* private mode */ }
+    }
+
+    // Where the card goes: under the target by default, above it when there is no room
+    // below, and never off either edge of the window.
+    function placeTour(step) {
+      const target = document.querySelector(step.at);
+      const frame = browserWindow.getBoundingClientRect();
+      if (!target) return false;
+      const box = target.getBoundingClientRect();
+      if (!box.width && !box.height) return false;
+
+      // The hole is Ria — all of her. In the mini bar that is the card *and* the slab
+      // hanging below it; docked it is the whole column. Her own corners, so the light
+      // stops where she does.
+      const panel = researchToolbar.getBoundingClientRect();
+      const slabEl = researchToolbar.querySelector('.compact-slab');
+      const slab = slabEl && slabEl.offsetParent ? slabEl.getBoundingClientRect() : null;
+      const lit = {
+        top: Math.min(panel.top, slab ? slab.top : panel.top),
+        left: Math.min(panel.left, slab ? slab.left : panel.left),
+        right: Math.max(panel.right, slab ? slab.right : panel.right),
+        bottom: Math.max(panel.bottom, slab ? slab.bottom : panel.bottom),
+      };
+      const surface = researchToolbar.querySelector('.toolbar-surface');
+      tourScrim.style.top = `${lit.top - frame.top}px`;
+      tourScrim.style.left = `${lit.left - frame.left}px`;
+      tourScrim.style.width = `${lit.right - lit.left}px`;
+      tourScrim.style.height = `${lit.bottom - lit.top}px`;
+      tourScrim.style.borderRadius = surface ? getComputedStyle(surface).borderRadius : '0px';
+
+      const pad = 6;
+      const top = box.top - frame.top;
+      const left = box.left - frame.left;
+      tourRing.style.top = `${top - pad}px`;
+      tourRing.style.left = `${left - pad}px`;
+      tourRing.style.width = `${box.width + pad * 2}px`;
+      tourRing.style.height = `${box.height + pad * 2}px`;
+
+      // The card goes *outside* the lit panel, never over it: the whole point of dimming
+      // the room is that Ria is the thing you are looking at, and a card sitting on her
+      // covers the control it is naming. Beside her where there is room — which there
+      // always is for the sidebar, pinned to one edge — under her where there isn't.
+      const gap = 14;
+      const cardW = tourCard.offsetWidth || 268;
+      const cardH = tourCard.offsetHeight || 120;
+      const litLeft = lit.left - frame.left;
+      const litRight = lit.right - frame.left;
+      const litTop = lit.top - frame.top;
+      const litBottom = lit.bottom - frame.top;
+      const edge = 8;
+      let side = 'left';
+      if (litLeft - gap - cardW < edge) side = 'right';
+      if (side === 'right' && litRight + gap + cardW > frame.width - edge) {
+        side = litBottom + gap + cardH < frame.height - edge ? 'below' : 'above';
+      }
+
+      const midY = top + box.height / 2;
+      const midX = left + box.width / 2;
+      let cardLeft;
+      let cardTop;
+      if (side === 'left' || side === 'right') {
+        cardLeft = side === 'left' ? litLeft - gap - cardW : litRight + gap;
+        // Level with what it points at, then pulled back inside the window; the notch
+        // travels to stay on the target when it is.
+        cardTop = Math.max(edge, Math.min(midY - cardH / 2, frame.height - cardH - edge));
+      } else {
+        cardTop = side === 'below' ? litBottom + gap : litTop - gap - cardH;
+        cardLeft = Math.max(edge, Math.min(midX - 32, frame.width - cardW - edge));
+      }
+      tourCard.style.top = `${cardTop}px`;
+      tourCard.style.left = `${cardLeft}px`;
+      ['left', 'right', 'below', 'above'].forEach((name) => tourEl.classList.toggle(`side-${name}`, name === side));
+
+      const notch = tourCard.querySelector('.tour-notch');
+      if (side === 'left' || side === 'right') {
+        notch.style.left = '';
+        notch.style.top = `${Math.max(10, Math.min(midY - cardTop - 6, cardH - 22))}px`;
+      } else {
+        notch.style.top = '';
+        notch.style.left = `${Math.max(10, Math.min(midX - cardLeft - 6, cardW - 22))}px`;
+      }
+      return true;
+    }
+
+    function showTourStep() {
+      const step = tourSteps[tourAt];
+      if (!step) { endTour(true); return; }
+      tourTitle.textContent = step.title || '';
+      tourCopy.innerHTML = step.body;
+      // Only for as long as this card is up: the control goes back to whatever the
+      // settings say about it the moment the tutorial moves on.
+      if (step.reveal) researchToolbar.dataset.tourReveal = step.reveal;
+      else delete researchToolbar.dataset.tourReveal;
+      // Before placing: the sample is what gives some of these anchors a size at all.
+      showSample(step.sample, tourFor);
+      tourCount.textContent = `${tourAt + 1} of ${tourSteps.length}`;
+      tourNextLabel.textContent = tourAt === tourSteps.length - 1 ? 'Got it' : 'Next';
+      tourEl.hidden = false;
+      // Placed straight away rather than on the next frame: reading `offsetHeight` inside
+      // `placeTour` flushes layout, so the card is already its new size — and a frame that
+      // never comes (a background tab throttles rAF to nothing) would leave every card
+      // pointing at wherever the first one did.
+      if (!placeTour(step)) { endTour(true); return; }
+      // Re-run the arrival animation on every step, so each one reads as a new thing
+      // being pointed at rather than a card sliding around on its own.
+      [tourCard, tourRing].forEach((el) => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+      // Ria changes shape when the view changes, and the card can arrive while she is still
+      // doing it — the first pass caught her at the sidebar's height and the mini bar's
+      // width. Measure again once she has stopped moving; if nothing moved, the second pass
+      // writes the same numbers.
+      window.clearTimeout(tourSettle);
+      tourSettle = window.setTimeout(() => { if (!tourEl.hidden) placeTour(step); }, 420);
+    }
+
+    function startTour(mode, options) {
+      const asked = !!(options && options.force);
+      if (tourFor === mode && !tourEl.hidden) return;
+      if (!asked && tourSeen()[mode]) return;
       if (!researchToolbar.classList.contains('visible')) return;
       if (researchToolbar.classList.contains('session-complete')) return;
-      if (toolbar.getPresence() !== 'compact' || hintSeen) return;
-      hintSeen = true;
-      toolbar.showSnack('Move between questions with \u2191 \u2193 or \u2190 \u2192', null, {
-        hold: 5000,
-        anywhere: true,
-        html: 'Move between questions with <span class="snack-keys"><kbd>\u2191</kbd><kbd>\u2193</kbd></span> or <span class="snack-keys"><kbd>\u2190</kbd><kbd>\u2192</kbd></span>',
-      });
+      tourFor = mode;
+      tourSteps = TOURS[mode] || [];
+      tourAt = 0;
+      if (!tourSteps.length) return;
+      showTourStep();
+    }
+
+    // Finished or skipped, it is the same promise: this surface has been explained and
+    // will not explain itself again. Taken off the screen because the surface changed
+    // under it is not — that one comes back.
+    function endTour(seen) {
+      if (tourEl.hidden) return;
+      window.clearTimeout(tourSettle);
+      clearSamples();
+      tourEl.hidden = true;
+      tourAt = -1;
+      delete researchToolbar.dataset.tourReveal;
+      if (seen) markTourSeen(tourFor);
+      tourFor = '';
+    }
+
+    function nextTourStep() {
+      tourAt += 1;
+      if (tourAt >= tourSteps.length) { endTour(true); return; }
+      showTourStep();
+    }
+
+    document.getElementById('tour-next').addEventListener('click', (event) => {
+      event.stopPropagation();
+      nextTourStep();
+    });
+    document.getElementById('tour-skip').addEventListener('click', (event) => {
+      event.stopPropagation();
+      endTour(true);
+    });
+
+    function tourArrives() {
+      if (!researchToolbar.classList.contains('visible')) return;
+      startTour(toolbar.getPresence());
     }
 
     function showToolbar() {
       researchToolbar.classList.add('visible');
       window.clearTimeout(hintTimer);
-      hintTimer = window.setTimeout(arrivalHint, 1000);
+      hintTimer = window.setTimeout(tourArrives, 1000);
     }
 
-    // Folding down to the mini bar is the other way of meeting it for the first time.
+    // Switching surfaces is the other way of meeting one for the first time, and the tour
+    // belongs to the surface rather than to the session: a card open against the mini bar
+    // has nothing to point at once the sidebar is up.
     researchToolbar.addEventListener('rae:shape', () => {
+      endTour(false);
       window.clearTimeout(hintTimer);
-      hintTimer = window.setTimeout(arrivalHint, 700);
+      hintTimer = window.setTimeout(tourArrives, 700);
+    });
+    // A card pointing at a control the window just moved is worse than no card.
+    window.addEventListener('resize', () => { if (!tourEl.hidden) placeTour(tourSteps[tourAt]); });
+
+    // "Show me around" in the settings menu, where personalising already lives. The menu is
+    // wired in the toolbar and the tutorial lives here, so it asks rather than reaches.
+    researchToolbar.addEventListener('rae:tour', () => {
+      endTour(false);
+      window.clearTimeout(hintTimer);
+      hintTimer = window.setTimeout(() => startTour(toolbar.getPresence(), { force: true }), 120);
     });
     const documents = [...document.querySelectorAll('.document')];
     // The script's own shape, read from the assistant so the two cannot drift.
@@ -3838,7 +4652,7 @@
       previewer.classList.remove('visible');
       riaStep = 0;
       riaCard.classList.remove('ready');
-      [riaLede, riaFeatures, riaOutro].forEach(riaHide);
+      [riaLede, riaFeatures, riaModes, riaOutro].forEach(riaHide);
       window.setTimeout(() => {
         // The idle state was committed a frame ago, so these transition rather than snap.
         riaOnboarding.classList.add('visible');
@@ -3851,12 +4665,16 @@
       { lede: 'Ria is your Remote Interview Assistant, here to help reduce your cognitive load during remote user interviews...' },
       { lede: '...by helping you focus on what matters most, engaging with the participant' },
       { features: true },
+      { modes: true },
       { outro: true, next: 'Join meeting', dot: false },
     ];
     // The closing screen sits outside the dotted sequence — no dots, no Back.
     const RIA_TOTAL = RIA_STEPS.filter((step) => step.dot !== false).length;
     const riaLede = document.getElementById('ria-lede');
     const riaFeatures = document.getElementById('ria-features');
+    const riaModes = document.getElementById('ria-modes');
+    const riaModeButtons = [...riaModes.querySelectorAll('.ria-mode')];
+    let riaMode = null;
     const riaOutro = document.getElementById('ria-outro');
     const riaCard = riaOnboarding.querySelector('.ria-onboarding');
     const riaNextLabel = document.getElementById('ria-next-label');
@@ -3896,6 +4714,8 @@
         riaToggle(riaLede, !!step.lede, openDelay);
       }
       riaToggle(riaFeatures, !!step.features, openDelay);
+      riaToggle(riaModes, !!step.modes, openDelay);
+      riaNext.disabled = !!step.modes && !riaMode;
       riaToggle(riaOutro, !!step.outro, openDelay);
 
       if (step.next && riaNextLabel.textContent !== step.next) riaSwapNextLabel(step.next);
@@ -3914,6 +4734,8 @@
       }, 120);
     }
     function riaGo(delta) {
+      // Picking a mode is the step's whole job; there is no way past it unpicked.
+      if (delta > 0 && RIA_STEPS[riaStep].modes && !riaMode) return;
       const next = riaStep + delta;
       if (next < 0) return;
       // The closing screen's button is the way into the call.
@@ -3926,6 +4748,20 @@
       riaStep = next;
       renderRiaStep(delta);
     }
+    // The choice lands on the toolbar as it is made. It is still off screen, so
+    // `immediate` skips the switching fade — there is nothing there to cross.
+    riaModeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        riaMode = button.dataset.mode;
+        riaModeButtons.forEach((other) => {
+          const on = other === button;
+          other.classList.toggle('is-on', on);
+          other.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        riaNext.disabled = false;
+        toolbar.setPresence(riaMode, { immediate: true });
+      });
+    });
     riaNext.addEventListener('click', () => riaGo(1));
     riaBack.addEventListener('click', () => riaGo(-1));
     document.getElementById('ria-close').addEventListener('click', () => {
@@ -4068,19 +4904,28 @@
       appWindow.classList.toggle('maximised');
       window.setTimeout(fitAppFrame, 60);
     });
+    // Ctrl on Windows, Command on a Mac. The caps on screen say Ctrl because the design
+    // does, but a tester on a Mac reaches for the key beside the space bar — and finding
+    // nothing there reads as a broken prototype rather than a different keyboard.
+    const stepping = (event) => event.ctrlKey || event.metaKey;
     document.addEventListener('keydown', (event) => {
-      const hint = document.getElementById('doc-hint');
-      if (event.ctrlKey && event.key === 'Enter' && hint && !hint.hidden) { document.getElementById('doc-hint-go').click(); return; }
-      const finishSession = document.getElementById('finish-session');
-      if (event.ctrlKey && event.key === 'Enter' && finishSession.classList.contains('visible')) { finishSession.click(); return; }
-      if (event.ctrlKey && event.key === 'Enter' && researchToolbar.classList.contains('session-complete')) { document.getElementById('view-doc').click(); return; }
-      if (riaOnboarding.classList.contains('visible')) {
-        if (event.ctrlKey && event.key === 'Enter') { riaGo(1); return; }
-        if (event.ctrlKey && event.key === 'ArrowLeft') { riaGo(-1); return; }
+      // The tour is in front of everything while it is up, so it answers first.
+      if (!tourEl.hidden) {
+        if (stepping(event) && event.key === 'Enter') { event.preventDefault(); nextTourStep(); return; }
+        if (event.key === 'Escape') { endTour(true); return; }
       }
-      if (event.ctrlKey && event.key === 'Enter' && previewer.classList.contains('visible')) { document.getElementById('setup-assistant').click(); return; }
-      if (event.ctrlKey && event.key === 'Enter' && selectedToast.classList.contains('visible')) joinMeeting.click();
-      else if (event.ctrlKey && event.key === 'Enter' && !modal.classList.contains('visible')) document.getElementById('prepare').click();
+      const hint = document.getElementById('doc-hint');
+      if (stepping(event) && event.key === 'Enter' && hint && !hint.hidden) { document.getElementById('doc-hint-go').click(); return; }
+      const finishSession = document.getElementById('finish-session');
+      if (stepping(event) && event.key === 'Enter' && finishSession.classList.contains('visible')) { finishSession.click(); return; }
+      if (stepping(event) && event.key === 'Enter' && researchToolbar.classList.contains('session-complete')) { document.getElementById('view-doc').click(); return; }
+      if (riaOnboarding.classList.contains('visible')) {
+        if (stepping(event) && event.key === 'Enter') { riaGo(1); return; }
+        if (stepping(event) && event.key === 'ArrowLeft') { riaGo(-1); return; }
+      }
+      if (stepping(event) && event.key === 'Enter' && previewer.classList.contains('visible')) { document.getElementById('setup-assistant').click(); return; }
+      if (stepping(event) && event.key === 'Enter' && selectedToast.classList.contains('visible')) joinMeeting.click();
+      else if (stepping(event) && event.key === 'Enter' && !modal.classList.contains('visible')) document.getElementById('prepare').click();
       if (event.key === 'Enter' && modal.classList.contains('visible') && chosenScript) selectScript();
       if (event.key === 'Escape' && appWindow.classList.contains('open')) { closeDoc(); return; }
       if (event.key === 'Escape') { modal.classList.remove('visible'); previewer.classList.remove('visible'); riaOnboarding.classList.remove('visible'); riaCard.classList.remove('ready'); }

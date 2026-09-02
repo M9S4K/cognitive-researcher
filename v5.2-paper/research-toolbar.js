@@ -204,10 +204,10 @@ window.ResearchToolbar = (function () {
   // keeps her write-ups out of the way; the sidebar is the whole script laid out, so her
   // notes belong in it and a note of your own is an interruption. Hence two sets of
   // defaults rather than one — and a switch to run one set in both.
-  const OPTIONS = ['probes', 'ai', 'jumps', 'manual'];
+  const OPTIONS = ['probes', 'ai', 'jumps', 'manual', 'ticks'];
   const OPTION_DEFAULTS = {
-    compact: { probes: true, ai: false, jumps: true, manual: true },
-    dock: { probes: true, ai: true, jumps: true, manual: false },
+    compact: { probes: true, ai: false, jumps: true, manual: true, ticks: true },
+    dock: { probes: true, ai: true, jumps: true, manual: false, ticks: true },
   };
 
   const QUESTION_SNAP_DURATION = 450;
@@ -874,6 +874,14 @@ window.ResearchToolbar = (function () {
     toolbarEl.querySelectorAll('.menu-toggle').forEach((item) => item.addEventListener('click', (event) => {
       event.stopPropagation();
       setOption(item.dataset.opt, item.getAttribute('aria-checked') !== 'true');
+    }));
+
+    // Showing someone around is the page's job, not the toolbar's — it asks, and closes
+    // the menu it was asked from.
+    toolbarEl.querySelectorAll('.menu-tour').forEach((button) => button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      closeDockMenu();
+      toolbarEl.dispatchEvent(new CustomEvent('rae:tour'));
     }));
 
     pauseButtons.forEach((button) => button.addEventListener('click', (event) => {

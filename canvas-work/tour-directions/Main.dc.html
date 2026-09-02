@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <style>
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; }
+    a { color: #1e1e1e; } a:hover { color: #000; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 880px; height: 600px; overflow: hidden; background: #a8a8a8;">
+
+  <!-- the call, for context -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 64px; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px; background: #e9e9e7;">
+    <div style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 18px; border-radius: 17px; background: #4a4a4a; color: #fff; font: 500 14px/1 Inter, sans-serif;">Leave</div>
+  </div>
+  <div style="position: absolute; top: 64px; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;">
+    <div style="display: grid; place-items: center; width: 168px; height: 168px; border-radius: 50%; background: #6f6f6f; color: #d5d5d5; font: 600 44px/1 Inter, sans-serif;">You</div>
+    <div style="color: #3e3e3e; font: 500 16px/1 Inter, sans-serif;">Waiting for attendee</div>
+  </div>
+
+  <!-- Ria, lit -->
+  <div style="position: absolute; top: 120px; left: 470px; width: 324px;">
+    <div style="position: absolute; top: 0; right: 0; bottom: -44px; left: 0; border-radius: 19px; background: #dddcd7;"></div>
+    <div style="position: absolute; right: 16px; bottom: -37px; display: flex; align-items: center; justify-content: center; gap: 4px; height: 29.5px; padding: 5px 7px; border: 1.286px solid rgba(0,0,0,.05); border-radius: 15px; background: #1e1e1e; color: #fff; font: 500 12px/1.4 Inter, sans-serif; letter-spacing: -.12px;">Start Recording</div>
+    <div style="position: absolute; left: 20px; bottom: -30px; color: #000; font: 400 11px/1.4 Inter, sans-serif; letter-spacing: -.11px;">Ria will take notes</div>
+
+    <div style="position: relative; border: 1px solid rgba(126,126,126,.2); border-radius: 20px; background: #fcfcfa; box-shadow: 0 4px 70px 20px rgba(0,0,0,.08); overflow: hidden;">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 9px 8px 9px 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 3px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #00a138;"></span>
+          <span style="color: #000; font: 500 13px/1 'Mona Sans', Inter, sans-serif;">Warm up</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="display: grid; place-items: center; width: 26.32px; height: 21px; border-radius: 9px; background: #dcdcdc;">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="#383838" stroke-width="1.5"><path d="M7.4 6.6 11.9 2.1M11.9 5.9V2.1H8.1"/><path d="M6.6 7.4 2.1 11.9M2.1 8.1v3.8h3.8"/></svg>
+          </span>
+          <span style="display: grid; place-items: center; width: 26.32px; height: 21px; border-radius: 9px; background: #dcdcdc;">
+            <svg width="15" height="15" viewBox="0 0 17 17" fill="none" stroke="#1E1E1E" stroke-width="1.6" stroke-linecap="round"><circle cx="8.5" cy="3.5" r=".7"/><circle cx="8.5" cy="8.5" r=".7"/><circle cx="8.5" cy="13.5" r=".7"/></svg>
+          </span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 8px; padding: 12px 10px 11px 16px;">
+        <div style="width: 18px; flex: none; text-align: center; color: #3e3e3e; font: 500 13px/1.5 'Mona Sans', Inter, sans-serif;">2<span style="font-weight: 600; font-size: 9px;">/4</span></div>
+        <div style="flex: 1 1 auto; min-width: 0;">
+          <p style="margin: 0; color: #3e3e3e; font: 500 13px/1.5 Inter, sans-serif;">What course are you studying?</p>
+          <div style="margin-top: 4px; height: 18px; color: #000; font: 400 italic 12px/1.5 Inter, sans-serif; opacity: .2;">&mdash;</div>
+        </div>
+      </div>
+    </div>
+    <!-- the mark this card is about -->
+    <div style="position: absolute; top: 53px; left: -8px; display: grid; place-items: center; width: 17.5px; height: 17.5px; border-radius: 50%; background: #000; border: 1.3px solid #a6a6a6;">
+      <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.4 7.3 6 10l4.6-5.4"/></svg>
+    </div>
+  </div>
+
+  <!-- the dark, as a hole -->
+  <div style="position: absolute; top: 120px; left: 470px; width: 324px; height: 150px; border-radius: 20px; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); pointer-events: none;"></div>
+  <!-- what this card names -->
+  <div style="position: absolute; top: 154px; left: 465px; width: 334px; height: 76.5px; border: 2px solid #1e1e1e; border-radius: 10px; box-shadow: 0 0 0 3px rgba(255,255,255,.65);"></div>
+
+  <!-- the card -->
+  <div style="position: absolute; top: 152px; left: 96px; width: 268px; padding: 14px 16px 12px; border-radius: 14px; background: #1e1e1e; box-shadow: 0 14px 34px rgba(0,0,0,.28);">
+    <span style="position: absolute; top: 34px; right: -6px; width: 12px; height: 12px; border-radius: 2px; background: #1e1e1e; transform: rotate(45deg);"></span>
+    <p style="margin: 0 0 4px; color: #fff; font: 600 14px/1.35 'Mona Sans', Inter, sans-serif; letter-spacing: -.14px;">Ria handles the notes</p>
+    <p style="margin: 0; color: #c9c9c7; font: 400 13px/1.5 Inter, sans-serif; letter-spacing: -.13px;">She listens along, takes notes, and ticks off questions. A hollow mark means there’s more to ask.</p>
+    <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+      <span style="flex: 1 1 auto; color: #8e8e8e; font: 500 11px/1 Inter, sans-serif;">2 of 4</span>
+      <span style="padding: 5px 8px; border-radius: 9px; color: #ababab; font: 500 12px/1.4 Inter, sans-serif;">Skip</span>
+      <span style="display: flex; align-items: center; gap: 5px; height: 28px; padding: 5px 8px; border-radius: 15px; background: #fff; color: #1e1e1e; font: 500 12px/1.4 Inter, sans-serif; letter-spacing: -.12px;">
+        Next
+        <span style="display: grid; place-items: center; min-width: 14.5px; height: 14.5px; padding: 0 3px; border: .77px solid #d4d4d2; border-radius: 3px; background: #f2f2f0; color: #8e8e8e; font: 500 9.2px/1 Inter, sans-serif;">Ctrl</span>
+        <span style="display: grid; place-items: center; min-width: 14.5px; height: 14.5px; padding: 0 3px; border: .77px solid #d4d4d2; border-radius: 3px; background: #f2f2f0; color: #8e8e8e; font: 500 9.2px/1 Inter, sans-serif;">&#8629;</span>
+      </span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
