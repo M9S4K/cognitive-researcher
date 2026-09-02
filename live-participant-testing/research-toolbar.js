@@ -99,7 +99,7 @@ window.ResearchToolbar = (function () {
               note: 'MSc in HCI. Reads it as formalising practice she already has rather than learning something new.',
               quote: 'HCI, the MSc. I’m not really learning to design — I’ve been doing that for years. I’m learning to prove I can.',
               probes: [
-                { number: '2.1', keyword: 'whereabouts', text: 'oh whereabouts in London?' },
+                { number: '2.1', keyword: 'location', text: 'oh whereabouts in London?' },
                 { number: '2.2', keyword: 'course length', text: 'and how long is your course?' },
               ],
             },
@@ -207,7 +207,7 @@ window.ResearchToolbar = (function () {
   const OPTIONS = ['probes', 'ai', 'jumps', 'manual', 'ticks'];
   const OPTION_DEFAULTS = {
     compact: { probes: true, ai: false, jumps: true, manual: true, ticks: true },
-    dock: { probes: true, ai: true, jumps: true, manual: false, ticks: true },
+    dock: { probes: true, ai: true, jumps: true, manual: true, ticks: true },
   };
 
   const QUESTION_SNAP_DURATION = 450;
